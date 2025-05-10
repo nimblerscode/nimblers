@@ -1,13 +1,13 @@
-import { users } from "../../db/schema";
-import { RouteOptions } from "@redwoodjs/sdk/router";
-import { AppContext } from "@/worker";
+import type { RequestInfo } from "@redwoodjs/sdk/worker";
 
-export async function Home({ appContext }: RouteOptions<AppContext>) {
-  const allUsers = await appContext.db.select().from(users).all();
+export function Home({ ctx }: RequestInfo) {
   return (
     <div>
-      <h1>Hello World</h1>
-      <pre>{JSON.stringify(allUsers, null, 2)}</pre>
+      <p>
+        {ctx.user?.name
+          ? `You are logged in as user ${ctx.user.name}`
+          : "You are not logged in"}
+      </p>
     </div>
   );
 }

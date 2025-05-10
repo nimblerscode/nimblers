@@ -40,5 +40,12 @@
 
     /* Skip type checking all .d.ts files. */
     "skipLibCheck": true
-  }
+  },
+  "include": [
+    "src/**/*",
+    "worker-configuration.d.ts",
+    "src/legacy",
+    "types/redwood-sdk.d.ts"
+  ],
+  "exclude": ["node_modules"]
 }

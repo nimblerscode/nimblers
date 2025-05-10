@@ -35,9 +35,9 @@ Within your project's `wrangler.jsonc` file, replace the placeholder values. For
       "binding": "DB",
       "database_name": "my-project-db",
       "database_id": "YOUR-DB-ID-HERE",
-      "migrations_dir": "drizzle",
-    },
-  ],
+      "migrations_dir": "drizzle"
+    }
+  ]
 }
 ```
 
