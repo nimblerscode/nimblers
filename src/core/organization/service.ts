@@ -1,5 +1,4 @@
-import { Layer, Schema as S } from "effect";
-import { Context, type Effect } from "effect";
+import { Context, type Effect, Schema as S } from "effect";
 import type { User } from "../auth/model";
 import type { Organization, OrganizationD1Schema } from "./model";
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "@effect/vitest";
 import type { User as BetterAuthUser, Session } from "better-auth"; // Assuming these types from better-auth
-import { Cause, Context, Effect, Layer, Option } from "effect";
+import { Effect, Layer } from "effect";
 import {
   handler as authHandlerEffect,
   getSession as getSessionEffect,

@@ -1,6 +1,5 @@
 import { Effect } from "effect";
 import type { User } from "../auth/model";
-import { Organization } from "./model";
 import {
   type OrgCreateData,
   type OrgD1CreateData,

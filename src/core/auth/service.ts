@@ -1,28 +1,28 @@
 import type { Session, User } from "better-auth";
 import { Schema as S } from "effect";
-import { Context, type Effect, type Option } from "effect";
+import { Context, type Effect } from "effect";
 import type { Account } from "./model";
 
 // === Errors ===
 export class UserNotFoundError extends S.TaggedError<UserNotFoundError>()(
   "UserNotFoundError",
-  { identifier: S.String },
+  { identifier: S.String }
 ) {}
 
 export class InvalidCredentialsError extends S.TaggedError<InvalidCredentialsError>()(
   "InvalidCredentialsError",
-  {},
+  {}
 ) {}
 
 export class AccountNotFoundError extends S.TaggedError<AccountNotFoundError>()(
   "AccountNotFoundError",
-  { userId: S.String, providerId: S.String },
+  { userId: S.String, providerId: S.String }
 ) {}
 
 // Placeholder for generic DB errors
 export class DbError extends S.TaggedError<DbError>()(
   "DbError",
-  { cause: S.Unknown }, // Store the original cause
+  { cause: S.Unknown } // Store the original cause
 ) {}
 
 export type AuthRepoError = UserNotFoundError | AccountNotFoundError | DbError;
@@ -30,7 +30,7 @@ export type AuthRepoError = UserNotFoundError | AccountNotFoundError | DbError;
 // Placeholder Error for high-level auth failures
 export class AuthServiceError extends S.TaggedError<AuthServiceError>()(
   "AuthServiceError",
-  { message: S.String, cause: S.optional(S.Unknown) },
+  { message: S.String, cause: S.optional(S.Unknown) }
 ) {}
 
 export type AuthSessionError =

@@ -1,4 +1,4 @@
-import { User as UserModel } from "@/core/auth/model";
+import { UserSchema as UserModel } from "@/core/auth/model";
 import { DbError, UserNotFoundError } from "@/core/auth/service";
 import type { UserId, UserProfileUpdateData } from "@/core/user/service";
 import { Effect, pipe } from "effect";

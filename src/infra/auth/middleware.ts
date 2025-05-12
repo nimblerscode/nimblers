@@ -20,7 +20,7 @@ export const sessionHandler = async ({
   request: Request;
 }) => {
   const getSessionEffect = getSession().pipe(
-    Effect.provide(AuthServiceLive(request))
+    Effect.provide(AuthServiceLive(request)),
   );
 
   return Effect.runPromise(
@@ -42,7 +42,7 @@ export const sessionHandler = async ({
           ctx.session = session;
           ctx.user = user;
         },
-      })
-    )
+      }),
+    ),
   );
 };

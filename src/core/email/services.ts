@@ -1,9 +1,15 @@
-import { Context, Effect, Layer, Ref } from "effect";
+import { Context, Data, Effect, Layer, Ref } from "effect";
+
+// --- Email Error Definition ---
+export class EmailError extends Data.TaggedError("EmailError")<{
+  message: string;
+  cause?: unknown; // For wrapping underlying errors
+}> {}
 
 export class EmailService extends Context.Tag("core/email/EmailService")<
   EmailService,
   {
-    sendEmail: ({
+    readonly sendEmail: ({
       from,
       to,
       subject,
@@ -13,7 +19,7 @@ export class EmailService extends Context.Tag("core/email/EmailService")<
       to: string;
       subject: string;
       body: string;
-    }) => Effect.Effect<void, Error>;
+    }) => Effect.Effect<void, EmailError>;
   }
 >() {}
 
@@ -36,14 +42,27 @@ export const EmailServiceTest = Layer.scoped(
     const sentEmailsRef = yield* _(Ref.make<Array<SentEmail>>([]));
     // Provide the Ref as a service for test helpers
 
+    // Mock implementation for sendEmail
+    const sendEmailImpl = ({
+      from,
+      to,
+      subject,
+      body,
+    }: {
+      from: string;
+      to: string;
+      subject: string;
+      body: string;
+    }) =>
+      Ref.update(sentEmailsRef, (emails) => [
+        ...emails,
+        { from, to, subject, body },
+      ]);
+
     return {
-      sendEmail: ({ from, to, subject, body }) =>
-        Ref.update(sentEmailsRef, (emails) => [
-          ...emails,
-          { from, to, subject, body },
-        ]),
+      sendEmail: sendEmailImpl,
     };
-  }),
+  })
 );
 
 // --- Test Helpers ---

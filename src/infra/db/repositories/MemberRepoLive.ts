@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm"; // Import and for where clause
-import { Effect, Layer, pipe } from "effect";
+import { Effect, Layer } from "effect";
 import { Schema as S } from "effect";
 import { v4 as uuidv4 } from "uuid";
 
-import { type Member, MemberSchema } from "@/core/member/model";
+import { type Member, NewMemberSchema } from "@/core/member/model";
 import {
   MemberDbError,
   MemberNotFoundError,
@@ -29,7 +29,7 @@ export const MemberRepoLive = Layer.effect(
 
           // Validate data against schema before insertion (ignore createdAt)
           const validatedData = yield* _(
-            S.decodeUnknown(MemberSchema)({ ...memberToInsert }),
+            S.decodeUnknown(NewMemberSchema)({ ...memberToInsert }),
             Effect.mapError((e) => new MemberDbError({ cause: e.toString() })),
           );
 
@@ -69,7 +69,7 @@ export const MemberRepoLive = Layer.effect(
 
           // Decode the DB result to Member (converts createdAt to ISO string)
           return yield* _(
-            S.decodeUnknown(MemberSchema)(result),
+            S.decodeUnknown(NewMemberSchema)(result),
             Effect.mapError((e) => new MemberDbError({ cause: e.toString() })),
           );
         }).pipe(Effect.withSpan("MemberRepo.createMember")),
@@ -111,7 +111,7 @@ export const MemberRepoLive = Layer.effect(
           };
           // Decode the raw database result to Member schema
           return yield* _(
-            S.decodeUnknown(MemberSchema)(memberRow),
+            S.decodeUnknown(NewMemberSchema)(memberRow),
             Effect.mapError((e) => new MemberDbError({ cause: e.toString() })),
           );
         }).pipe(Effect.withSpan("MemberRepo.findMembership")),

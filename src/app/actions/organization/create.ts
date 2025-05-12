@@ -48,14 +48,14 @@ export type SwitchOrganizationActionState = {
 // === CREATE ORGANIZATION ACTION ===
 export async function createOrganizationAction(
   _prevState: CreateOrganizationActionState, // previous state from useActionState
-  formData: FormData
+  formData: FormData,
 ): Promise<CreateOrganizationActionState> {
   const ctx = requestInfo.ctx as AppContext;
 
   // --- Retrieve authenticated userId ---
   if (!ctx.session || !ctx.session.userId) {
     console.error(
-      "createOrganizationAction: No session or userId found. User might not be authenticated."
+      "createOrganizationAction: No session or userId found. User might not be authenticated.",
     );
     return {
       success: false,
@@ -102,8 +102,8 @@ export async function createOrganizationAction(
   // Create the Effect program using the service
   const createOrgProgram = OrganizationProvisionService.pipe(
     Effect.flatMap((service) =>
-      service.initializeOrganization(orgCreatePayload)
-    )
+      service.initializeOrganization(orgCreatePayload),
+    ),
   );
 
   // Use the centralized DOServiceLayer
@@ -119,7 +119,7 @@ export async function createOrganizationAction(
 
     // Create the effect to insert into main DB
     const orgRepoLayer = OrgRepoD1Layer.pipe(
-      Layer.provide(DatabaseLive({ DB: env.DB }))
+      Layer.provide(DatabaseLive({ DB: env.DB })),
     );
 
     console.log("organization", organization);
@@ -128,9 +128,9 @@ export async function createOrganizationAction(
       Effect.flatMap((service) =>
         service.insertOrgToMainDB(
           { id: organization.id, name: organization.name },
-          creatorId
-        )
-      )
+          creatorId,
+        ),
+      ),
     ).pipe(Effect.provide(orgRepoLayer));
 
     const result = await Effect.runPromiseExit(insertOrgToMainDB);

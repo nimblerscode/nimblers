@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "@effect/vitest"; // Import 'it' from @effect/vitest
-import { Cause, Context, Effect, Layer, Option } from "effect";
+import { Effect, Layer } from "effect";
 import { sendEmail } from "../../../src/core/email/effect"; // Adjust path as needed
 import { EmailServiceError } from "../../../src/core/email/model"; // Adjust path as needed
 import { EmailService } from "../../../src/core/email/services"; // Adjust path as needed

@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Layer } from "effect";
 import type { Resend } from "resend";
 import { email } from "./resendInstance";
 

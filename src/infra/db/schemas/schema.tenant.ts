@@ -30,6 +30,13 @@ export const member = sqliteTable("member", {
   // Removed updatedAt to match better-auth schema
 });
 
+export const invitationStatusEnum = [
+  "pending",
+  "accepted",
+  "expired",
+  "revoked",
+] as const;
+
 // Invitation table (aligned with better-auth)
 export const invitation = sqliteTable("invitation", {
   id: text("id").primaryKey(),
@@ -37,7 +44,9 @@ export const invitation = sqliteTable("invitation", {
   // organizationId: text("organizationId").notNull(),
   inviterId: text("inviterId").notNull(), // ID from the gateway's user table
   role: text("role").notNull(),
-  status: text("status").notNull().default("pending"), // e.g., 'pending', 'accepted', 'rejected', 'expired'
+  status: text("status", { enum: invitationStatusEnum })
+    .notNull()
+    .default("pending"),
   expiresAt: normalizeDate("expiresAt").notNull(), // Now stores ISO string
   createdAt: normalizeDate("createdAt").notNull(), // Now stores ISO string
   // Removed updatedAt to match better-auth schema
