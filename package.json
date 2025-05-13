@@ -25,8 +25,8 @@
     "migrate:gateway": "drizzle-kit generate --config=drizzle.config.gateway.ts",
     "migrate:tenant": "drizzle-kit generate --config=drizzle.config.tenant.ts",
     "migrate:dev": "wrangler d1 migrations apply DB --local",
-    "seed": "npm run worker:run ./src/infra/db/seed.ts",
-    "seed:users": "npm run worker:run ./src/infra/db/seed.ts",
+    "seed:global": "npm run worker:run ./src/infrastructure/persistence/global/d1/seed.ts",
+    "seed:tenant": "npm run worker:run ./src/infrastructure/persistence/tenant/d1/seed.ts",
     "check": "npm run types",
     "types": "npm run tsc"
   },

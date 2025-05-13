@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import {
   type CreateOrgInput,
+  create,
   createOrg,
   getOrgById,
   getOrgByUserId,
-  insertOrgToMainDB,
 } from "../../../src/core/organization/effects"; // Adjust path
 import type {
   OrgCreateData,
@@ -38,7 +38,7 @@ const mockInsertOrgToMainDBMethod = vi.fn();
 const OrgD1ServiceTest = Layer.succeed(
   OrgD1Service,
   OrgD1Service.of({
-    insertOrgToMainDB: mockInsertOrgToMainDBMethod,
+    create: mockInsertOrgToMainDBMethod,
   }),
 );
 
@@ -237,9 +237,9 @@ describe("Organization Core Effects", () => {
     );
   });
 
-  describe("insertOrgToMainDB effect", () => {
+  describe("create effect", () => {
     it.effect(
-      "should call OrgD1Service.insertOrgToMainDB with correct parameters and return the org data",
+      "should call OrgD1Service.create with correct parameters and return the org data",
       () =>
         Effect.gen(function* (_) {
           const orgToInsert: OrgD1CreateData = {
@@ -254,7 +254,7 @@ describe("Organization Core Effects", () => {
             Effect.succeed(orgToInsert),
           );
 
-          const result = yield* _(insertOrgToMainDB(orgToInsert, userId));
+          const result = yield* _(create(orgToInsert, userId));
 
           expect(mockInsertOrgToMainDBMethod).toHaveBeenCalledOnce();
           expect(mockInsertOrgToMainDBMethod).toHaveBeenCalledWith(
@@ -266,7 +266,7 @@ describe("Organization Core Effects", () => {
     );
 
     it.effect(
-      "should return OrgDbError if OrgD1Service.insertOrgToMainDB fails",
+      "should return OrgDbError if OrgD1Service.create fails",
       () =>
         Effect.gen(function* (_) {
           const orgToInsert: OrgD1CreateData = {
@@ -281,9 +281,7 @@ describe("Organization Core Effects", () => {
             Effect.fail(originalError),
           );
 
-          const result = yield* _(
-            Effect.either(insertOrgToMainDB(orgToInsert, userId)),
-          );
+          const result = yield* _(Effect.either(create(orgToInsert, userId)));
 
           expect(mockInsertOrgToMainDBMethod).toHaveBeenCalledOnce();
           expect(result._tag).toBe("Left");

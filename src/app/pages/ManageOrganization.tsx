@@ -2,8 +2,7 @@
 import { getOrganizationsForUser } from "@/app/actions/organization/create"; // Import the server action
 import InviteMemberForm from "@/app/components/InviteMemberForm";
 import LogoutButton from "@/app/components/LogoutButton";
-import OrganizationSwitcher from "@/app/components/OrganizationSwitcher"; // Import the switcher component
-import type { AppContext } from "@/edge/types"; // Import the context type
+import type { AppContext } from "@/infrastructure/cloudflare/worker"; // Import the context type
 import React from "react"; // Import React for Suspense
 import ManageOrganizationClient from "./ManageOrganizationClient"; // Import the new client wrapper
 
@@ -49,11 +48,12 @@ async function OrganizationListContainer({
 
   return (
     <div>
-      <OrganizationSwitcher
+      <p>Organizations</p>
+      {/* <OrganizationSwitcher
         organizations={organizations}
         activeOrganizationId={activeOrganizationId}
         userId={userId}
-      />
+      /> */}
     </div>
   );
 }
@@ -67,8 +67,7 @@ async function ManageOrganization({ ctx, params }: ManageOrganizationProps) {
     return <p>Loading user data or redirecting...</p>;
   }
 
-  const activeOrganizationId = session.activeOrganizationId; // Current active org from session
-  const userId = user.id;
+  const userId = session.userId;
 
   // Fetch organization list once here
   const organizations = await getOrganizationsForUser(userId);

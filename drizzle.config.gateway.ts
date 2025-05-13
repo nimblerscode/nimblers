@@ -3,7 +3,7 @@ import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
   out: "./drizzle/gateway", // Separate output directory for gateway migrations
-  schema: "./src/infra/db/schemas/schema.ts", // Point to the unified schema file in the infra directory
+  schema: "./src/infrastructure/persistence/global/d1/schema.ts", // Point to the unified schema file in the infra directory
   dialect: "sqlite", // D1 uses SQLite dialect
   driver: "d1-http", // Specify the D1 driver
   dbCredentials: {

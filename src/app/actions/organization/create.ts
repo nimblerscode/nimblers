@@ -4,17 +4,17 @@ import { env } from "cloudflare:workers";
 import { requestInfo } from "@redwoodjs/sdk/worker";
 import { Effect, Exit, Layer } from "effect";
 
-// Core service imports
+import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
+
+import { OrgD1Service } from "@/domain/global/organization/service";
+import type { UserId } from "@/domain/global/user/model";
+import type { NewOrganization } from "@/domain/tenant/organization/model";
 import {
   type OrgDOCreationPayload,
   OrganizationProvisionService,
-} from "@/core/organization/organizationDOService";
-
-import { DatabaseLive, OrganizationDOLive } from "@/infra/layers";
-
-import { type OrgCreateData, OrgD1Service } from "@/core/organization/service";
-import { OrgRepoD1Layer } from "@/infra/db/repositories/OrgD1RepoLive";
-import type { AppContext } from "@/worker";
+} from "@/domain/tenant/organizationDOService";
+import type { AppContext } from "@/infrastructure/cloudflare/worker";
+import { OrgRepoD1Layer } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
 
 // Define your global Env type, or import it if defined elsewhere
 // This should match the bindings defined in your wrangler.jsonc
@@ -24,7 +24,7 @@ export interface CreateOrganizationActionState {
   success: boolean;
   message: string;
   errors?: { [key: string]: string[] } | null;
-  organization?: OrgCreateData | null; // Or a more specific DTO for the created org
+  organization?: NewOrganization | null; // Or a more specific DTO for the created org
 }
 
 // Type for the successfully created organization data returned by the DO/Action
@@ -95,7 +95,7 @@ export async function createOrganizationAction(
     name,
     slug,
     logo: logo || undefined,
-    creatorId,
+    creatorId: creatorId as UserId,
     // id and createdAt will be handled by the DO/service layer
   };
 
@@ -124,16 +124,17 @@ export async function createOrganizationAction(
 
     console.log("organization", organization);
 
-    const insertOrgToMainDB = OrgD1Service.pipe(
+    const create = OrgD1Service.pipe(
       Effect.flatMap((service) =>
-        service.insertOrgToMainDB(
-          { id: organization.id, name: organization.name },
-          creatorId,
-        ),
+        service.create({
+          id: organization.id,
+          name: organization.name,
+          creatorId: creatorId as UserId,
+        }),
       ),
     ).pipe(Effect.provide(orgRepoLayer));
 
-    const result = await Effect.runPromiseExit(insertOrgToMainDB);
+    const result = await Effect.runPromiseExit(create);
 
     if (Exit.isSuccess(result)) {
       return {

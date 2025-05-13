@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8c2b931e-deb1-43a4-bcca-232301090ccf",
+  "id": "79a284f0-9b63-4649-9980-25341ce030a7",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "invitation": {
@@ -16,13 +16,6 @@
         },
         "email": {
           "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "organizationId": {
-          "name": "organizationId",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -90,13 +83,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "organizationId": {
-          "name": "organizationId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "role": {
           "name": "role",
           "type": "text",
@@ -114,21 +100,7 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "member_organizationId_organization_id_fk": {
-          "name": "member_organizationId_organization_id_fk",
-          "tableFrom": "member",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "organizationId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
