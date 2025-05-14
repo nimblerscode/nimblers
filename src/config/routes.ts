@@ -6,8 +6,8 @@ import Login from "@/app/pages/Login";
 import SignUp from "@/app/pages/SignUp";
 
 import { GetInvitation } from "@/app/components/GetInvitation";
-import { authResponse, sessionHandler } from "@/infrastructure/auth/middleware";
 import ManageOrganization from "@/app/pages/ManageOrganization";
+import { authResponse, sessionHandler } from "@/infrastructure/auth/middleware";
 
 // Organization routes (if simple enough to keep here, otherwise import)
 export const organizationRoutes = [

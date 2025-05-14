@@ -27,13 +27,13 @@ const decodeOrg = (organization: Organization) => {
         return mapToOrgDbError(decodeError);
       },
       onSuccess: (decodedData) => decodedData,
-    })
+    }),
   );
 };
 
 export const makeOrgEffectAdapter = (
   drizzleAdapter: ReturnType<typeof makeOrgDrizzleAdapter>,
-  memberRepo: MemberRepo["Type"]
+  memberRepo: MemberRepo["Type"],
 ) => ({
   createOrg: (data: NewOrganization, creatorUserId: string) =>
     Effect.gen(function* () {
@@ -43,7 +43,7 @@ export const makeOrgEffectAdapter = (
       });
       if (!result) {
         return yield* Effect.fail(
-          mapToOrgDbError("Insert returned no results")
+          mapToOrgDbError("Insert returned no results"),
         );
       }
       const organization = yield* decodeOrg(result.org).pipe(
@@ -51,12 +51,12 @@ export const makeOrgEffectAdapter = (
           console.log(result.org);
           console.error("Organization Decode DO Error:", e);
           return mapToOrgDbError(e);
-        })
+        }),
       );
 
       // Now, create the initial member
       const createdMemberEffect = memberRepo.createMember(
-        result.memberCreateData
+        result.memberCreateData,
       );
       yield* createdMemberEffect.pipe(Effect.mapError(mapToOrgDbError));
       return organization;

@@ -1,3 +1,4 @@
+import type { UserId } from "@/domain/global/user/model";
 import { Context, type Effect } from "effect";
 import type { NewOrganization, OrgDbError, Organization } from "./model";
 
@@ -6,9 +7,9 @@ import type { NewOrganization, OrgDbError, Organization } from "./model";
 export class OrgService extends Context.Tag("core/organization/OrgService")<
   OrgService,
   {
-    createOrg: (
+    create: (
       data: NewOrganization,
-      creatorUserId: string,
+      creatorUserId: UserId,
     ) => Effect.Effect<Organization, OrgDbError>;
   }
 >() {}

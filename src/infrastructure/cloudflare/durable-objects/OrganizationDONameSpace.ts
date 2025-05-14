@@ -1,13 +1,15 @@
 import type { env } from "cloudflare:workers";
+import type { OrganizationProvisionPayload } from "@/domain/tenant/organization/provision/model";
+import { OrganizationProvision } from "@/domain/tenant/organization/provision/service";
+import { Headers } from "@effect/platform";
 import { Context, Data, Effect, Layer } from "effect";
-import type { UserId } from "../global/user/model";
-import type { NewOrganization, Organization } from "./organization/model";
-
+import type {
+  NewOrganization,
+  Organization,
+} from "../../../domain/tenant/organization/model";
 // Payload for creating/initializing an organization in the DO
 // This should be compatible with what orgCreatePayload was in your action
-export type OrgDOCreationPayload = NewOrganization & {
-  creatorId: UserId;
-};
+export type OrgDOCreationPayload = NewOrganization;
 
 // Custom error for DO interactions
 export class DOInteractionError extends Data.TaggedError("DOInteractionError")<{
@@ -17,22 +19,10 @@ export class DOInteractionError extends Data.TaggedError("DOInteractionError")<{
   readonly originalError?: unknown;
 }> {}
 
-// Rename the DO-based service port to "Provision" semantics
-export class OrganizationProvisionService extends Context.Tag(
-  "core/organization/OrganizationProvisionService"
-)<
-  OrganizationProvisionService,
-  {
-    readonly initializeOrganization: (
-      payload: OrgDOCreationPayload
-    ) => Effect.Effect<Organization, DOInteractionError>;
-  }
->() {}
-
 // --- Required Dependency Tag ---
 // The DO namespace needed by the live service
 export class OrganizationDONamespace extends Context.Tag(
-  "cloudflare/bindings/ORG_DO_NAMESPACE"
+  "cloudflare/bindings/ORG_DO_NAMESPACE",
 )<
   OrganizationDONamespace, // The service itself (though it's just holding the namespace)
   typeof env.ORG_DO // Use DurableObjectNamespace directly, let TS infer or it defaults appropriately
@@ -40,30 +30,65 @@ export class OrganizationDONamespace extends Context.Tag(
 
 // Live Implementation Layer
 export const OrganizationProvisionServiceLive = Layer.effect(
-  OrganizationProvisionService,
+  OrganizationProvision,
   Effect.gen(function* (_) {
-    const orgDONamespace = yield* _(OrganizationDONamespace);
+    const orgDONamespace = yield* OrganizationDONamespace;
 
     return {
-      initializeOrganization: (payload: OrgDOCreationPayload) =>
-        Effect.tryPromise({
+      create: ({ organization, creatorId }: OrganizationProvisionPayload) => {
+        const a = Effect.gen(function* ($) {
+          // 1) look up your DO stub
+          const doId = orgDONamespace.idFromName(organization.slug);
+          const stub = orgDONamespace.get(doId);
+
+          // 2) call stub.fetch with (url, init) instead of new Request(...)
+          const response = yield* Effect.tryPromise({
+            try: async () => {
+              return stub.fetch("http://internal/organization", {
+                method: "POST",
+                headers: Headers.unsafeFromRecord({
+                  "Content-Type": "application/json",
+                }),
+                body: JSON.stringify({
+                  organization: {
+                    name: organization.name,
+                    slug: organization.slug,
+                    logo: organization.logo,
+                  },
+                  userId: creatorId,
+                }),
+              });
+            },
+            catch: (error) => {
+              return new DOInteractionError({
+                message: "An unexpected error occurred during DO interaction.",
+                originalError: error,
+              });
+            },
+          });
+
+          return response;
+        });
+        // .pipe(Effect.provide(FetchHttpClient.layer));
+
+        const x = Effect.tryPromise({
           try: async () => {
             // Use slug for idFromName, assuming it's unique
-            const doId = orgDONamespace.idFromName(payload.slug);
+            const doId = orgDONamespace.idFromName(organization.slug);
             const stub = orgDONamespace.get(doId);
 
-            console.log("initializeOrganization -> payload", payload);
+            console.log("initializeOrganization -> organization", organization);
             // Construct a full Request URL for DO stub.fetch
             const req = new Request("http://internal/organization", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 organization: {
-                  name: payload.name,
-                  slug: payload.slug,
-                  logo: payload.logo,
+                  name: organization.name,
+                  slug: organization.slug,
+                  logo: organization.logo,
                 },
-                userId: payload.creatorId,
+                userId: creatorId,
               }),
             });
             const response = await stub.fetch(req);
@@ -80,7 +105,7 @@ export const OrganizationProvisionServiceLive = Layer.effect(
                   errorJson.message ||
                   `DO request failed. Status: ${response.status}`,
                 status: response.status,
-                slug: payload.slug,
+                slug: organization.slug,
               });
             }
             const res = (await response.json()) as Organization;
@@ -94,10 +119,13 @@ export const OrganizationProvisionServiceLive = Layer.effect(
             return new DOInteractionError({
               message: "An unexpected error occurred during DO interaction.",
               originalError: unknownError,
-              slug: payload.slug,
+              slug: organization.slug,
             });
           },
-        }),
+        });
+
+        return x;
+      },
     };
-  })
+  }),
 );

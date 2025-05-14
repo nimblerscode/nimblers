@@ -1,10 +1,10 @@
 import { env } from "cloudflare:workers";
+import { createBetterAuthServiceAdapter } from "@/infrastructure/auth/better-auth/adapter";
+import { BetterAuthConfigLive } from "@/infrastructure/auth/better-auth/config";
 import {
   OrganizationDONamespace,
   OrganizationProvisionServiceLive,
-} from "@/domain/tenant/organizationDOService";
-import { createBetterAuthServiceAdapter } from "@/infrastructure/auth/better-auth/adapter";
-import { BetterAuthConfigLive } from "@/infrastructure/auth/better-auth/config";
+} from "@/infrastructure/cloudflare/durable-objects/OrganizationDONameSpace";
 import { ResendEmailAdapterLive } from "@/infrastructure/email/resend/adapter";
 import { ResendConfigLive } from "@/infrastructure/email/resend/config";
 import {

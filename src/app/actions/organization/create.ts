@@ -9,10 +9,7 @@ import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
 import { OrgD1Service } from "@/domain/global/organization/service";
 import type { UserId } from "@/domain/global/user/model";
 import type { NewOrganization } from "@/domain/tenant/organization/model";
-import {
-  type OrgDOCreationPayload,
-  OrganizationProvisionService,
-} from "@/domain/tenant/organizationDOService";
+import { OrganizationProvision } from "@/domain/tenant/organization/provision/service";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { OrgRepoD1Layer } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
 
@@ -91,18 +88,20 @@ export async function createOrganizationAction(
     };
   }
 
-  const orgCreatePayload: OrgDOCreationPayload = {
+  const orgCreatePayload: NewOrganization = {
     name,
     slug,
     logo: logo || undefined,
-    creatorId: creatorId as UserId,
     // id and createdAt will be handled by the DO/service layer
   };
 
   // Create the Effect program using the service
-  const createOrgProgram = OrganizationProvisionService.pipe(
+  const createOrgProgram = OrganizationProvision.pipe(
     Effect.flatMap((service) =>
-      service.initializeOrganization(orgCreatePayload),
+      service.create({
+        organization: orgCreatePayload,
+        creatorId: creatorId as UserId,
+      }),
     ),
   );
 

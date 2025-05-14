@@ -32,6 +32,7 @@ import {
   GetInvitationUseCaseLive,
 } from "@/application/tenant/invitations/get";
 import { DatabaseLive } from "@/config/layers";
+import { UserIdSchema } from "@/domain/global/user/model";
 import { InvitationIdSchema } from "@/domain/tenant/invitations/models";
 import { OrgInvitationRepoLive } from "@/domain/tenant/invitations/service";
 import { ResendEmailAdapterLive } from "@/infrastructure/email/resend/adapter";
@@ -70,7 +71,7 @@ const createOrganization = HttpApiEndpoint.post(
   .setPayload(
     Schema.Struct({
       organization: NewOrganizationSchema,
-      userId: Schema.String,
+      userId: UserIdSchema,
     }),
   )
   .addSuccess(OrganizationSchema);
@@ -156,7 +157,7 @@ const organizationsGroupLive = HttpApiBuilder.group(
         .handle(
           "createOrganization",
           ({ payload: { organization, userId } }) => {
-            return repository.createOrg(organization, userId).pipe(
+            return repository.create(organization, userId).pipe(
               Effect.mapError(
                 (error) =>
                   new HttpApiError.HttpApiDecodeError({

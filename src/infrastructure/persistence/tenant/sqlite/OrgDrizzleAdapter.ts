@@ -8,7 +8,7 @@ import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { v4 as uuidv4 } from "uuid";
 
 export const makeOrgDrizzleAdapter = (
-  db: DrizzleSqliteDODatabase<typeof schema>
+  db: DrizzleSqliteDODatabase<typeof schema>,
 ) => ({
   createOrg: async (data: NewOrganization, creatorUserId: string) => {
     const orgId = uuidv4();

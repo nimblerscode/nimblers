@@ -14,6 +14,6 @@ export const EmailSchema = S.String.pipe(
     identifier: "EmailFormat",
     jsonSchema: { type: "string", format: "email" },
   }),
-  S.brand("Email")
+  S.brand("Email"),
 );
 export type Email = S.Schema.Type<typeof EmailSchema>;
