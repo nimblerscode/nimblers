@@ -38,13 +38,14 @@
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",
     "effect": "^3.14.19",
+    "jose": "^6.0.11",
     "react": "19.2.0-canary-39cad7af-20250411",
     "react-dom": "19.2.0-canary-39cad7af-20250411",
     "resend": "^4.5.1",
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "2.0.0-beta.4",
     "@cloudflare/vitest-pool-workers": "^0.8.24",
     "@cloudflare/workers-types": "^4.20250505.0",
     "@effect/vitest": "^0.21.2",

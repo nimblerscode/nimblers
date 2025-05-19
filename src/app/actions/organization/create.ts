@@ -1,7 +1,7 @@
 "use server";
 
-import { env } from "cloudflare:workers";
 import { requestInfo } from "@redwoodjs/sdk/worker";
+import { env } from "cloudflare:workers";
 import { Effect, Exit, Layer } from "effect";
 
 import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
@@ -9,9 +9,9 @@ import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
 import { OrgD1Service } from "@/domain/global/organization/service";
 import type { UserId } from "@/domain/global/user/model";
 import type { NewOrganization } from "@/domain/tenant/organization/model";
-import { OrganizationProvision } from "@/domain/tenant/organization/provision/service";
+import { OrganizationDOService } from "@/domain/tenant/organization/service";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
-import { OrgRepoD1Layer } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
+import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
 
 // Define your global Env type, or import it if defined elsewhere
 // This should match the bindings defined in your wrangler.jsonc
@@ -45,14 +45,14 @@ export type SwitchOrganizationActionState = {
 // === CREATE ORGANIZATION ACTION ===
 export async function createOrganizationAction(
   _prevState: CreateOrganizationActionState, // previous state from useActionState
-  formData: FormData,
+  formData: FormData
 ): Promise<CreateOrganizationActionState> {
   const ctx = requestInfo.ctx as AppContext;
 
   // --- Retrieve authenticated userId ---
   if (!ctx.session || !ctx.session.userId) {
     console.error(
-      "createOrganizationAction: No session or userId found. User might not be authenticated.",
+      "createOrganizationAction: No session or userId found. User might not be authenticated."
     );
     return {
       success: false,
@@ -68,46 +68,23 @@ export async function createOrganizationAction(
   const slug = formData.get("slug") as string;
   const logo = formData.get("logo") as string | undefined;
 
-  const errors: { [key: string]: string[] } = {};
-  if (!name || name.trim() === "") {
-    errors.name = ["Organization name is required."];
-  }
-  if (!slug || slug.trim() === "") {
-    errors.slug = ["Organization slug is required."];
-  } else if (!/^[a-z0-9-]+$/.test(slug)) {
-    errors.slug = [
-      "Slug can only contain lowercase letters, numbers, and hyphens.",
-    ];
-  }
-  if (Object.keys(errors).length > 0) {
-    return {
-      success: false,
-      message: "Validation failed. Please check the fields.",
-      errors,
-      organization: null,
-    };
-  }
-
   const orgCreatePayload: NewOrganization = {
     name,
     slug,
-    logo: logo || undefined,
+    logo: logo ?? undefined,
     // id and createdAt will be handled by the DO/service layer
   };
 
   // Create the Effect program using the service
-  const createOrgProgram = OrganizationProvision.pipe(
+  const createOrgProgram = OrganizationDOService.pipe(
     Effect.flatMap((service) =>
-      service.create({
-        organization: orgCreatePayload,
-        creatorId: creatorId as UserId,
-      }),
-    ),
+      service.createOrganization(orgCreatePayload, creatorId as UserId)
+    )
   );
 
-  // Use the centralized DOServiceLayer
-  const fullLayer = OrganizationDOLive({ ORG_DO: env.ORG_DO });
-  const runnableEffect = createOrgProgram.pipe(Effect.provide(fullLayer));
+  const finalLayer = OrganizationDOLive({ ORG_DO: env.ORG_DO });
+
+  const runnableEffect = createOrgProgram.pipe(Effect.provide(finalLayer));
 
   // Run the Effect
   const program = await Effect.runPromiseExit(runnableEffect);
@@ -117,8 +94,8 @@ export async function createOrganizationAction(
     const organization = program.value;
 
     // Create the effect to insert into main DB
-    const orgRepoLayer = OrgRepoD1Layer.pipe(
-      Layer.provide(DatabaseLive({ DB: env.DB })),
+    const orgRepoLayer = OrgRepoD1LayerLive.pipe(
+      Layer.provide(DatabaseLive({ DB: env.DB }))
     );
 
     console.log("organization", organization);
@@ -129,8 +106,8 @@ export async function createOrganizationAction(
           id: organization.id,
           name: organization.name,
           creatorId: creatorId as UserId,
-        }),
-      ),
+        })
+      )
     ).pipe(Effect.provide(orgRepoLayer));
 
     const result = await Effect.runPromiseExit(create);
@@ -139,7 +116,11 @@ export async function createOrganizationAction(
       return {
         success: true,
         message: "Organization created successfully!",
-        organization,
+        organization: {
+          name: organization.name,
+          slug: organization.slug,
+          logo: organization.logo ?? undefined,
+        },
         errors: null,
       };
     }

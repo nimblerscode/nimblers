@@ -1,13 +1,13 @@
+import { eq } from "drizzle-orm";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type {
   NewOrganizationD1,
   OrganizationD1,
 } from "@/domain/global/organization/model";
-import { eq } from "drizzle-orm";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
 import * as schema from "./schema";
 
 export const makeOrgD1DrizzleAdapter = (
-  db: DrizzleD1Database<typeof schema>,
+  db: DrizzleD1Database<typeof schema>
 ) => ({
   create: async (organizationData: NewOrganizationD1) => {
     const orgInsertData = {
@@ -20,6 +20,14 @@ export const makeOrgD1DrizzleAdapter = (
       .insert(schema.organization)
       .values(orgInsertData)
       .returning();
+
+    await db
+      .update(schema.session)
+      .set({
+        activeOrganizationId: orgResults[0].id,
+      })
+      .where(eq(schema.session.userId, organizationData.creatorId));
+
     return orgResults[0] as unknown as OrganizationD1;
   },
   getOrgById: async (id: string) => {

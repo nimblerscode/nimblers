@@ -1,7 +1,7 @@
 "use client";
 
-import { authClient } from "@/app/lib/authClient";
 import { type FormEvent, useState } from "react";
+import { authClient } from "@/app/lib/authClient";
 
 // Initialize the auth client (consider moving this outside if reused)
 export default function Login() {
@@ -33,7 +33,7 @@ export default function Login() {
           // Check if response indicates success (better-auth client might not throw for all logical errors)
           // Assuming success if no error is thrown, redirect. Adjust if response has specific success flags.
           console.log("Client-side sign-in successful:"); // Optional logging
-          window.location.href = "/create-organization"; // Redirect on success
+          window.location.href = "/organization/create"; // Redirect on success
           setIsPending(false);
         },
         onError: async (error) => {

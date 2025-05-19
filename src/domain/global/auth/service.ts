@@ -1,6 +1,5 @@
 import type { Session, User } from "better-auth";
-import { Schema as S } from "effect";
-import { Context, type Effect } from "effect";
+import { Context, type Effect, Schema as S } from "effect";
 import type { UserNotFoundError } from "../user/model";
 import type { Account } from "./model";
 

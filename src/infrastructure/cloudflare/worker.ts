@@ -1,9 +1,8 @@
-// Import only error types if they are used in AppContext or elsewhere
 import { defineApp } from "@redwoodjs/sdk/worker";
-import { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";
-
-import { allRoutes } from "@/config/routes"; // Assuming Env is exported from routes.ts
 import type { Session, User } from "better-auth";
+
+import { allRoutes } from "@/config/routes";
+import { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";
 
 export type AppContext = {
   session?: Session;

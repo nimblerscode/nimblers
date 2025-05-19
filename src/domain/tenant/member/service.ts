@@ -1,5 +1,5 @@
-import type { Email } from "@/domain/global/email/model";
 import { Context, type Effect, type Option } from "effect";
+import type { Email } from "@/domain/global/email/model";
 import type {
   Member,
   MemberDbError,

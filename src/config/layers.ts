@@ -1,9 +1,13 @@
-import { env } from "cloudflare:workers";
+import { InvitationUseCaseLive } from "@/application/tenant/invitations/service";
 import { createBetterAuthServiceAdapter } from "@/infrastructure/auth/better-auth/adapter";
 import { BetterAuthConfigLive } from "@/infrastructure/auth/better-auth/config";
 import {
+  InvitationDONamespace,
+  InvitationDOServiceLive,
+} from "@/infrastructure/cloudflare/durable-objects/InvitationDO";
+import {
+  OrganizationDOAdapterLive,
   OrganizationDONamespace,
-  OrganizationProvisionServiceLive,
 } from "@/infrastructure/cloudflare/durable-objects/OrganizationDONameSpace";
 import { ResendEmailAdapterLive } from "@/infrastructure/email/resend/adapter";
 import { ResendConfigLive } from "@/infrastructure/email/resend/config";
@@ -11,7 +15,16 @@ import {
   D1BindingLive,
   DrizzleD1ClientLive,
 } from "@/infrastructure/persistence/global/d1/drizzle";
+import {
+  DrizzleDOClientLive,
+  DurableObjectState,
+} from "@/infrastructure/persistence/tenant/sqlite/drizzle";
+import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
+import { InvitationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/InvitationRepoLive";
+import { env } from "cloudflare:workers";
 import { Layer } from "effect";
+import type { OrganizationId } from "@/domain/tenant/organization/model";
+import { InviteTokenLive } from "@/domain/tenant/invitations/tokenUtils";
 
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
@@ -29,9 +42,49 @@ export const AuthServiceLive = (req: Request) =>
 
 /**
  * DOServiceLayer: provides only the Durable Object Namespace
- * and the OrganizationProvisionServiceLive (DO stub).
+ * and the OrganizationDOAdapter implementation.
  */
 export function OrganizationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
   const doNamespaceLayer = Layer.succeed(OrganizationDONamespace, doEnv.ORG_DO);
-  return Layer.provide(OrganizationProvisionServiceLive, doNamespaceLayer);
+
+  const OrgServiceLayer = Layer.provide(
+    OrganizationDOAdapterLive,
+    doNamespaceLayer
+  );
+
+  return OrgServiceLayer;
 }
+
+export function InvitationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
+  const doNamespaceLayer = Layer.succeed(InvitationDONamespace, doEnv.ORG_DO);
+  return Layer.provide(
+    InvitationDOServiceLive.pipe(Layer.provide(InviteTokenLive)),
+    doNamespaceLayer
+  );
+}
+
+export const InvitationLayerLive = (doId: DurableObjectId) => {
+  const MemberServiceLayer = Layer.provide(MemberRepoLive, DrizzleDOClientLive);
+
+  // Invitation repository layer
+  const InvitationRepoLayer = Layer.provide(
+    InvitationRepoLive,
+    DrizzleDOClientLive
+  );
+
+  // Email service layer
+  const EmailLayer = Layer.provide(
+    ResendEmailAdapterLive,
+    Layer.merge(ResendConfigLive, MemberServiceLayer)
+  );
+
+  // User repository layer
+
+  // Invitation use case layer with all its dependencies
+  const InvitationUseCaseLayer = Layer.provide(
+    InvitationUseCaseLive(doId).pipe(Layer.provide(InviteTokenLive)),
+    Layer.mergeAll(EmailLayer, MemberServiceLayer)
+  );
+
+  return InvitationUseCaseLayer.pipe(Layer.provide(InvitationRepoLayer));
+};

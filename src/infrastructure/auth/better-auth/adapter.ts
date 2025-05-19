@@ -1,6 +1,6 @@
+import { Effect, Layer } from "effect";
 import { AuthService, AuthServiceError } from "@/domain/global/auth/service";
 import { BetterAuthInstance } from "@/infrastructure/auth/better-auth/config";
-import { Effect, Layer } from "effect";
 
 export const createBetterAuthServiceAdapter = (request: Request) => {
   return Layer.scoped(

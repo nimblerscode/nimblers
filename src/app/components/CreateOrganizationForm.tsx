@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useEffect } from "react"; // Import useEffect
+import { useActionState } from "react"; // Import useEffect
 import {
   type CreateOrganizationActionState,
   createOrganizationAction,
 } from "../actions/organization/create"; // Correct relative path and add type import
+
 // Initialize state with the correct type
 const initialState: CreateOrganizationActionState = {
   success: false,
@@ -18,24 +19,6 @@ export default function CreateOrganizationForm() {
     createOrganizationAction,
     initialState,
   );
-
-  // Add useEffect for redirection
-  useEffect(() => {
-    // Check if the action was successful and we have the new org slug
-    if (state.success && state.organization?.slug) {
-      const newOrgSlug = state.organization.slug;
-      console.log(
-        `Organization created successfully. Redirecting to /${newOrgSlug}/manage...`,
-      );
-      // Perform the redirect using basic browser navigation
-      window.location.href = `/${newOrgSlug}/manage`;
-      // If you were using a client-side router like Next.js, you might do:
-      // import { useRouter } from 'next/navigation';
-      // const router = useRouter();
-      // router.push(`/${newOrgSlug}/manage`);
-    }
-    // Dependencies array: run effect when success or slug changes
-  }, [state.success, state.organization?.slug]);
 
   return (
     <form action={formAction}>

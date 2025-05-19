@@ -7,6 +7,6 @@ import { integer } from "drizzle-orm/sqlite-core";
 export const normalizeDate = (column: string) => {
   return integer(column, { mode: "timestamp_ms" })
     .notNull()
-    .default(sql`(unixepoch() * 1000)`)
-    .$onUpdate(() => new Date());
+    .default(sql`(unixepoch() * 1000)`);
+  // .$onUpdate(() => new Date());
 };

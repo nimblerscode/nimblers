@@ -1,9 +1,9 @@
 "use server";
+import React from "react"; // Import React for Suspense
 import { getOrganizationsForUser } from "@/app/actions/organization/create"; // Import the server action
 import InviteMemberForm from "@/app/components/InviteMemberForm";
 import LogoutButton from "@/app/components/LogoutButton";
 import type { AppContext } from "@/infrastructure/cloudflare/worker"; // Import the context type
-import React from "react"; // Import React for Suspense
 import ManageOrganizationClient from "./ManageOrganizationClient"; // Import the new client wrapper
 
 // Define the expected shape of organization data (can be shared or redefined)

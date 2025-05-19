@@ -1,7 +1,7 @@
-import type { Email } from "@/domain/global/email/model";
-import type { User, UserId } from "@/domain/global/user/model";
 import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { Email } from "@/domain/global/email/model";
+import type { User, UserId } from "@/domain/global/user/model";
 import type * as schema from "./schema";
 import type { user as userTable } from "./schema";
 

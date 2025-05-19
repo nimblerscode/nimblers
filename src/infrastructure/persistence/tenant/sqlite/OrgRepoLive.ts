@@ -1,31 +1,40 @@
-import { MemberRepo } from "@/domain/tenant/member/service";
-import type { OrgDbError } from "@/domain/tenant/organization/model";
-import { OrgService } from "@/domain/tenant/organization/service";
-import { makeOrgDrizzleAdapter } from "@/infrastructure/persistence/tenant/sqlite/OrgDrizzleAdapter";
-import { makeOrgEffectAdapter } from "@/infrastructure/persistence/tenant/sqlite/OrgEffectAdapter";
-import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { Effect, Layer } from "effect";
+import { MemberRepo } from "@/domain/tenant/member/service";
+import {
+  type NewOrganization,
+  OrgDbError,
+} from "@/domain/tenant/organization/model";
+import { OrgService } from "@/domain/tenant/organization/service";
+import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
+import { makeOrgDrizzleAdapter } from "@/infrastructure/persistence/tenant/sqlite/OrgDrizzleAdapter";
 
+const mapToOrgDbError = (error: unknown): OrgDbError => {
+  return new OrgDbError({ cause: error });
+};
 // --- Live Layer ---
 export const OrgRepoLive = Layer.effect(
   OrgService,
   Effect.gen(function* () {
-    const client = yield* DrizzleDOClient;
+    const { db } = yield* DrizzleDOClient;
     const memberRepoService = yield* MemberRepo;
 
-    const adapter = makeOrgEffectAdapter(
-      makeOrgDrizzleAdapter(client.db),
-      memberRepoService,
-    );
+    const drizzleAdapter = makeOrgDrizzleAdapter(db);
 
-    // Wrap/rename and adapt error type if needed
     return {
-      create: (data, creatorUserId) =>
-        adapter.createOrg(data, creatorUserId).pipe(
-          // If createOrg only throws OrgDbError, widen to OrgDbError | DOInteractionError
-          Effect.mapError((e) => e as OrgDbError),
-        ),
-      // ...add other methods as needed
+      create: (data: NewOrganization, creatorUserId: string) =>
+        Effect.gen(function* () {
+          const result = yield* Effect.tryPromise({
+            try: () => drizzleAdapter.createOrg(data, creatorUserId),
+            catch: mapToOrgDbError,
+          });
+          // Now, create the initial member
+          const createdMemberEffect = memberRepoService.createMember(
+            result.memberCreateData
+          );
+
+          yield* createdMemberEffect.pipe(Effect.mapError(mapToOrgDbError));
+          return result.org;
+        }),
     };
-  }),
+  })
 );

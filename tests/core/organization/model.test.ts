@@ -3,10 +3,10 @@ import { Schema as S } from "effect";
 import {
   type Invitation,
   InvitationSchema,
-  type OrgCreateInput,
-  OrgCreateInputSchema,
   type Organization,
   OrganizationSchema,
+  type OrgCreateInput,
+  OrgCreateInputSchema,
 } from "../../../src/core/organization/model"; // Adjusted relative path
 
 describe("Core Organization Models", () => {

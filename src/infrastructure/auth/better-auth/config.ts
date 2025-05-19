@@ -1,7 +1,7 @@
+import { Context, Effect, Layer } from "effect";
 import { EmailService } from "@/domain/global/email/service";
 import { auth } from "@/infrastructure/auth/better-auth/instance";
 import { DrizzleD1Client } from "@/infrastructure/persistence/global/d1/drizzle";
-import { Context, Effect, Layer } from "effect";
 
 export type InferredAuthInstance = ReturnType<typeof auth>;
 
@@ -17,9 +17,9 @@ export const BetterAuthConfigLive: Layer.Layer<
   DrizzleD1Client | EmailService
 > = Layer.effect(
   BetterAuthInstance,
-  Effect.gen(function* (_) {
-    const drizzleClient = yield* _(DrizzleD1Client);
-    const emailService = yield* _(EmailService);
+  Effect.gen(function* () {
+    const drizzleClient = yield* DrizzleD1Client;
+    const emailService = yield* EmailService;
 
     // Initialize betterAuth with the Drizzle adapter, EmailService, and config
     const authInstance = auth(drizzleClient, emailService);

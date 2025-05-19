@@ -1,9 +1,9 @@
+import type { User as BetterAuthUser, Session } from "better-auth";
+import { Effect } from "effect";
 import {
   AuthService,
   type AuthServiceError,
 } from "@/domain/global/auth/service";
-import type { User as BetterAuthUser, Session } from "better-auth";
-import { Effect } from "effect";
 
 export const getSession = (): Effect.Effect<
   { session: Session; user: BetterAuthUser },

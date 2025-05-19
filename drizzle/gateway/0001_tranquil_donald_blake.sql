@@ -1,0 +1,1 @@
+ALTER TABLE `organization` RENAME COLUMN "orgId" TO "id";

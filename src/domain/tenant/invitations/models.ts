@@ -1,11 +1,11 @@
+import { Data, Schema as S } from "effect";
 import { EmailSchema } from "@/domain/global/email/model";
 import type { UserError } from "@/domain/global/user/model";
 import { UserIdSchema } from "@/domain/global/user/model";
 import {
-  type OrgDbError,
   OrganizationIdSchema,
+  type OrgDbError,
 } from "@/domain/tenant/organization/model";
-import { Data, Schema as S } from "effect";
 
 export const InvitationStatusLiterals = {
   pending: S.Literal("pending"),
@@ -18,7 +18,7 @@ export const InvitationStatusSchema = S.Union(
   InvitationStatusLiterals.pending,
   InvitationStatusLiterals.accepted,
   InvitationStatusLiterals.expired,
-  InvitationStatusLiterals.revoked,
+  InvitationStatusLiterals.revoked
 );
 
 export type InvitationStatus = S.Schema.Type<typeof InvitationStatusSchema>;
@@ -45,7 +45,6 @@ export const InvitationSchema = S.Struct({
 export type Invitation = S.Schema.Type<typeof InvitationSchema>;
 
 export const NewInvitationSchema = S.Struct({
-  organizationId: OrganizationIdSchema,
   inviterId: UserIdSchema,
   inviteeEmail: EmailSchema,
   role: S.String,
@@ -70,29 +69,28 @@ export class InvitationExpired extends Data.TaggedError("InvitationExpired")<{
 }> {}
 
 export class InvitationAlreadyAccepted extends Data.TaggedError(
-  "InvitationAlreadyAccepted",
-)<{ message: string; invitationId: string; acceptedAt: Date }> {}
+  "InvitationAlreadyAccepted"
+)<{ message: string; invitationId: string }> {}
 
 export class InvitationAlreadyRevoked extends Data.TaggedError(
-  "InvitationAlreadyRevoked",
+  "InvitationAlreadyRevoked"
 )<{ message: string; invitationId: string }> {}
 
 export class DuplicatePendingInvitation extends Data.TaggedError(
-  "DuplicatePendingInvitation",
+  "DuplicatePendingInvitation"
 )<{ message: string; email: string }> {}
 
 export class MaxPendingInvitationsReached extends Data.TaggedError(
-  "MaxPendingInvitationsReached",
+  "MaxPendingInvitationsReached"
 )<{ message: string; organizationId: string; limit: number }> {}
 
 export class UserAlreadyMember extends Data.TaggedError("UserAlreadyMember")<{
   message: string;
   userId: string;
-  organizationId: string;
 }> {}
 
 export class InvalidInvitationStatusTransition extends Data.TaggedError(
-  "InvalidInvitationStatusTransition",
+  "InvalidInvitationStatusTransition"
 )<{
   message: string;
   invitationId: string;

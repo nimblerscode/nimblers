@@ -1,8 +1,8 @@
+import { Effect } from "effect";
 import { getSession } from "@/application/global/auth/getSession";
 import { handler } from "@/application/global/auth/handler";
 import { AuthServiceLive } from "@/config/layers";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
-import { Effect } from "effect";
 
 export const makeAuthResponseEffect = (request: Request) => {
   return handler().pipe(Effect.provide(AuthServiceLive(request)));
@@ -20,8 +20,9 @@ export const sessionHandler = async ({
   ctx: AppContext;
   request: Request;
 }) => {
+  console.log("sessionHandler", ctx);
   const getSessionEffect = getSession().pipe(
-    Effect.provide(AuthServiceLive(request)),
+    Effect.provide(AuthServiceLive(request))
   );
 
   return Effect.runPromise(
@@ -42,8 +43,10 @@ export const sessionHandler = async ({
             });
           ctx.session = session;
           ctx.user = user;
+
+          console.log("sessionHandler", ctx);
         },
-      }),
-    ),
+      })
+    )
   );
 };

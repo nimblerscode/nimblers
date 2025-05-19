@@ -4,7 +4,13 @@ import { getOrgHandler } from "./api/handlers";
 
 export class OrganizationDurableObject extends EffectDurableObjectBase {
   async fetch(request: Request): Promise<Response> {
-    const { handler } = getOrgHandler(this.state, this.env.DB);
-    return handler(request);
+    console.log("Organization fetch", request);
+    const { handler } = getOrgHandler(this.state);
+    const x = handler(request).then((response) => {
+      console.log("Organization fetch response", response);
+      return response;
+    });
+
+    return x;
   }
 }

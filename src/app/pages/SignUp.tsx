@@ -1,8 +1,8 @@
 "use client";
 
+import { type FormEvent, useState } from "react";
 // Import the better-auth client
 import { authClient } from "@/app/lib/authClient";
-import { type FormEvent, useState } from "react";
 
 // Define state for messages/errors
 interface SignUpState {

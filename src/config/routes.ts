@@ -1,12 +1,12 @@
+import CreateOrganizationForm from "@/app/components/CreateOrganizationForm";
+import { Document } from "@/app/Document";
+import SendInvitation from "@/app/pages/Home";
+import Login from "@/app/pages/Login";
 import { prefix, render, route } from "@redwoodjs/sdk/router";
 
-import { Document } from "@/app/Document";
-import CreateOrganizationForm from "@/app/components/CreateOrganizationForm";
-import Login from "@/app/pages/Login";
-import SignUp from "@/app/pages/SignUp";
-
-import { GetInvitation } from "@/app/components/GetInvitation";
 import ManageOrganization from "@/app/pages/ManageOrganization";
+import SignUp from "@/app/pages/SignUp";
+import InvitationsPage from "@/app/pages/InvitationsPage";
 import { authResponse, sessionHandler } from "@/infrastructure/auth/middleware";
 
 // Organization routes (if simple enough to keep here, otherwise import)
@@ -20,7 +20,8 @@ export const allRoutes = [
   render(Document, [
     route("/", () => new Response("Hello, World!")),
     prefix("/organization", organizationRoutes),
-    route("/invitations/:invitationId", [GetInvitation]),
+    route("/invitations/create", [sessionHandler, SendInvitation]),
+    route("/invitations/:token", InvitationsPage),
     route("/login", [Login]),
     route("/signup", [SignUp]),
     // Add other UI routes within Document here if needed

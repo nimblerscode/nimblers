@@ -1,5 +1,5 @@
-import { normalizeDate } from "@/infrastructure/persistence/common/utils"; // Import the helper
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { normalizeDate } from "@/infrastructure/persistence/common/utils"; // Import the helper
 
 // === Better Auth Aligned Schema ===
 
@@ -64,7 +64,7 @@ export const verification = sqliteTable("verification", {
 
 // === Organizations Table ===
 export const organization = sqliteTable("organization", {
-  id: text("orgId").primaryKey().notNull(), // Matches DO name/ID
+  id: text("id").primaryKey().notNull(), // Matches DO name/ID
   name: text("name").notNull().unique(),
   status: text("status").default("active").notNull(), // 'active', 'archived', etc.
   creatorId: text("creatorId")

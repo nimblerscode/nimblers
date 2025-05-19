@@ -1,9 +1,8 @@
+import { Effect } from "effect";
 import {
   type NewOrganizationD1,
   OrgDbError,
 } from "@/domain/global/organization/model";
-
-import { Effect } from "effect";
 import type { makeOrgD1DrizzleAdapter } from "./OrgD1DrizzleAdapter";
 
 const mapToOrgDbError = (error: unknown): OrgDbError => {
@@ -12,7 +11,7 @@ const mapToOrgDbError = (error: unknown): OrgDbError => {
 };
 
 export const makeOrgD1EffectAdapter = (
-  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>,
+  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>
 ) => ({
   create: (organizationData: NewOrganizationD1) =>
     Effect.gen(function* () {
@@ -22,7 +21,7 @@ export const makeOrgD1EffectAdapter = (
       });
       if (!orgResult) {
         return yield* Effect.fail(
-          mapToOrgDbError("Insert returned no results"),
+          mapToOrgDbError("Insert returned no results")
         );
       }
       return orgResult;

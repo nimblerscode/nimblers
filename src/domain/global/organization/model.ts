@@ -1,5 +1,5 @@
-import { OrganizationIdSchema } from "@/domain/tenant/organization/model";
 import { Schema as S } from "effect";
+import { OrganizationIdSchema } from "@/domain/tenant/organization/model";
 import { UserIdSchema } from "../user/model";
 
 export const OrganizationD1Schema = S.Struct({

@@ -1,10 +1,10 @@
-import type { OrganizationId } from "@/domain/tenant/organization/model";
 import { Context, type Effect } from "effect";
+import type { OrganizationId } from "@/domain/tenant/organization/model";
 import type {
   NewOrganizationD1,
+  OrganizationD1,
   OrgDbError,
   OrgNotFoundError,
-  OrganizationD1,
 } from "./model";
 
 export class OrgD1Service extends Context.Tag("core/organization/OrgD1Service")<

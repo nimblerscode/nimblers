@@ -1,3 +1,4 @@
+import { Effect, Layer } from "effect";
 import { DbError } from "@/domain/global/auth/service";
 import type { Email } from "@/domain/global/email/model";
 import {
@@ -6,10 +7,9 @@ import {
   UserNotFoundError,
 } from "@/domain/global/user/model";
 import { UserRepo } from "@/domain/global/user/service";
-import { Effect, Layer } from "effect";
-import { makeUserDrizzleAdapter } from "./UserDrizzleAdapter";
 import { DrizzleD1Client } from "./drizzle";
 import { user as userTable } from "./schema";
+import { makeUserDrizzleAdapter } from "./UserDrizzleAdapter";
 
 export const UserRepoLive = Layer.effect(
   UserRepo,

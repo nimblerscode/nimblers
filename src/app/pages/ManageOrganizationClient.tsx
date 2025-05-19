@@ -1,7 +1,8 @@
 "use client";
 
-import { switchActiveOrganization } from "@/app/actions/organization/create";
 import { type ReactNode, useEffect, useState, useTransition } from "react";
+
+// import { switchActiveOrganization } from "@/app/actions/organization/create";
 
 // Define the expected shape of an organization object (mirroring switcher)
 type OrganizationInfo = {

@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import {
   DOInteractionError,
-  type OrgDOCreationPayload,
   OrganizationDONamespace,
   OrganizationProvisionService,
   OrganizationProvisionServiceLive,
+  type OrgDOCreationPayload,
 } from "../../../src/core/organization/organizationDOService";
 import type { OrgCreateData } from "../../../src/core/organization/service";
 

@@ -1,5 +1,5 @@
-import { normalizeDate } from "@/infrastructure/persistence/common/utils"; // Import the helper
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { normalizeDate } from "@/infrastructure/persistence/common/utils"; // Import the helper
 
 // --- Better Auth Organization Plugin Tables ---
 

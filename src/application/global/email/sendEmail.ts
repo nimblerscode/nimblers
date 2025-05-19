@@ -1,6 +1,6 @@
+import { Effect } from "effect";
 import { EmailError } from "@/domain/global/email/model";
 import { EmailService } from "@/domain/global/email/service";
-import { Effect } from "effect";
 
 export const sendEmail = ({
   from,

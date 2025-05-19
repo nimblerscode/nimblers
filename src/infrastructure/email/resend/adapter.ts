@@ -1,6 +1,6 @@
+import { Effect, Layer } from "effect";
 import { EmailError } from "@/domain/global/email/model";
 import { EmailService } from "@/domain/global/email/service";
-import { Effect, Layer } from "effect";
 import { EmailConfig } from "./config";
 
 export const ResendEmailAdapterLive = Layer.effect(

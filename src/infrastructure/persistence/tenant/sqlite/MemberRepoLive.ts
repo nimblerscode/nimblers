@@ -1,7 +1,6 @@
-import { Effect, Layer, Option } from "effect";
-import { Schema as S } from "effect";
+import { eq } from "drizzle-orm";
+import { Effect, Layer, Option, Schema as S } from "effect";
 import { v4 as uuidv4 } from "uuid";
-
 import {
   type Member,
   MemberDbError,
@@ -9,20 +8,18 @@ import {
   NewMemberSchema,
 } from "@/domain/tenant/member/model";
 import { MemberRepo } from "@/domain/tenant/member/service";
-
 import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { member as memberTable } from "@/infrastructure/persistence/tenant/sqlite/schema";
-import { eq } from "drizzle-orm";
 
 export const MemberRepoLive = Layer.effect(
   MemberRepo,
-  Effect.gen(function* (_) {
-    const { db } = yield* _(DrizzleDOClient);
+  Effect.gen(function* () {
+    const { db } = yield* DrizzleDOClient;
 
     return {
       createMember: (data: NewMember) => {
         const effectLogic: Effect.Effect<Member, MemberDbError, never> =
-          Effect.gen(function* (_) {
+          Effect.gen(function* () {
             const memberId = uuidv4();
             const memberToInsert = {
               ...data,
@@ -30,38 +27,34 @@ export const MemberRepoLive = Layer.effect(
             };
 
             // Validate input data
-            yield* _(
-              S.decodeUnknown(NewMemberSchema)(data),
+            yield* S.decodeUnknown(NewMemberSchema)(data).pipe(
               Effect.mapError(
                 (e) =>
                   new MemberDbError({
                     cause: `Input data validation error: ${e}`,
-                  }),
-              ),
+                  })
+              )
             );
 
-            const dbRow = yield* _(
-              Effect.tryPromise({
-                try: async () => {
-                  const res = await db
-                    .insert(memberTable)
-                    .values(memberToInsert)
-                    .returning()
-                    .get();
-                  if (!res) {
-                    throw new MemberDbError({
-                      cause: "Failed to insert member, no result returned.",
-                    });
-                  }
-                  return res as Member;
-                },
-                catch: (unknownError) => {
-                  if (unknownError instanceof MemberDbError)
-                    return unknownError;
-                  return new MemberDbError({ cause: unknownError });
-                },
-              }),
-            );
+            const dbRow = yield* Effect.tryPromise({
+              try: async () => {
+                const res = await db
+                  .insert(memberTable)
+                  .values(memberToInsert)
+                  .returning()
+                  .get();
+                if (!res) {
+                  throw new MemberDbError({
+                    cause: "Failed to insert member, no result returned.",
+                  });
+                }
+                return res as Member;
+              },
+              catch: (unknownError) => {
+                if (unknownError instanceof MemberDbError) return unknownError;
+                return new MemberDbError({ cause: unknownError });
+              },
+            });
 
             const createdAtDate =
               dbRow.createdAt instanceof Date
@@ -98,7 +91,7 @@ export const MemberRepoLive = Layer.effect(
               },
               catch: (unknownError) =>
                 new MemberDbError({ cause: unknownError }), // This becomes MemberDbError in the Effect error channel
-            }),
+            })
           );
 
           if (!dbResult || dbResult.length === 0) {
@@ -133,5 +126,5 @@ export const MemberRepoLive = Layer.effect(
           return Option.some(member); // Correctly return Option.some(member)
         }).pipe(Effect.withSpan("MemberRepo.findMembership")),
     };
-  }),
+  })
 );
