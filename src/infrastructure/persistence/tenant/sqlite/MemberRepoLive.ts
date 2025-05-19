@@ -32,8 +32,8 @@ export const MemberRepoLive = Layer.effect(
                 (e) =>
                   new MemberDbError({
                     cause: `Input data validation error: ${e}`,
-                  })
-              )
+                  }),
+              ),
             );
 
             const dbRow = yield* Effect.tryPromise({
@@ -91,7 +91,7 @@ export const MemberRepoLive = Layer.effect(
               },
               catch: (unknownError) =>
                 new MemberDbError({ cause: unknownError }), // This becomes MemberDbError in the Effect error channel
-            })
+            }),
           );
 
           if (!dbResult || dbResult.length === 0) {
@@ -126,5 +126,5 @@ export const MemberRepoLive = Layer.effect(
           return Option.some(member); // Correctly return Option.some(member)
         }).pipe(Effect.withSpan("MemberRepo.findMembership")),
     };
-  })
+  }),
 );

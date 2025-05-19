@@ -16,7 +16,7 @@ import migrations from "../../../../../drizzle/tenant/migrations.js"; // Placeho
  * Tag for the Durable Object's state, providing access to its storage.
  */
 export const DurableObjectState = Context.GenericTag<DurableObjectState>(
-  "infra/do/DurableObjectStorage"
+  "infra/do/DurableObjectStorage",
 );
 
 /**
@@ -76,7 +76,7 @@ export const DrizzleDOClientLive = Layer.scoped(
           });
         }),
     };
-  })
+  }),
 );
 
 const schema = tenantSchema;

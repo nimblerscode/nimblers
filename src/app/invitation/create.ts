@@ -9,7 +9,7 @@ import type { InviteUserState } from "../pages/Home";
 
 export async function inviteUserAction(
   prevState: InviteUserState,
-  formData: FormData
+  formData: FormData,
 ) {
   const email = formData.get("email") as string;
 
@@ -21,9 +21,9 @@ export async function inviteUserAction(
           inviteeEmail: email as Email,
           role: "admin",
         },
-        "jjj"
-      )
-    )
+        "jjj",
+      ),
+    ),
   );
 
   const fullLayer = InvitationDOLive({
@@ -31,7 +31,7 @@ export async function inviteUserAction(
   });
 
   const invitation = await Effect.runPromise(
-    invitationProgram.pipe(Effect.provide(fullLayer))
+    invitationProgram.pipe(Effect.provide(fullLayer)),
   );
 
   return invitation;

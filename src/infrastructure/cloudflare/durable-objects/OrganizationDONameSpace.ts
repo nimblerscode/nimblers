@@ -1,17 +1,17 @@
 import type { env } from "cloudflare:workers";
 import { Headers } from "@effect/platform";
 import { Context, Effect, Layer } from "effect";
-import { OrganizationDOService } from "@/domain/tenant/organization/service";
 import type { UserId } from "@/domain/global/user/model";
 import type {
   NewOrganization,
   Organization,
 } from "@/domain/tenant/organization/model";
 import { OrganizationProvisionError } from "@/domain/tenant/organization/provision/service";
+import { OrganizationDOService } from "@/domain/tenant/organization/service";
 
 // The DO namespace needed by the adapter
 export class OrganizationDONamespace extends Context.Tag(
-  "cloudflare/bindings/ORG_DO_NAMESPACE"
+  "cloudflare/bindings/ORG_DO_NAMESPACE",
 )<OrganizationDONamespace, typeof env.ORG_DO>() {}
 
 // Layer that provides the adapter
@@ -22,7 +22,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
 
     const createOrganizationDO = (
       organization: NewOrganization,
-      creatorId: UserId
+      creatorId: UserId,
     ) => {
       return Effect.gen(function* () {
         // Create the organization in the Durable Object
@@ -80,5 +80,5 @@ export const OrganizationDOAdapterLive = Layer.effect(
     return {
       createOrganization: createOrganizationDO,
     };
-  })
+  }),
 );

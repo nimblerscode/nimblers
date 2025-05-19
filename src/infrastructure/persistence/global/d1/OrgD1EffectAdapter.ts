@@ -11,7 +11,7 @@ const mapToOrgDbError = (error: unknown): OrgDbError => {
 };
 
 export const makeOrgD1EffectAdapter = (
-  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>
+  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>,
 ) => ({
   create: (organizationData: NewOrganizationD1) =>
     Effect.gen(function* () {
@@ -21,7 +21,7 @@ export const makeOrgD1EffectAdapter = (
       });
       if (!orgResult) {
         return yield* Effect.fail(
-          mapToOrgDbError("Insert returned no results")
+          mapToOrgDbError("Insert returned no results"),
         );
       }
       return orgResult;

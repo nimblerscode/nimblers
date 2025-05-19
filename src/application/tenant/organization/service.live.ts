@@ -16,11 +16,11 @@ export const OrganizationProvisionLive = Layer.effect(
           // Use the service to create the organization
           const result = yield* organizationDOService.createOrganization(
             organization,
-            creatorId
+            creatorId,
           );
 
           return result;
         }),
     };
-  })
+  }),
 );

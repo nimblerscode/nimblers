@@ -13,7 +13,7 @@ export class OrgService extends Context.Tag("core/organization/OrgService")<
   {
     create: (
       data: NewOrganization,
-      creatorUserId: UserId
+      creatorUserId: UserId,
     ) => Effect.Effect<Organization, OrgDbError>;
   }
 >() {}
@@ -24,7 +24,7 @@ export class OrgService extends Context.Tag("core/organization/OrgService")<
  * Repository service for basic organization persistence
  */
 export class OrgRepositoryService extends Context.Tag(
-  "domain/services/OrgRepository"
+  "domain/services/OrgRepository",
 )<
   OrgRepositoryService,
   {
@@ -40,13 +40,13 @@ export class OrgRepositoryService extends Context.Tag(
  * Durable Object service for distributed organization operations
  */
 export class OrganizationDOService extends Context.Tag(
-  "domain/services/OrganizationDO"
+  "domain/services/OrganizationDO",
 )<
   OrganizationDOService,
   {
     createOrganization: (
       organization: NewOrganization,
-      creatorId: UserId
+      creatorId: UserId,
     ) => Effect.Effect<Organization, OrganizationProvisionError>;
     // Add other methods if your domain requires them
     // updateOrganization: (id: string, data: Partial<NewOrganization>) => ...

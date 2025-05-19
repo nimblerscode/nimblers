@@ -1,9 +1,9 @@
 "use server";
 
-import { InvitationDOService } from "@/application/tenant/invitations/service";
-import { InvitationDOLive } from "@/config/layers";
 import { env } from "cloudflare:workers";
 import { Effect } from "effect";
+import { InvitationDOService } from "@/application/tenant/invitations/service";
+import { InvitationDOLive } from "@/config/layers";
 
 type ActionState = {
   loading?: boolean;
@@ -13,7 +13,7 @@ type ActionState = {
 
 export async function handleAcceptInvitation(
   prevState: ActionState,
-  formData: FormData
+  formData: FormData,
 ): Promise<ActionState> {
   const token = formData.get("token") as string;
 
@@ -22,7 +22,7 @@ export async function handleAcceptInvitation(
   }
 
   const invitationProgram = InvitationDOService.pipe(
-    Effect.flatMap((service) => service.accept(token))
+    Effect.flatMap((service) => service.accept(token)),
   );
 
   const fullLayer = InvitationDOLive({

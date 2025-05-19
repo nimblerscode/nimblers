@@ -22,13 +22,14 @@ export function AcceptInvitationForm({ token }: AcceptInvitationFormProps) {
         return { success: true };
       } catch (error) {
         return {
-          error: error instanceof Error
-            ? error.message
-            : "Failed to accept invitation"
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to accept invitation",
         };
       }
     },
-    { loading: false }
+    { loading: false },
   );
 
   if (state.success) {

@@ -22,7 +22,7 @@ export const sessionHandler = async ({
 }) => {
   console.log("sessionHandler", ctx);
   const getSessionEffect = getSession().pipe(
-    Effect.provide(AuthServiceLive(request))
+    Effect.provide(AuthServiceLive(request)),
   );
 
   return Effect.runPromise(
@@ -46,7 +46,7 @@ export const sessionHandler = async ({
 
           console.log("sessionHandler", ctx);
         },
-      })
-    )
+      }),
+    ),
   );
 };

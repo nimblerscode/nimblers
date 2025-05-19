@@ -29,12 +29,12 @@ export const OrgRepoLive = Layer.effect(
           });
           // Now, create the initial member
           const createdMemberEffect = memberRepoService.createMember(
-            result.memberCreateData
+            result.memberCreateData,
           );
 
           yield* createdMemberEffect.pipe(Effect.mapError(mapToOrgDbError));
           return result.org;
         }),
     };
-  })
+  }),
 );

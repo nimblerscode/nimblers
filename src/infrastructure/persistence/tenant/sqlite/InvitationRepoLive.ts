@@ -1,19 +1,19 @@
+import { eq } from "drizzle-orm";
+import { Effect, Layer, Option } from "effect";
 import type { Email } from "@/domain/global/email/model";
+import type { UserId } from "@/domain/global/user/model";
 import type {
+  Invitation,
   InvitationId,
   InvitationStatus,
   NewInvitation,
 } from "@/domain/tenant/invitations/models";
+import { InvitationRepo } from "@/domain/tenant/invitations/service";
 import { OrgDbError } from "@/domain/tenant/organization/model";
 import {
   DrizzleDOClient,
   schema,
 } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
-import { eq } from "drizzle-orm";
-import { Effect, Layer, Option } from "effect";
-import { InvitationRepo } from "@/domain/tenant/invitations/service";
-import type { UserId } from "@/domain/global/user/model";
-import type { Invitation } from "@/domain/tenant/invitations/models";
 
 type InvitationFromDB = {
   id: string;
@@ -86,7 +86,7 @@ export const InvitationRepoLive = Layer.effect(
             return new OrgDbError({
               cause: error,
             });
-          })
+          }),
         ),
 
       findPendingByEmail: (email: Email) =>
@@ -168,5 +168,5 @@ export const InvitationRepoLive = Layer.effect(
     };
 
     return invitationRepo;
-  })
+  }),
 );

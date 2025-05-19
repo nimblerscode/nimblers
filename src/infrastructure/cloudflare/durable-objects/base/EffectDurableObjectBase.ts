@@ -19,29 +19,29 @@ export abstract class EffectDurableObjectBase {
     this.state.blockConcurrencyWhile(async () => {
       try {
         const coreMigrationEffect = Effect.flatMap(DrizzleDOClient, (client) =>
-          client.migrate()
+          client.migrate(),
         );
         const durableObjectStorageLayer = Layer.succeed(
           DurableObjectState,
-          this.state
+          this.state,
         );
         const migrationSpecificProviderLayer = Layer.provide(
           DrizzleDOClientLive,
-          durableObjectStorageLayer
+          durableObjectStorageLayer,
         );
         const layeredMigrationEffect = Effect.provide(
           coreMigrationEffect,
-          migrationSpecificProviderLayer
+          migrationSpecificProviderLayer,
         );
         const fullyScopedEffect = Effect.scoped(layeredMigrationEffect);
         const effectToRun = fullyScopedEffect.pipe(
           Effect.catchAll((e) => {
             console.error(
               `DO (${this.doId}): Migration failed inside blockConcurrencyWhile! Aborting constructor.`,
-              e
+              e,
             );
             return Effect.die(e);
-          })
+          }),
         );
         await Effect.runPromise(effectToRun);
         console.log(`DO (${this.doId}): Migrations run successfully.`);
@@ -49,10 +49,10 @@ export abstract class EffectDurableObjectBase {
       } catch (e) {
         console.error(
           `DO (${this.doId}): Error during blockConcurrencyWhile (migrations/runtime setup)! Aborting constructor.`,
-          e
+          e,
         );
         throw new Error(
-          `Failed to initialize DO during blockConcurrencyWhile: ${e}`
+          `Failed to initialize DO during blockConcurrencyWhile: ${e}`,
         );
       }
     });

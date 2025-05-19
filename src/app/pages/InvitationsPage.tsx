@@ -1,8 +1,8 @@
+import { env } from "cloudflare:workers";
+import type { RequestInfo } from "@redwoodjs/sdk/worker";
+import { Effect } from "effect";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InvitationDOLive } from "@/config/layers";
-import type { RequestInfo } from "@redwoodjs/sdk/worker";
-import { env } from "cloudflare:workers";
-import { Effect } from "effect";
 import { AcceptInvitationForm } from "../components/AcceptInvitationForm";
 
 // This is a server component (no "use client" directive)
@@ -15,17 +15,17 @@ export default async function InvitationsPage({ params }: RequestInfo) {
 
   // Fetch invitation data on the server
   const invitationProgram = InvitationDOService.pipe(
-    Effect.flatMap((service) => service.get(token))
+    Effect.flatMap((service) => service.get(token)),
   );
 
   const fullLayer = InvitationDOLive({
-    ORG_DO: env.ORG_DO
+    ORG_DO: env.ORG_DO,
   });
 
   try {
     // Run the Effect directly to get the invitation
     const invitation = await Effect.runPromise(
-      invitationProgram.pipe(Effect.provide(fullLayer))
+      invitationProgram.pipe(Effect.provide(fullLayer)),
     );
 
     if (!invitation) {
@@ -46,7 +46,8 @@ export default async function InvitationsPage({ params }: RequestInfo) {
           <strong>Status:</strong> {invitation.status}
         </p>
         <p>
-          <strong>Expires At:</strong> {new Date(invitation.expiresAt).toLocaleString()}
+          <strong>Expires At:</strong>{" "}
+          {new Date(invitation.expiresAt).toLocaleString()}
         </p>
         <AcceptInvitationForm token={token} />
       </div>
@@ -55,7 +56,9 @@ export default async function InvitationsPage({ params }: RequestInfo) {
     return (
       <div className="p-4 bg-red-100 rounded-md text-red-800">
         <h2 className="font-bold">Error</h2>
-        <p>{error instanceof Error ? error.message : "Failed to load invitation"}</p>
+        <p>
+          {error instanceof Error ? error.message : "Failed to load invitation"}
+        </p>
       </div>
     );
   }

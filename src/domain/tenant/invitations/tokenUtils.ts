@@ -1,9 +1,9 @@
 // libs/auth/invite-token.ts
 import { env } from "cloudflare:workers";
-import { Context, Effect, Layer } from "effect";
-import { SignJWT, jwtVerify } from "jose";
-import type { InvitationId } from "./models";
 import type { DurableObjectId } from "@cloudflare/workers-types";
+import { Context, Effect, Layer } from "effect";
+import { jwtVerify, SignJWT } from "jose";
+import type { InvitationId } from "./models";
 
 // Create a TextEncoder for the secret
 const encoder = new TextEncoder();
@@ -26,7 +26,7 @@ export class InviteToken extends Context.Tag("core/token")<
       doId: DurableObjectId;
     }) => Effect.Effect<string, ErrorToken>;
     verify: (
-      token: string
+      token: string,
     ) => Effect.Effect<
       { doId: DurableObjectId; invitationId: InvitationId },
       ErrorToken
@@ -82,5 +82,5 @@ export const InviteTokenLive = Layer.effect(
           },
         }),
     };
-  })
+  }),
 );

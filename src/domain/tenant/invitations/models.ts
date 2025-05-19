@@ -18,7 +18,7 @@ export const InvitationStatusSchema = S.Union(
   InvitationStatusLiterals.pending,
   InvitationStatusLiterals.accepted,
   InvitationStatusLiterals.expired,
-  InvitationStatusLiterals.revoked
+  InvitationStatusLiterals.revoked,
 );
 
 export type InvitationStatus = S.Schema.Type<typeof InvitationStatusSchema>;
@@ -69,19 +69,19 @@ export class InvitationExpired extends Data.TaggedError("InvitationExpired")<{
 }> {}
 
 export class InvitationAlreadyAccepted extends Data.TaggedError(
-  "InvitationAlreadyAccepted"
+  "InvitationAlreadyAccepted",
 )<{ message: string; invitationId: string }> {}
 
 export class InvitationAlreadyRevoked extends Data.TaggedError(
-  "InvitationAlreadyRevoked"
+  "InvitationAlreadyRevoked",
 )<{ message: string; invitationId: string }> {}
 
 export class DuplicatePendingInvitation extends Data.TaggedError(
-  "DuplicatePendingInvitation"
+  "DuplicatePendingInvitation",
 )<{ message: string; email: string }> {}
 
 export class MaxPendingInvitationsReached extends Data.TaggedError(
-  "MaxPendingInvitationsReached"
+  "MaxPendingInvitationsReached",
 )<{ message: string; organizationId: string; limit: number }> {}
 
 export class UserAlreadyMember extends Data.TaggedError("UserAlreadyMember")<{
@@ -90,7 +90,7 @@ export class UserAlreadyMember extends Data.TaggedError("UserAlreadyMember")<{
 }> {}
 
 export class InvalidInvitationStatusTransition extends Data.TaggedError(
-  "InvalidInvitationStatusTransition"
+  "InvalidInvitationStatusTransition",
 )<{
   message: string;
   invitationId: string;

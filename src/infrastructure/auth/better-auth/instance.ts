@@ -3,19 +3,18 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { Context } from "effect";
-import { Effect, Exit } from "effect";
+import { Effect, Exit, Option } from "effect";
+import { sendEmail as sendEmailEffect } from "@/application/global/email/sendEmail";
 import type { EmailService as EmailServiceTag } from "@/domain/global/email/service";
 import { EmailService } from "@/domain/global/email/service";
-import { sendEmail as sendEmailEffect } from "@/application/global/email/sendEmail";
 import * as schema from "@/infrastructure/persistence/global/d1/schema";
-import { Option } from "effect";
 
 // Type for the actual service implementation object
 type EmailServiceInterface = Context.Tag.Service<typeof EmailServiceTag>;
 
 const makeAuth = (
   db: DrizzleD1Database<typeof schema>,
-  emailServiceImpl: EmailServiceInterface
+  emailServiceImpl: EmailServiceInterface,
 ) =>
   betterAuth({
     databaseHooks: {
@@ -144,7 +143,7 @@ const makeAuth = (
         });
 
         const runnableEffect = verificationEmailEffect.pipe(
-          Effect.provideService(EmailService, emailServiceImpl)
+          Effect.provideService(EmailService, emailServiceImpl),
         );
 
         const result = await Effect.runPromiseExit(runnableEffect);
@@ -152,10 +151,10 @@ const makeAuth = (
         if (Exit.isFailure(result)) {
           console.error(
             `Failed to send verification email to ${user.email}:`,
-            result.cause
+            result.cause,
           );
           const errorToThrow = Exit.causeOption(result).pipe(
-            Option.getOrElse(() => new Error("Unknown error sending email"))
+            Option.getOrElse(() => new Error("Unknown error sending email")),
           );
           throw errorToThrow;
         }

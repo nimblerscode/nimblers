@@ -1,32 +1,31 @@
 "use client";
 
+import type { RequestInfo } from "@redwoodjs/sdk/worker";
 import type { Cause } from "effect/Cause";
 import { useActionState } from "react";
+import type { User } from "@/domain/global/user/model";
 import type {
   Invitation,
   InvitationError,
 } from "@/domain/tenant/invitations/models";
 import type { OrgDbError } from "@/domain/tenant/organization/model";
 import { inviteUserAction } from "../invitation/create";
-import type { User } from "@/domain/global/user/model";
-import type { RequestInfo } from "@redwoodjs/sdk/worker";
 
 export type InviteUserState =
   | {
-    success: false;
-    message: string;
-    errors: Cause<InvitationError | OrgDbError> | null;
-    user: User;
-  }
+      success: false;
+      message: string;
+      errors: Cause<InvitationError | OrgDbError> | null;
+      user: User;
+    }
   | {
-    success: true;
-    message: string;
-    errors: null;
-    invitation: Invitation; // Replace with actual type if known
-    token: string;
-    user: User;
-  };
-
+      success: true;
+      message: string;
+      errors: null;
+      invitation: Invitation; // Replace with actual type if known
+      token: string;
+      user: User;
+    };
 
 export default function SendInvitation(props: RequestInfo) {
   const initialState: InviteUserState = {

@@ -7,7 +7,7 @@ import type {
 import * as schema from "./schema";
 
 export const makeOrgD1DrizzleAdapter = (
-  db: DrizzleD1Database<typeof schema>
+  db: DrizzleD1Database<typeof schema>,
 ) => ({
   create: async (organizationData: NewOrganizationD1) => {
     const orgInsertData = {

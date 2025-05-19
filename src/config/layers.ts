@@ -1,4 +1,7 @@
+import { env } from "cloudflare:workers";
+import { Layer } from "effect";
 import { InvitationUseCaseLive } from "@/application/tenant/invitations/service";
+import { InviteTokenLive } from "@/domain/tenant/invitations/tokenUtils";
 import { createBetterAuthServiceAdapter } from "@/infrastructure/auth/better-auth/adapter";
 import { BetterAuthConfigLive } from "@/infrastructure/auth/better-auth/config";
 import {
@@ -15,16 +18,9 @@ import {
   D1BindingLive,
   DrizzleD1ClientLive,
 } from "@/infrastructure/persistence/global/d1/drizzle";
-import {
-  DrizzleDOClientLive,
-  DurableObjectState,
-} from "@/infrastructure/persistence/tenant/sqlite/drizzle";
-import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
+import { DrizzleDOClientLive } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { InvitationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/InvitationRepoLive";
-import { env } from "cloudflare:workers";
-import { Layer } from "effect";
-import type { OrganizationId } from "@/domain/tenant/organization/model";
-import { InviteTokenLive } from "@/domain/tenant/invitations/tokenUtils";
+import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
 
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
@@ -49,7 +45,7 @@ export function OrganizationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 
   const OrgServiceLayer = Layer.provide(
     OrganizationDOAdapterLive,
-    doNamespaceLayer
+    doNamespaceLayer,
   );
 
   return OrgServiceLayer;
@@ -59,7 +55,7 @@ export function InvitationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
   const doNamespaceLayer = Layer.succeed(InvitationDONamespace, doEnv.ORG_DO);
   return Layer.provide(
     InvitationDOServiceLive.pipe(Layer.provide(InviteTokenLive)),
-    doNamespaceLayer
+    doNamespaceLayer,
   );
 }
 
@@ -69,13 +65,13 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation repository layer
   const InvitationRepoLayer = Layer.provide(
     InvitationRepoLive,
-    DrizzleDOClientLive
+    DrizzleDOClientLive,
   );
 
   // Email service layer
   const EmailLayer = Layer.provide(
     ResendEmailAdapterLive,
-    Layer.merge(ResendConfigLive, MemberServiceLayer)
+    Layer.merge(ResendConfigLive, MemberServiceLayer),
   );
 
   // User repository layer
@@ -83,7 +79,7 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation use case layer with all its dependencies
   const InvitationUseCaseLayer = Layer.provide(
     InvitationUseCaseLive(doId).pipe(Layer.provide(InviteTokenLive)),
-    Layer.mergeAll(EmailLayer, MemberServiceLayer)
+    Layer.mergeAll(EmailLayer, MemberServiceLayer),
   );
 
   return InvitationUseCaseLayer.pipe(Layer.provide(InvitationRepoLayer));

@@ -1,12 +1,11 @@
+import { prefix, render, route } from "@redwoodjs/sdk/router";
 import CreateOrganizationForm from "@/app/components/CreateOrganizationForm";
 import { Document } from "@/app/Document";
 import SendInvitation from "@/app/pages/Home";
+import InvitationsPage from "@/app/pages/InvitationsPage";
 import Login from "@/app/pages/Login";
-import { prefix, render, route } from "@redwoodjs/sdk/router";
-
 import ManageOrganization from "@/app/pages/ManageOrganization";
 import SignUp from "@/app/pages/SignUp";
-import InvitationsPage from "@/app/pages/InvitationsPage";
 import { authResponse, sessionHandler } from "@/infrastructure/auth/middleware";
 
 // Organization routes (if simple enough to keep here, otherwise import)

@@ -1,6 +1,7 @@
 import type { env } from "cloudflare:workers";
 import { Headers } from "@effect/platform";
 import { Context, Data, Effect, Layer } from "effect";
+import { InvitationDOService } from "@/application/tenant/invitations/service";
 import type {
   Invitation,
   NewInvitation,
@@ -9,7 +10,6 @@ import {
   InvalidToken,
   InvitationNotFound,
 } from "@/domain/tenant/invitations/models";
-import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InviteToken } from "@/domain/tenant/invitations/tokenUtils";
 import { OrgDbError } from "@/domain/tenant/organization/model";
 
@@ -24,7 +24,7 @@ export class DOInteractionError extends Data.TaggedError("DOInteractionError")<{
 // --- Required Dependency Tag ---
 // The DO namespace needed by the live service
 export class InvitationDONamespace extends Context.Tag(
-  "cloudflare/bindings/INVITATION_DO_NAMESPACE"
+  "cloudflare/bindings/INVITATION_DO_NAMESPACE",
 )<
   InvitationDONamespace, // The service itself (though it's just holding the namespace)
   typeof env.ORG_DO // Use DurableObjectNamespace directly, let TS infer or it defaults appropriately
@@ -44,8 +44,8 @@ export const InvitationDOServiceLive = Layer.effect(
               (error) =>
                 new InvalidToken({
                   message: error.message,
-                })
-            )
+                }),
+            ),
           );
 
           const id = invitationDONamespace.idFromString(doId.toString());
@@ -56,7 +56,7 @@ export const InvitationDOServiceLive = Layer.effect(
                 `http://internal/invitations/${doId}?token=${token}`,
                 {
                   method: "GET",
-                }
+                },
               );
               console.log("res from invitation do", res);
               const invitation = (await res.json()) as Invitation;
@@ -141,7 +141,7 @@ export const InvitationDOServiceLive = Layer.effect(
               console.log("Response status:", response.status);
               console.log(
                 "Response headers:",
-                Object.fromEntries(response.headers.entries())
+                Object.fromEntries(response.headers.entries()),
               );
               const text = await response.text();
               console.log("Raw response body:", text);
@@ -150,7 +150,7 @@ export const InvitationDOServiceLive = Layer.effect(
               if (!response.ok) {
                 throw new OrgDbError({
                   cause: new Error(
-                    text || `Server responded with status ${response.status}`
+                    text || `Server responded with status ${response.status}`,
                   ),
                 });
               }
@@ -186,5 +186,5 @@ export const InvitationDOServiceLive = Layer.effect(
         });
       },
     };
-  })
+  }),
 );
