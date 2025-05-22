@@ -1,5 +1,5 @@
-import { defineApp } from "@redwoodjs/sdk/worker";
 import type { Session, User } from "better-auth";
+import { defineApp } from "rwsdk/worker";
 
 import { allRoutes } from "@/config/routes";
 import { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";

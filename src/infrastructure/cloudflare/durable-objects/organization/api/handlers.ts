@@ -35,12 +35,12 @@ class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   {},
 ) {}
 
-const getOrganizations = HttpApiEndpoint.get(
+const _getOrganizations = HttpApiEndpoint.get(
   "getOrganizations",
   "/organizations",
 ).addSuccess(Schema.Array(OrganizationSchema));
 
-const getOrganization = HttpApiEndpoint.get(
+const _getOrganization = HttpApiEndpoint.get(
   "getOrganization",
 )`/organization/${idParam}`
   .addSuccess(OrganizationSchema)
@@ -58,11 +58,11 @@ const createOrganization = HttpApiEndpoint.post(
   )
   .addSuccess(OrganizationSchema);
 
-const deleteOrganization = HttpApiEndpoint.del(
+const _deleteOrganization = HttpApiEndpoint.del(
   "deleteOrganization",
 )`/organizations/${idParam}`;
 
-const updateOrganization = HttpApiEndpoint.patch(
+const _updateOrganization = HttpApiEndpoint.patch(
   "updateOrganization",
 )`/organizations/${idParam}`
   .setPayload(
@@ -104,7 +104,7 @@ const getInvitation = HttpApiEndpoint.get(
   .addSuccess(InvitationSchema)
   .addError(HttpApiError.NotFound);
 
-const acceptInvitation = HttpApiEndpoint.post(
+const _acceptInvitation = HttpApiEndpoint.post(
   "acceptInvitation",
   "/invitations/:id/accept",
 )

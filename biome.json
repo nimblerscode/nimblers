@@ -16,7 +16,8 @@
       "!**/.wrangler/**",
       "!**/.cursor/**",
       "!**/.git/**",
-      "!**/coverage/**"
+      "!**/coverage/**",
+      "!**/styled-system/**"
     ]
   },
   "formatter": {

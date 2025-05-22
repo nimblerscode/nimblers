@@ -1,8 +1,8 @@
 "use server";
 
 import { env } from "cloudflare:workers";
-import { requestInfo } from "@redwoodjs/sdk/worker";
 import { Effect, Exit, Layer } from "effect";
+import { requestInfo } from "rwsdk/worker";
 
 import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
 

@@ -1,17 +1,18 @@
-import { prefix, render, route } from "@redwoodjs/sdk/router";
-import CreateOrganizationForm from "@/app/components/CreateOrganizationForm";
+import { prefix, render, route } from "rwsdk/router";
+import { Layout as OverviewLayout } from "@/app/components/organizations/overview/Layout";
+// import CreateOrganizationForm from "@/app/components/CreateOrganizationForm"; // No longer directly used here
 import { Document } from "@/app/Document";
 import SendInvitation from "@/app/pages/Home";
 import InvitationsPage from "@/app/pages/InvitationsPage";
-import Login from "@/app/pages/Login";
-import ManageOrganization from "@/app/pages/ManageOrganization";
-import SignUp from "@/app/pages/SignUp";
+import { Layout as LoginLayout } from "@/app/pages/login/Layout";
+import Layout from "@/app/pages/organization/Layout"; // Import the new wrapper page
+import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
 import { authResponse, sessionHandler } from "@/infrastructure/auth/middleware";
 
 // Organization routes (if simple enough to keep here, otherwise import)
 export const organizationRoutes = [
-  route("/create", [sessionHandler, CreateOrganizationForm]),
-  route("/:orgSlug", [sessionHandler, ManageOrganization]),
+  route("/create", [sessionHandler, Layout]), // Use the wrapper page
+  route("/:orgSlug", [OverviewLayout]),
 ];
 
 // Combine all routes into a single array
@@ -21,8 +22,8 @@ export const allRoutes = [
     prefix("/organization", organizationRoutes),
     route("/invitations/create", [sessionHandler, SendInvitation]),
     route("/invitations/:token", InvitationsPage),
-    route("/login", [Login]),
-    route("/signup", [SignUp]),
+    route("/login", [LoginLayout]),
+    route("/signup", [SignUpLayout]),
     // Add other UI routes within Document here if needed
     // route("/*", NotFoundPage), // Example: Needs NotFoundPage component
   ]),

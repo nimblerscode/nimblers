@@ -82,7 +82,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               );
             }
 
-            const expiresAt = yield* Effect.gen(function* () {
+            const _expiresAt = yield* Effect.gen(function* () {
               const currentTime = yield* Clock.currentTimeMillis;
               return new Date(
                 currentTime + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000,

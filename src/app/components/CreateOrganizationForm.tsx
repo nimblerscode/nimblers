@@ -5,8 +5,8 @@ import {
   type CreateOrganizationActionState,
   createOrganizationAction,
 } from "../actions/organization/create"; // Correct relative path and add type import
+import { Button } from "../design-system/Button";
 
-// Initialize state with the correct type
 const initialState: CreateOrganizationActionState = {
   success: false,
   message: "",
@@ -14,7 +14,7 @@ const initialState: CreateOrganizationActionState = {
   organization: null,
 };
 
-export default function CreateOrganizationForm() {
+export function CreateOrganizationForm() {
   const [state, formAction, pending] = useActionState(
     createOrganizationAction,
     initialState,
@@ -75,9 +75,9 @@ export default function CreateOrganizationForm() {
         />
       </label>
       <br />
-      <button type="submit" disabled={pending}>
+      <Button type="submit" isDisabled={pending}>
         {pending ? "Creating..." : "Create Organization"}
-      </button>
+      </Button>
     </form>
   );
 }

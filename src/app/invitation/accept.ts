@@ -12,7 +12,7 @@ type ActionState = {
 };
 
 export async function handleAcceptInvitation(
-  prevState: ActionState,
+  _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   const token = formData.get("token") as string;

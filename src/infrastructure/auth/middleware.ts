@@ -28,7 +28,7 @@ export const sessionHandler = async ({
   return Effect.runPromise(
     getSessionEffect.pipe(
       Effect.match({
-        onFailure: (e) =>
+        onFailure: (_e) =>
           new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,
           }),

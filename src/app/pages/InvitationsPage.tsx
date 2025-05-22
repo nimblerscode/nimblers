@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import type { RequestInfo } from "@redwoodjs/sdk/worker";
 import { Effect } from "effect";
+import type { RequestInfo } from "rwsdk/worker";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InvitationDOLive } from "@/config/layers";
 import { AcceptInvitationForm } from "../components/AcceptInvitationForm";

@@ -165,7 +165,7 @@ export const InvitationDOServiceLive = Layer.effect(
               try {
                 const res = JSON.parse(text) as Invitation;
                 return res;
-              } catch (e) {
+              } catch (_e) {
                 throw new OrgDbError({
                   cause: new Error("Invalid JSON response from server"),
                 });

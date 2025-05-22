@@ -1,8 +1,8 @@
 "use client";
 
-import type { RequestInfo } from "@redwoodjs/sdk/worker";
 import type { Cause } from "effect/Cause";
 import { useActionState } from "react";
+import type { RequestInfo } from "rwsdk/worker";
 import type { User } from "@/domain/global/user/model";
 import type {
   Invitation,
@@ -36,7 +36,7 @@ export default function SendInvitation(props: RequestInfo) {
   };
 
   console.log("ctx", props.ctx);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, _pending] = useActionState(
     inviteUserAction,
     initialState,
   );

@@ -42,7 +42,7 @@ const OrgD1ServiceTest = Layer.succeed(
   }),
 );
 
-const TestLayer = Layer.merge(OrgServiceTest, OrgD1ServiceTest);
+const _TestLayer = Layer.merge(OrgServiceTest, OrgD1ServiceTest);
 
 describe("Organization Core Effects", () => {
   beforeEach(() => {
