@@ -8,6 +8,7 @@ import {
   NewMemberSchema,
 } from "@/domain/tenant/member/model";
 import { MemberRepo } from "@/domain/tenant/member/service";
+import type { Email } from "@/domain/global/email/model";
 import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { member as memberTable } from "@/infrastructure/persistence/tenant/sqlite/schema";
 
@@ -32,8 +33,8 @@ export const MemberRepoLive = Layer.effect(
                 (e) =>
                   new MemberDbError({
                     cause: `Input data validation error: ${e}`,
-                  }),
-              ),
+                  })
+              )
             );
 
             const dbRow = yield* Effect.tryPromise({
@@ -68,7 +69,6 @@ export const MemberRepoLive = Layer.effect(
             return {
               id: dbRow.id,
               userId: dbRow.userId,
-              organizationId: dbRow.organizationId,
               role: dbRow.role,
               createdAt: createdAtDate,
               updatedAt: updatedAtDate,
@@ -78,7 +78,7 @@ export const MemberRepoLive = Layer.effect(
         return effectLogic;
       },
 
-      findMembership: (userId: string) =>
+      findMembership: (email: Email) =>
         Effect.gen(function* (_) {
           const dbResult = yield* _(
             Effect.tryPromise({
@@ -86,25 +86,20 @@ export const MemberRepoLive = Layer.effect(
                 return await db
                   .select()
                   .from(memberTable)
-                  .where(eq(memberTable.userId, userId))
+                  .where(eq(memberTable.userId, email))
                   .limit(1);
               },
               catch: (unknownError) =>
-                new MemberDbError({ cause: unknownError }), // This becomes MemberDbError in the Effect error channel
-            }),
+                new MemberDbError({ cause: unknownError }),
+            })
           );
 
           if (!dbResult || dbResult.length === 0) {
-            // If the service interface expects MemberNotFoundError for not found cases:
-            // return yield* _(Effect.fail(new MemberNotFoundError()));
-            // If the service interface expects Option.none for not found and MemberNotFoundError for other errors:
-            return Option.none(); // Correctly return Option.none()
+            return Option.none();
           }
 
-          // Process and return Option.some(member)
-          const dbRow = dbResult[0] as Member; // Assuming dbResult[0] is compatible with Member structure
+          const dbRow = dbResult[0] as Member;
 
-          // Ensure createdAt and updatedAt are Date objects
           const createdAtDate =
             dbRow.createdAt instanceof Date
               ? dbRow.createdAt
@@ -117,14 +112,37 @@ export const MemberRepoLive = Layer.effect(
           const member = {
             id: dbRow.id,
             userId: dbRow.userId,
-            organizationId: dbRow.organizationId,
             role: dbRow.role,
             createdAt: createdAtDate,
             updatedAt: updatedAtDate,
           } satisfies Member;
 
-          return Option.some(member); // Correctly return Option.some(member)
+          return Option.some(member);
         }).pipe(Effect.withSpan("MemberRepo.findMembership")),
+
+      getMembers: Effect.gen(function* () {
+        const dbResult = yield* Effect.tryPromise({
+          try: async () => {
+            return await db.select().from(memberTable);
+          },
+          catch: (unknownError) => new MemberDbError({ cause: unknownError }),
+        });
+
+        return dbResult.map((dbRow) => {
+          const createdAtDate =
+            dbRow.createdAt instanceof Date
+              ? dbRow.createdAt
+              : new Date((dbRow.createdAt as unknown as number) * 1000);
+
+          return {
+            id: dbRow.id,
+            userId: dbRow.userId,
+            role: dbRow.role,
+            createdAt: createdAtDate,
+            updatedAt: createdAtDate,
+          } satisfies Member;
+        });
+      }).pipe(Effect.withSpan("MemberRepo.getMembers")),
     };
-  }),
+  })
 );

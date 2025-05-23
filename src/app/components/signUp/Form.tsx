@@ -39,22 +39,17 @@ export function SignUpForm() {
       { name, email, password },
       {
         onSuccess: (context) => {
-          console.log("authClient.signUp.email success context:", context);
           setFormState({
             isLoading: false,
             error: null,
-            // Use context.data which might contain success message or user info
             message:
               context.data?.message ||
               context.data ||
               "Signup successful! Check email for verification.",
           });
-          // Optional: Redirect or further actions
-          // window.location.href = '/login'; // Example redirect
+          window.location.href = "/organization/create";
         },
         onError: (error) => {
-          console.log("authClient.signUp.email error:", error);
-          // Extract a meaningful error message if possible
           setFormState({
             isLoading: false,
             error: error.error.message,

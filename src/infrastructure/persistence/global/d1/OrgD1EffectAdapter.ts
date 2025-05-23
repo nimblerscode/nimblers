@@ -11,7 +11,7 @@ const mapToOrgDbError = (error: unknown): OrgDbError => {
 };
 
 export const makeOrgD1EffectAdapter = (
-  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>,
+  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>
 ) => ({
   create: (organizationData: NewOrganizationD1) =>
     Effect.gen(function* () {
@@ -21,7 +21,7 @@ export const makeOrgD1EffectAdapter = (
       });
       if (!orgResult) {
         return yield* Effect.fail(
-          mapToOrgDbError("Insert returned no results"),
+          mapToOrgDbError("Insert returned no results")
         );
       }
       return orgResult;
@@ -37,4 +37,20 @@ export const makeOrgD1EffectAdapter = (
       }
       return orgResult;
     }),
+  getOrgIdBySlug: (slug: string, userId: string) => {
+    console.log("slug from service", slug);
+    return Effect.gen(function* () {
+      const orgSlug = yield* Effect.tryPromise({
+        try: () => drizzleAdapter.getOrgIdBySlug(slug, userId),
+        catch: (e) => {
+          console.log("e from service", e);
+          return mapToOrgDbError(e);
+        },
+      });
+      if (!orgSlug) {
+        return yield* Effect.fail(mapToOrgDbError("Get returned no results"));
+      }
+      return orgSlug;
+    });
+  },
 });

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6e137480-9094-42fd-88d5-6633e542bb5c",
+  "id": "cd33f595-8334-4d64-8d11-17c7b36c4265",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -126,15 +126,15 @@
     "organization": {
       "name": "organization",
       "columns": {
-        "orgId": {
-          "name": "orgId",
+        "id": {
+          "name": "id",
           "type": "text",
           "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
-        "name": {
-          "name": "name",
+        "slug": {
+          "name": "slug",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -147,13 +147,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'active'"
-        },
-        "creatorId": {
-          "name": "creatorId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
         },
         "createdAt": {
           "name": "createdAt",
@@ -173,26 +166,78 @@
         }
       },
       "indexes": {
-        "organization_name_unique": {
-          "name": "organization_name_unique",
+        "organization_slug_unique": {
+          "name": "organization_slug_unique",
           "columns": [
-            "name"
+            "slug"
           ],
           "isUnique": true
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "organization_membership": {
+      "name": "organization_membership",
+      "columns": {
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organizationId": {
+          "name": "organizationId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {},
       "foreignKeys": {
-        "organization_creatorId_user_id_fk": {
-          "name": "organization_creatorId_user_id_fk",
-          "tableFrom": "organization",
+        "organization_membership_userId_user_id_fk": {
+          "name": "organization_membership_userId_user_id_fk",
+          "tableFrom": "organization_membership",
           "tableTo": "user",
           "columnsFrom": [
-            "creatorId"
+            "userId"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "organization_membership_organizationId_organization_id_fk": {
+          "name": "organization_membership_organizationId_organization_id_fk",
+          "tableFrom": "organization_membership",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organizationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },

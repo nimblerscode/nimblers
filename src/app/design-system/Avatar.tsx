@@ -70,11 +70,11 @@ export const Avatar: React.FC<AvatarProps> = ({
 }) => {
   const initials = name
     ? name
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
     : "";
 
   return (

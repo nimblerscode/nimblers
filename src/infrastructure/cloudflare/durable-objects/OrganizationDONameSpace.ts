@@ -11,7 +11,7 @@ import { OrganizationDOService } from "@/domain/tenant/organization/service";
 
 // The DO namespace needed by the adapter
 export class OrganizationDONamespace extends Context.Tag(
-  "cloudflare/bindings/ORG_DO_NAMESPACE",
+  "cloudflare/bindings/ORG_DO_NAMESPACE"
 )<OrganizationDONamespace, typeof env.ORG_DO>() {}
 
 // Layer that provides the adapter
@@ -22,7 +22,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
 
     const createOrganizationDO = (
       organization: NewOrganization,
-      creatorId: UserId,
+      creatorId: UserId
     ) => {
       return Effect.gen(function* () {
         // Create the organization in the Durable Object
@@ -77,8 +77,50 @@ export const OrganizationDOAdapterLive = Layer.effect(
       });
     };
 
+    const getOrganizationDO = (slug: string) => {
+      return Effect.gen(function* () {
+        const doId = orgDONamespace.idFromName(slug);
+        const stub = orgDONamespace.get(doId);
+        const response = yield* Effect.tryPromise({
+          try: async () => {
+            return stub.fetch(`http://internal/organization/${slug}`, {
+              method: "GET",
+            });
+          },
+          catch: (error) => {
+            throw new OrganizationProvisionError({
+              message: "An unexpected error occurred during DO interaction.",
+              cause: error,
+            });
+          },
+        });
+
+        if (!response.ok) {
+          throw new OrganizationProvisionError({
+            message: "An unexpected error occurred during DO interaction.",
+            cause: response,
+          });
+        }
+
+        const org = yield* Effect.tryPromise({
+          try: async () => {
+            return response.json() as unknown as Organization;
+          },
+          catch: (error) => {
+            throw new OrganizationProvisionError({
+              message: "An unexpected error occurred during DO interaction.",
+              cause: error,
+            });
+          },
+        });
+
+        return org;
+      });
+    };
+
     return {
       createOrganization: createOrganizationDO,
+      getOrganization: getOrganizationDO,
     };
-  }),
+  })
 );

@@ -2,7 +2,7 @@
 import { CreateOrganization } from "@/app/components/organizations/create/Create";
 import { Container, Heading, VStack } from "@/app/design-system";
 
-export default function Layout() {
+export function Layout() {
   return (
     <Container
       display="flex"

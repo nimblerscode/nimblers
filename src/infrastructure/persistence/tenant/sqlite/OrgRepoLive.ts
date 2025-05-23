@@ -16,11 +16,21 @@ export const OrgRepoLive = Layer.effect(
   OrgService,
   Effect.gen(function* () {
     const { db } = yield* DrizzleDOClient;
+    // this dep is not needed in the get method, but is needed for the create method
     const memberRepoService = yield* MemberRepo;
 
     const drizzleAdapter = makeOrgDrizzleAdapter(db);
 
     return {
+      get: (slug: string) =>
+        Effect.gen(function* () {
+          const result = yield* Effect.tryPromise({
+            try: () => drizzleAdapter.getOrgBySlug(slug),
+            catch: mapToOrgDbError,
+          });
+
+          return { ...result };
+        }),
       create: (data: NewOrganization, creatorUserId: string) =>
         Effect.gen(function* () {
           const result = yield* Effect.tryPromise({
@@ -29,12 +39,12 @@ export const OrgRepoLive = Layer.effect(
           });
           // Now, create the initial member
           const createdMemberEffect = memberRepoService.createMember(
-            result.memberCreateData,
+            result.memberCreateData
           );
 
           yield* createdMemberEffect.pipe(Effect.mapError(mapToOrgDbError));
           return result.org;
         }),
     };
-  }),
+  })
 );

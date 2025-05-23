@@ -1,4 +1,9 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  integer,
+  sqliteTable,
+  text,
+  primaryKey,
+} from "drizzle-orm/sqlite-core";
 import { normalizeDate } from "@/infrastructure/persistence/common/utils"; // Import the helper
 
 // === Better Auth Aligned Schema ===
@@ -65,10 +70,18 @@ export const verification = sqliteTable("verification", {
 // === Organizations Table ===
 export const organization = sqliteTable("organization", {
   id: text("id").primaryKey().notNull(), // Matches DO name/ID
-  name: text("name").notNull().unique(),
+  slug: text("slug").notNull().unique(),
   status: text("status").default("active").notNull(), // 'active', 'archived', etc.
-  creatorId: text("creatorId")
-    .notNull()
-    .references(() => user.id, { onDelete: "no action" }),
   ...timestamp,
+});
+
+export const organizationMembership = sqliteTable("organization_membership", {
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  organizationId: text("organizationId")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // 'owner', 'admin', 'member', …
+  createdAt: normalizeDate("createdAt").notNull(),
 });

@@ -1,14 +1,3 @@
-import {
-  HttpApi,
-  HttpApiBuilder,
-  HttpApiEndpoint,
-  HttpApiError,
-  HttpApiGroup,
-  HttpApiSchema,
-  HttpApiSwagger,
-  HttpServer,
-} from "@effect/platform";
-import { Effect, Layer, Schema } from "effect";
 import { InvitationLayerLive } from "@/config/layers";
 import { UserIdSchema } from "@/domain/global/user/model";
 import {
@@ -16,6 +5,8 @@ import {
   NewInvitationSchema,
 } from "@/domain/tenant/invitations/models";
 import { InvitationUseCase } from "@/domain/tenant/invitations/service";
+import { MemberSchema } from "@/domain/tenant/member/model";
+import { MemberRepo } from "@/domain/tenant/member/service";
 import {
   NewOrganizationSchema,
   OrganizationSchema,
@@ -27,48 +18,60 @@ import {
 } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
 import { OrgRepoLive } from "@/infrastructure/persistence/tenant/sqlite/OrgRepoLive";
+import {
+  HttpApi,
+  HttpApiBuilder,
+  HttpApiEndpoint,
+  HttpApiError,
+  HttpApiGroup,
+  HttpApiSchema,
+  HttpApiSwagger,
+  HttpServer,
+} from "@effect/platform";
+import { Effect, Layer, Schema } from "effect";
 
 const idParam = HttpApiSchema.param("id", Schema.NumberFromString);
 
 class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
-  {},
+  {}
 ) {}
 
 const _getOrganizations = HttpApiEndpoint.get(
   "getOrganizations",
-  "/organizations",
+  "/organizations"
 ).addSuccess(Schema.Array(OrganizationSchema));
 
-const _getOrganization = HttpApiEndpoint.get(
-  "getOrganization",
-)`/organization/${idParam}`
+const getOrganization = HttpApiEndpoint.get(
+  "getOrganization"
+)`/organization/:organizationSlug`
   .addSuccess(OrganizationSchema)
-  .addError(HttpApiError.NotFound);
+  .addError(HttpApiError.NotFound)
+  .setPath(Schema.Struct({ organizationSlug: Schema.String }));
 
 const createOrganization = HttpApiEndpoint.post(
   "createOrganization",
-  "/organization",
+  "/organization"
 )
   .setPayload(
     Schema.Struct({
       organization: NewOrganizationSchema,
       userId: UserIdSchema,
-    }),
+    })
   )
   .addSuccess(OrganizationSchema);
 
 const _deleteOrganization = HttpApiEndpoint.del(
-  "deleteOrganization",
+  "deleteOrganization"
 )`/organizations/${idParam}`;
 
 const _updateOrganization = HttpApiEndpoint.patch(
-  "updateOrganization",
+  "updateOrganization"
 )`/organizations/${idParam}`
   .setPayload(
     Schema.Struct({
       name: Schema.String,
-    }),
+    })
   )
   .addSuccess(OrganizationSchema);
 
@@ -76,12 +79,12 @@ const createInvitation = HttpApiEndpoint.post("createInvitation", "/invite")
   .setPayload(
     Schema.Struct({
       newInvitation: NewInvitationSchema,
-    }),
+    })
   )
   .addSuccess(
     Schema.Struct({
       invitation: InvitationSchema,
-    }),
+    })
   )
   .addError(HttpApiError.BadRequest);
 // .addError(HttpApiError.InternalServerError);
@@ -89,40 +92,53 @@ const createInvitation = HttpApiEndpoint.post("createInvitation", "/invite")
 // Define a GET endpoint with a path parameter ":id"
 const getInvitation = HttpApiEndpoint.get(
   "getInvitation",
-  "/invitations/:organizationSlug",
+  "/invitations/:organizationSlug"
 )
   .setPath(
     Schema.Struct({
       organizationSlug: Schema.String,
-    }),
+    })
   )
   .setUrlParams(
     Schema.Struct({
       token: Schema.String,
-    }),
+    })
   )
   .addSuccess(InvitationSchema)
   .addError(HttpApiError.NotFound);
 
 const _acceptInvitation = HttpApiEndpoint.post(
   "acceptInvitation",
-  "/invitations/:id/accept",
+  "/invitations/:id/accept"
 )
   .setPayload(Schema.Struct({ token: Schema.String }))
   .addSuccess(
     Schema.Struct({
       ok: Schema.Boolean,
-    }),
+    })
   )
   .addError(HttpApiError.NotFound);
+
+const getMembers = HttpApiEndpoint.get(
+  "getMembers",
+  "/members/:organizationSlug"
+)
+  .addSuccess(Schema.Array(MemberSchema))
+  .addError(HttpApiError.NotFound)
+  .setPath(
+    Schema.Struct({
+      organizationSlug: Schema.String,
+    })
+  );
 
 // Group all user-related endpoints
 const organizationsGroup = HttpApiGroup.make("organizations")
   // .add(getOrganizations)
-  // .add(getOrganization)
+  .add(getOrganization)
   .add(createOrganization)
   .add(createInvitation)
   .add(getInvitation)
+  .add(getMembers)
   // .add(acceptInvitation)
   // .add(deleteOrganization)
   // .add(updateOrganization)
@@ -155,10 +171,31 @@ const organizationsGroupLive = HttpApiBuilder.group(
                     },
                   ],
                 });
-              }),
+              })
             );
-          },
+          }
         )
+        .handle("getOrganization", ({ path: { organizationSlug } }) => {
+          return repository.get(organizationSlug).pipe(
+            Effect.map((organization) => organization),
+            Effect.mapError((error) => {
+              console.error(
+                `Failed to get organization ${organizationSlug}:`,
+                error
+              );
+              return new HttpApiError.HttpApiDecodeError({
+                message: error.message,
+                issues: [
+                  {
+                    _tag: "Type",
+                    message: error.message,
+                    path: [],
+                  },
+                ],
+              });
+            })
+          );
+        })
         .handle("createInvitation", ({ payload: { newInvitation } }) => {
           console.log("createInvitation handler", newInvitation);
           return invitationService.create(newInvitation).pipe(
@@ -178,7 +215,7 @@ const organizationsGroupLive = HttpApiBuilder.group(
                   },
                 ],
               });
-            }),
+            })
           );
         })
         .handle("getInvitation", ({ urlParams: { token } }) => {
@@ -194,9 +231,25 @@ const organizationsGroupLive = HttpApiBuilder.group(
                       path: [],
                     },
                   ],
-                }),
-            ),
+                })
+            )
           );
+        })
+        .handle("getMembers", ({ path: { organizationSlug } }) => {
+          return Effect.gen(function* () {
+            console.log("getMembers handler", organizationSlug);
+            const memberRepo = yield* MemberRepo;
+            return yield* memberRepo.getMembers.pipe(
+              Effect.map((members) => members),
+              Effect.mapError(
+                (error) =>
+                  new HttpApiError.HttpApiDecodeError({
+                    message: error.message || String(error),
+                    issues: [],
+                  })
+              )
+            );
+          });
         });
       // .handle("acceptInvitation", ({ payload: { token } }) => {
       //   return invitationService
@@ -224,7 +277,7 @@ const organizationsGroupLive = HttpApiBuilder.group(
       //       )
       //     );
       // });
-    }),
+    })
 );
 
 export function getOrgHandler(doState: DurableObjectState) {
@@ -234,39 +287,39 @@ export function getOrgHandler(doState: DurableObjectState) {
   // Organization repository layer
   const OrgServiceLayer = Layer.provide(
     OrgRepoLive,
-    Layer.merge(DrizzleDOClientLive, MemberServiceLayer),
+    Layer.merge(DrizzleDOClientLive, MemberServiceLayer)
   );
 
   const DORepoLayer = Layer.succeed(DurableObjectState, doState);
 
   const InvitationRepoLayer = Layer.provide(
     InvitationLayerLive(doState.id),
-    DORepoLayer,
+    DORepoLayer
   );
 
   const finalLayer = Layer.provide(
-    Layer.merge(OrgServiceLayer, InvitationRepoLayer), // DOLayer now requires DurableObjectStorage
-    DORepoLayer,
+    Layer.mergeAll(OrgServiceLayer, InvitationRepoLayer, MemberServiceLayer),
+    DORepoLayer
   );
 
   // Organizations group layer with all dependencies
   const organizationsGroupLayerLive = Layer.provide(
     organizationsGroupLive,
-    finalLayer,
+    finalLayer
   );
 
   // API layer with Swagger
   const OrganizationApiLive = HttpApiBuilder.api(api).pipe(
-    Layer.provide(organizationsGroupLayerLive),
+    Layer.provide(organizationsGroupLayerLive)
   );
 
   const SwaggerLayer = HttpApiSwagger.layer().pipe(
-    Layer.provide(OrganizationApiLive),
+    Layer.provide(OrganizationApiLive)
   );
 
   // Final handler with all layers merged
   const { dispose, handler } = HttpApiBuilder.toWebHandler(
-    Layer.mergeAll(OrganizationApiLive, SwaggerLayer, HttpServer.layerContext),
+    Layer.mergeAll(OrganizationApiLive, SwaggerLayer, HttpServer.layerContext)
   );
 
   return { dispose, handler };

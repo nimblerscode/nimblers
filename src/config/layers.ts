@@ -21,6 +21,7 @@ import {
 import { DrizzleDOClientLive } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { InvitationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/InvitationRepoLive";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
+import { MembersDOServiceLive } from "@/infrastructure/cloudflare/durable-objects/MembersDO";
 
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
@@ -45,7 +46,7 @@ export function OrganizationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 
   const OrgServiceLayer = Layer.provide(
     OrganizationDOAdapterLive,
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 
   return OrgServiceLayer;
@@ -55,7 +56,7 @@ export function InvitationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
   const doNamespaceLayer = Layer.succeed(InvitationDONamespace, doEnv.ORG_DO);
   return Layer.provide(
     InvitationDOServiceLive.pipe(Layer.provide(InviteTokenLive)),
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 }
 
@@ -65,13 +66,13 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation repository layer
   const InvitationRepoLayer = Layer.provide(
     InvitationRepoLive,
-    DrizzleDOClientLive,
+    DrizzleDOClientLive
   );
 
   // Email service layer
   const EmailLayer = Layer.provide(
     ResendEmailAdapterLive,
-    Layer.merge(ResendConfigLive, MemberServiceLayer),
+    Layer.merge(ResendConfigLive, MemberServiceLayer)
   );
 
   // User repository layer
@@ -79,8 +80,19 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation use case layer with all its dependencies
   const InvitationUseCaseLayer = Layer.provide(
     InvitationUseCaseLive(doId).pipe(Layer.provide(InviteTokenLive)),
-    Layer.mergeAll(EmailLayer, MemberServiceLayer),
+    Layer.mergeAll(EmailLayer, MemberServiceLayer)
   );
 
   return InvitationUseCaseLayer.pipe(Layer.provide(InvitationRepoLayer));
 };
+
+export function MemberDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
+  const doNamespaceLayer = Layer.succeed(OrganizationDONamespace, doEnv.ORG_DO);
+
+  const MemberServiceLayer = Layer.provide(
+    MembersDOServiceLive,
+    doNamespaceLayer
+  );
+
+  return MemberServiceLayer;
+}

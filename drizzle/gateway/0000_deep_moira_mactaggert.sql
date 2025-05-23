@@ -16,16 +16,23 @@ CREATE TABLE `account` (
 );
 --> statement-breakpoint
 CREATE TABLE `organization` (
-	`orgId` text PRIMARY KEY NOT NULL,
-	`name` text NOT NULL,
+	`id` text PRIMARY KEY NOT NULL,
+	`slug` text NOT NULL,
 	`status` text DEFAULT 'active' NOT NULL,
-	`creatorId` text NOT NULL,
 	`createdAt` integer DEFAULT (unixepoch() * 1000) NOT NULL,
-	`updatedAt` integer DEFAULT (unixepoch() * 1000) NOT NULL,
-	FOREIGN KEY (`creatorId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
+	`updatedAt` integer DEFAULT (unixepoch() * 1000) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `organization_name_unique` ON `organization` (`name`);--> statement-breakpoint
+CREATE UNIQUE INDEX `organization_slug_unique` ON `organization` (`slug`);--> statement-breakpoint
+CREATE TABLE `organization_membership` (
+	`userId` text NOT NULL,
+	`organizationId` text NOT NULL,
+	`role` text NOT NULL,
+	`createdAt` integer DEFAULT (unixepoch() * 1000) NOT NULL,
+	FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`organizationId`) REFERENCES `organization`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `session` (
 	`id` text PRIMARY KEY NOT NULL,
 	`userId` text NOT NULL,

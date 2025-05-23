@@ -6,12 +6,23 @@ import type {
 } from "@/domain/tenant/organization/model";
 import type { schema } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { organization as organizationTable } from "@/infrastructure/persistence/tenant/sqlite/schema";
-
+import { eq } from "drizzle-orm";
 export const makeOrgDrizzleAdapter = (
-  db: DrizzleSqliteDODatabase<typeof schema>,
+  db: DrizzleSqliteDODatabase<typeof schema>
 ) => ({
+  getOrgBySlug: async (slug: string) => {
+    const orgResults = await db
+      .select()
+      .from(organizationTable)
+      .where(eq(organizationTable.slug, slug));
+
+    if (!orgResults || orgResults.length === 0) {
+      throw new Error("No organization found");
+    }
+
+    return orgResults[0] as unknown as Organization;
+  },
   createOrg: async (data: NewOrganization, creatorUserId: string) => {
-    console.log("createOrg from drizzleAdapter", data, creatorUserId);
     const id = uuidv4();
     const orgInsertData = {
       id,

@@ -9,6 +9,11 @@ export const OrganizationProvisionLive = Layer.effect(
     const organizationDOService = yield* OrganizationDOService;
 
     return {
+      get: (slug: string) =>
+        Effect.gen(function* () {
+          const result = yield* organizationDOService.getOrganization(slug);
+          return result;
+        }),
       create: (payload: OrganizationProvisionPayload) =>
         Effect.gen(function* () {
           const { organization, creatorId } = payload;
@@ -16,11 +21,11 @@ export const OrganizationProvisionLive = Layer.effect(
           // Use the service to create the organization
           const result = yield* organizationDOService.createOrganization(
             organization,
-            creatorId,
+            creatorId
           );
 
           return result;
         }),
     };
-  }),
+  })
 );

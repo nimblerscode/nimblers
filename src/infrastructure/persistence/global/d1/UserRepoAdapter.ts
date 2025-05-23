@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { DbError } from "@/domain/global/auth/service";
 import type { Email } from "@/domain/global/email/model";
 import {
+  type NewMembership,
   type User,
   type UserId,
   UserNotFoundError,
@@ -18,24 +19,21 @@ export const UserRepoLive = Layer.effect(
     const drizzleAdapter = makeUserDrizzleAdapter(db, userTable);
     const serviceMethods = {
       findById: (userId: UserId) =>
-        Effect.gen(function* (_) {
-          const userResult: User | undefined = yield* _(
-            Effect.tryPromise({
-              try: () => drizzleAdapter.findById(userId),
-              catch: (error) => new DbError({ cause: error }),
-            }),
-          );
+        Effect.gen(function* () {
+          const userResult: User | undefined = yield* Effect.tryPromise({
+            try: () => drizzleAdapter.findById(userId),
+            catch: (error) => new DbError({ cause: error }),
+          });
+
           if (!userResult) {
-            return yield* _(
-              Effect.fail(
-                new UserNotFoundError({
-                  message: "User not found",
-                  identifier: { type: "id", value: userId },
-                }),
-              ),
+            return yield* Effect.fail(
+              new UserNotFoundError({
+                message: "User not found",
+                identifier: { type: "id", value: userId },
+              })
             );
           }
-          return userResult as User;
+          return userResult;
         }),
 
       findByEmail: (email: Email) =>
@@ -44,7 +42,7 @@ export const UserRepoLive = Layer.effect(
             Effect.tryPromise({
               try: () => drizzleAdapter.findByEmail(email),
               catch: (error) => new DbError({ cause: error }),
-            }),
+            })
           );
           if (!userResult) {
             return yield* _(
@@ -52,22 +50,28 @@ export const UserRepoLive = Layer.effect(
                 new UserNotFoundError({
                   message: "User not found",
                   identifier: { type: "email", value: email },
-                }),
-              ),
+                })
+              )
             );
           }
           return userResult;
         }),
+
+      createMemberOrg: (data: NewMembership) =>
+        Effect.tryPromise({
+          try: () => drizzleAdapter.createMemberOrg(data),
+          catch: (error: unknown) => new DbError({ cause: error }),
+        }),
+
+      getUsers: (memberIds: UserId[]) =>
+        Effect.gen(function* () {
+          const users = yield* Effect.tryPromise({
+            try: () => drizzleAdapter.getUsers(memberIds),
+            catch: (error) => new DbError({ cause: error }),
+          });
+          return users;
+        }),
     };
     return serviceMethods;
-    // const drizzleAdapter = makeUserDrizzleAdapter(db, userTable);
-    // const userEffectAdapter = makeUserEffectAdapter(drizzleAdapter);
-    // return userEffectAdapter;
-  }),
-
-  // Effect.map(DrizzleD1Client, (db) =>
-  //   makeUserEffectAdapter(makeUserDrizzleAdapter(db, userTable))
-  // )
+  })
 );
-
-// export const UserRepo = UserRepoLive.pipe(Layer.extend(UserRepoLive));

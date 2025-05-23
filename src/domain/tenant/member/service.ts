@@ -3,6 +3,7 @@ import type { Email } from "@/domain/global/email/model";
 import type {
   Member,
   MemberDbError,
+  MemberDOError,
   MemberNotFoundError,
   NewMember,
 } from "./model"; // Import the schema now
@@ -16,15 +17,19 @@ export class MemberRepo extends Context.Tag("core/member/MemberRepo")<
 
     // // Find membership by userId and organizationId
     findMembership: (
-      email: Email,
+      email: Email
     ) => Effect.Effect<
       Option.Option<Member>,
       MemberNotFoundError | MemberDbError
     >;
 
-    // // Potentially add other methods like:
-    // listMembersByOrg: (organizationId: string) => Effect.Effect<Member[], MemberDbError>;
-    // updateMemberRole: (...) => Effect.Effect<Member, MemberRepoError>;
-    // deleteMember: (...) => Effect.Effect<void, MemberRepoError>;
+    getMembers: Effect.Effect<Member[], MemberDbError>;
+  }
+>() {}
+
+export class MemberDOService extends Context.Tag("core/member/MemberDOService")<
+  MemberDOService,
+  {
+    get: (slug: string) => Effect.Effect<Member[], MemberDOError>;
   }
 >() {}

@@ -45,14 +45,14 @@ export type SwitchOrganizationActionState = {
 // === CREATE ORGANIZATION ACTION ===
 export async function createOrganizationAction(
   _prevState: CreateOrganizationActionState, // previous state from useActionState
-  formData: FormData,
+  formData: FormData
 ): Promise<CreateOrganizationActionState> {
   const ctx = requestInfo.ctx as AppContext;
 
   // --- Retrieve authenticated userId ---
   if (!ctx.session || !ctx.session.userId) {
     console.error(
-      "createOrganizationAction: No session or userId found. User might not be authenticated.",
+      "createOrganizationAction: No session or userId found. User might not be authenticated."
     );
     return {
       success: false,
@@ -65,8 +65,10 @@ export async function createOrganizationAction(
 
   // --- Basic Validation (can be enhanced or moved) ---
   const name = formData.get("name") as string;
-  const slug = formData.get("slug") as string;
   const logo = formData.get("logo") as string | undefined;
+
+  // the slug is the name in lowercase with dashes
+  const slug = name.toLowerCase().replace(/ /g, "-");
 
   const orgCreatePayload: NewOrganization = {
     name,
@@ -78,8 +80,8 @@ export async function createOrganizationAction(
   // Create the Effect program using the service
   const createOrgProgram = OrganizationDOService.pipe(
     Effect.flatMap((service) =>
-      service.createOrganization(orgCreatePayload, creatorId as UserId),
-    ),
+      service.createOrganization(orgCreatePayload, creatorId as UserId)
+    )
   );
 
   const finalLayer = OrganizationDOLive({ ORG_DO: env.ORG_DO });
@@ -95,7 +97,7 @@ export async function createOrganizationAction(
 
     // Create the effect to insert into main DB
     const orgRepoLayer = OrgRepoD1LayerLive.pipe(
-      Layer.provide(DatabaseLive({ DB: env.DB })),
+      Layer.provide(DatabaseLive({ DB: env.DB }))
     );
 
     console.log("organization", organization);
@@ -104,10 +106,10 @@ export async function createOrganizationAction(
       Effect.flatMap((service) =>
         service.create({
           id: organization.id,
-          name: organization.name,
+          slug: organization.slug,
           creatorId: creatorId as UserId,
-        }),
-      ),
+        })
+      )
     ).pipe(Effect.provide(orgRepoLayer));
 
     const result = await Effect.runPromiseExit(create);

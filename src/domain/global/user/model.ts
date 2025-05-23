@@ -27,6 +27,14 @@ export const NewUserSchema = S.Struct({
   hashedPassword: S.String, // This will be the already hashed password
 });
 
+export const NewMembershipSchema = S.Struct({
+  userId: UserIdSchema,
+  organizationId: S.String,
+  role: S.String,
+});
+
+export type NewMembership = S.Schema.Type<typeof NewMembershipSchema>;
+
 export type NewUser = S.Schema.Type<typeof NewUserSchema>;
 
 // --- User Errors ---
@@ -36,7 +44,7 @@ export class UserNotFoundError extends Data.TaggedError("UserNotFoundError")<{
 }> {}
 
 export class UserAlreadyExistsError extends Data.TaggedError(
-  "UserAlreadyExistsError",
+  "UserAlreadyExistsError"
 )<{
   message: string;
   email: Email;

@@ -1,19 +1,20 @@
 import { Context, type Effect } from "effect";
 import type { DbError } from "../auth/service";
 import type { Email } from "../email/model";
-import type { User, UserId, UserNotFoundError } from "./model";
+import type { NewMembership, User, UserId, UserNotFoundError } from "./model";
 
 export abstract class UserRepo extends Context.Tag("@core/user/UserRepo")<
   UserRepo,
   {
     readonly findByEmail: (
-      email: Email,
+      email: Email
     ) => Effect.Effect<User, UserNotFoundError | DbError>;
     readonly findById: (
-      id: UserId,
+      id: UserId
     ) => Effect.Effect<User, UserNotFoundError | DbError>;
-    // Potentially add:
-    // readonly update: (user: User) => Effect.Effect<User, UserError>;
-    // readonly delete: (id: User["id"]) => Effect.Effect<void, UserError>;
+    readonly createMemberOrg: (
+      data: NewMembership
+    ) => Effect.Effect<void, DbError>;
+    readonly getUsers: (memberIds: UserId[]) => Effect.Effect<User[], DbError>;
   }
 >() {}

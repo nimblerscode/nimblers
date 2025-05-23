@@ -1,7 +1,11 @@
 "use client";
-import { Building2 } from "lucide-react";
-import { useState } from "react";
 import {
+  createOrganizationAction,
+  CreateOrganizationActionState,
+} from "@/app/actions/organization/create";
+import {
+  Banner,
+  Box,
   Button,
   Card,
   CardContent,
@@ -22,6 +26,8 @@ import {
   PricingPlanCardHeader,
   PricingPlanGroup,
 } from "@/app/design-system/PricingPlanSelector";
+import { Building2, Loader2 } from "lucide-react";
+import { useActionState, useState } from "react";
 import { PlanDurationSelector } from "./PlanDurationSelector";
 
 const PRICING_PLANS = [
@@ -32,8 +38,10 @@ const PRICING_PLANS = [
     price: "$0",
     features: [
       "1000 messages per month",
-      "1000 messages per month",
-      "1000 messages per month",
+      "Basic analytics",
+      "Basic support",
+      "Basic permissions",
+      "Basic branding"
     ],
     isRecommended: false,
   },
@@ -44,8 +52,12 @@ const PRICING_PLANS = [
     price: "$10",
     features: [
       "1000 messages per month",
-      "1000 messages per month",
-      "1000 messages per month",
+      "Advanced analytics",
+      "Priority support",
+      "Customizable branding",
+      "Advanced permissions",
+      "Team collaboration",
+      "24/7 support",
     ],
     isRecommended: true,
   },
@@ -55,17 +67,36 @@ const PRICING_PLANS = [
     description: "For large teams with high messaging needs",
     price: "$20",
     features: [
-      "1000 messages per month",
-      "1000 messages per month",
-      "1000 messages per month",
+      "Unlimited messages",
+      "Advanced analytics",
+      "Priority support",
+      "Customizable branding",
+      "Advanced permissions",
+      "Team collaboration",
+      "24/7 support",
     ],
     isRecommended: false,
   },
 ];
 
+const initialState: CreateOrganizationActionState = {
+  success: false,
+  message: "",
+  errors: null,
+  organization: null,
+};
+
 export function CreateOrganization() {
   const [organizationName, setOrganizationName] = useState("");
   const [selectedPlan, setSelectedPlan] = useState(PRICING_PLANS[1]);
+  const [state, formAction, pending] = useActionState(
+    createOrganizationAction,
+    initialState
+  );
+
+  if (state.success) {
+    window.location.href = `/organization/${state.organization?.slug}`;
+  }
 
   return (
     <Card>
@@ -92,12 +123,26 @@ export function CreateOrganization() {
           </HStack>
         </CardHeader>
         <CardContent w="full">
-          <form>
+          <form action={formAction}>
             <VStack gap="6" w="full" alignItems="stretch">
+              {!state.success && state.message ? (
+                <Banner variant="danger" title="Organization creation failed">
+                  <Text
+                    fontSize="sm"
+                    color="content.danger"
+                    maxWidth="100%"
+                    overflow="hidden"
+                    textOverflow="ellipsis"
+                    whiteSpace="nowrap"
+                  >
+                    {state.message}
+                  </Text>
+                </Banner>
+              ) : null}
               <VStack gap="2" w="full" alignItems="stretch">
                 <TextField
                   isRequired
-                  name="organizationName"
+                  name="name"
                   label="Organization name"
                   inputProps={{ placeholder: "Nimblers Inc" }}
                   value={organizationName}
@@ -107,7 +152,8 @@ export function CreateOrganization() {
                   <Text fontSize="sm" color="content.secondary">
                     Your organization URL will be:{" "}
                     <Text as="span" fontWeight="bold">
-                      nimblers.com/{organizationName}
+                      nimblers.com/
+                      {organizationName.toLowerCase().replace(/ /g, "-")}
                     </Text>
                   </Text>
                 ) : null}
@@ -130,7 +176,7 @@ export function CreateOrganization() {
                   onChange={(value) =>
                     setSelectedPlan(
                       PRICING_PLANS.find((plan) => plan.id === value) ||
-                        PRICING_PLANS[0],
+                      PRICING_PLANS[0]
                     )
                   }
                 >
@@ -148,9 +194,16 @@ export function CreateOrganization() {
                   ))}
                 </PricingPlanGroup>
                 <Button variant="primary" size="lg" type="submit">
-                  {selectedPlan.id === "free"
-                    ? "Create organization"
-                    : "Continue to Payment"}
+                  <HStack gap="2">
+                    {selectedPlan.id === "free"
+                      ? "Create organization"
+                      : "Continue to Payment"}
+                    {pending ? (
+                      <Box animation="spin">
+                        <Icon icon={Loader2} />
+                      </Box>
+                    ) : null}
+                  </HStack>
                 </Button>
               </VStack>
             </VStack>

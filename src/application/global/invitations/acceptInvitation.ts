@@ -14,17 +14,18 @@ import {
 } from "@/domain/tenant/invitations/service";
 import type { Member, NewMember } from "@/domain/tenant/member/model";
 import { MemberRepo } from "@/domain/tenant/member/service";
+import type { NewMembership } from "@/domain/global/user/model";
 
 // --- AcceptInvitation Use Case Definition ---
 export const makeAcceptInvitationUseCase = Effect.gen(function* () {
   const invitationRepo = yield* InvitationRepo;
   const getInvitationUseCase = yield* InvitationUseCase;
-  const orgMemberRepo = yield* MemberRepo;
+  const memberRepo = yield* MemberRepo;
   const userRepo = yield* UserRepo;
 
   return {
     accept: (
-      input: AcceptInvitationInput,
+      input: AcceptInvitationInput
     ): Effect.Effect<Member, AcceptInvitationError> => {
       return Effect.gen(function* (_) {
         // Note: `invitation` here is of type `Invitation` from `../models`
@@ -43,21 +44,32 @@ export const makeAcceptInvitationUseCase = Effect.gen(function* () {
           userId: user.id, // from the created/found global user
           role: invitation.role, // from the invitation
         };
-        const orgMember = yield* orgMemberRepo.createMember(newOrgMemberData);
+        const orgMember = yield* memberRepo.createMember(newOrgMemberData);
+
+        // 3.1 Create Membership-organization record
+        const newMembershipData: NewMembership = {
+          userId: user.id,
+          // Member does not have an organizationId,
+          // so we need to get it from the DO
+          organizationId: orgMember.organizationId,
+          role: invitation.role,
+        };
+
+        yield* userRepo.createMemberOrg(newMembershipData);
 
         // 4. Update Invitation status
         yield* invitationRepo.updateStatus(
           invitation.id,
           Schema.decodeUnknownSync(InvitationStatusSchema)(
-            InvitationStatusLiterals.accepted,
-          ),
+            InvitationStatusLiterals.accepted
+          )
         );
 
         // Return the created organization member
         return orgMember;
       }).pipe(
         Effect.catchAll((e) => Effect.fail(e as AcceptInvitationError)), // Ensure error type
-        Effect.withSpan("AcceptInvitationUseCase.accept"),
+        Effect.withSpan("AcceptInvitationUseCase.accept")
       );
     },
   };
@@ -65,12 +77,12 @@ export const makeAcceptInvitationUseCase = Effect.gen(function* () {
 
 // --- Service Interface & Tag for AcceptInvitationUseCase ---
 export abstract class AcceptInvitationUseCase extends Context.Tag(
-  "@core/organization/invitations/use-cases/AcceptInvitationUseCase",
+  "@core/organization/invitations/use-cases/AcceptInvitationUseCase"
 )<
   AcceptInvitationUseCase,
   {
     readonly accept: (
-      input: AcceptInvitationInput,
+      input: AcceptInvitationInput
     ) => Effect.Effect<Member, AcceptInvitationError>;
   }
 >() {}
@@ -78,5 +90,5 @@ export abstract class AcceptInvitationUseCase extends Context.Tag(
 // --- Live Layer for AcceptInvitationUseCase ---
 export const AcceptInvitationUseCaseLive = Layer.effect(
   AcceptInvitationUseCase,
-  makeAcceptInvitationUseCase,
+  makeAcceptInvitationUseCase
 );
