@@ -24,7 +24,7 @@ export class DOInteractionError extends Data.TaggedError("DOInteractionError")<{
 // --- Required Dependency Tag ---
 // The DO namespace needed by the live service
 export class InvitationDONamespace extends Context.Tag(
-  "cloudflare/bindings/INVITATION_DO_NAMESPACE",
+  "cloudflare/bindings/INVITATION_DO_NAMESPACE"
 )<
   InvitationDONamespace, // The service itself (though it's just holding the namespace)
   typeof env.ORG_DO // Use DurableObjectNamespace directly, let TS infer or it defaults appropriately
@@ -44,8 +44,8 @@ export const InvitationDOServiceLive = Layer.effect(
               (error) =>
                 new InvalidToken({
                   message: error.message,
-                }),
-            ),
+                })
+            )
           );
 
           const id = invitationDONamespace.idFromString(doId.toString());
@@ -56,7 +56,7 @@ export const InvitationDOServiceLive = Layer.effect(
                 `http://internal/invitations/${doId}?token=${token}`,
                 {
                   method: "GET",
-                },
+                }
               );
               console.log("res from invitation do", res);
               const invitation = (await res.json()) as Invitation;
@@ -81,6 +81,7 @@ export const InvitationDOServiceLive = Layer.effect(
         });
       },
       accept: (token: string) => {
+        // TODO change the token param to the invitation id
         console.log("InvitationDO accept", token);
         return Effect.gen(function* () {
           const doId = invitationDONamespace.idFromName(token);
@@ -141,31 +142,21 @@ export const InvitationDOServiceLive = Layer.effect(
               console.log("Response status:", response.status);
               console.log(
                 "Response headers:",
-                Object.fromEntries(response.headers.entries()),
+                Object.fromEntries(response.headers.entries())
               );
-              const text = await response.text();
-              console.log("Raw response body:", text);
-
               // If response is not ok, throw error regardless of body content
               if (!response.ok) {
                 throw new OrgDbError({
                   cause: new Error(
-                    text || `Server responded with status ${response.status}`,
+                    `Server responded with status ${response.status}`
                   ),
                 });
               }
 
-              // Only try to parse JSON if we have content and response was ok
-              if (!text) {
-                throw new OrgDbError({
-                  cause: new Error("Empty response received from server"),
-                });
-              }
-
               try {
-                const res = JSON.parse(text) as Invitation;
+                const res = (await response.json()) as Invitation;
                 return res;
-              } catch (_e) {
+              } catch {
                 throw new OrgDbError({
                   cause: new Error("Invalid JSON response from server"),
                 });
@@ -185,6 +176,56 @@ export const InvitationDOServiceLive = Layer.effect(
           return response;
         });
       },
+      list: (organizationSlug: string) => {
+        console.log("InvitationDO list", organizationSlug);
+        return Effect.gen(function* () {
+          const doId = invitationDONamespace.idFromName(organizationSlug);
+          const stub = invitationDONamespace.get(doId);
+          const response = yield* Effect.tryPromise({
+            try: async () => {
+              console.log(
+                "Fetching invitations for organization:",
+                organizationSlug
+              );
+              const response = await stub.fetch("http://internal/invitations", {
+                method: "GET",
+                headers: Headers.unsafeFromRecord({
+                  "Content-Type": "application/json",
+                }),
+              });
+              console.log("Response status:", response.status);
+
+              if (!response.ok) {
+                throw new OrgDbError({
+                  cause: new Error(
+                    `Server responded with status ${response.status}`
+                  ),
+                });
+              }
+
+              try {
+                const res = (await response.json()) as Invitation[];
+                return res;
+              } catch {
+                throw new OrgDbError({
+                  cause: new Error("Invalid JSON response from server"),
+                });
+              }
+            },
+            catch: (error) => {
+              console.error("Error in invitation listing:", error);
+              if (error instanceof OrgDbError) {
+                return error;
+              }
+              return new OrgDbError({
+                cause:
+                  error instanceof Error ? error : new Error(String(error)),
+              });
+            },
+          });
+          return response;
+        });
+      },
     };
-  }),
+  })
 );

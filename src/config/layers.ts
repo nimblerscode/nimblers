@@ -61,6 +61,7 @@ export function InvitationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 }
 
 export const InvitationLayerLive = (doId: DurableObjectId) => {
+  console.log("InvitationLayerLive----->", doId);
   const MemberServiceLayer = Layer.provide(MemberRepoLive, DrizzleDOClientLive);
 
   // Invitation repository layer

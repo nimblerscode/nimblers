@@ -41,7 +41,6 @@ export const InvitationRepoLive = Layer.effect(
   InvitationRepo,
   Effect.gen(function* () {
     const drizzleClient = yield* DrizzleDOClient;
-    // const inviteToken = yield* InviteToken;
     const invitationRepo = {
       create: (invitationData: NewInvitation) =>
         Effect.gen(function* () {
@@ -86,7 +85,7 @@ export const InvitationRepoLive = Layer.effect(
             return new OrgDbError({
               cause: error,
             });
-          }),
+          })
         ),
 
       findPendingByEmail: (email: Email) =>
@@ -112,6 +111,26 @@ export const InvitationRepoLive = Layer.effect(
             createdAt: Number(result[0].createdAt),
           });
           return Option.some(invitation);
+        }),
+
+      findAll: () =>
+        Effect.gen(function* () {
+          const result = yield* Effect.tryPromise({
+            try: () => drizzleClient.db.select().from(schema.invitation),
+            catch: (error: unknown) => {
+              return new OrgDbError({
+                cause: error,
+              });
+            },
+          });
+
+          return result.map((row) =>
+            mapDbInvitationToDomain({
+              ...row,
+              expiresAt: Number(row.expiresAt),
+              createdAt: Number(row.createdAt),
+            })
+          );
         }),
 
       updateStatus: (invitationId: InvitationId, status: InvitationStatus) =>
@@ -168,5 +187,5 @@ export const InvitationRepoLive = Layer.effect(
     };
 
     return invitationRepo;
-  }),
+  })
 );

@@ -1,7 +1,6 @@
 // libs/auth/invite-token.ts
 import { env } from "cloudflare:workers";
-import type { DurableObjectId } from "@cloudflare/workers-types";
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Schema } from "effect";
 import { jwtVerify, SignJWT } from "jose";
 import type { InvitationId } from "./models";
 
@@ -11,24 +10,23 @@ const encoder = new TextEncoder();
 // Create the key using a Uint8Array instead of CryptoKey
 const getSecretKey = (secret: string) => encoder.encode(secret);
 
-export class ErrorToken extends Error {
-  readonly _tag = "ErrorToken";
-  constructor(readonly message: string) {
-    super(message);
-  }
-}
+// Placeholder for generic Org DB errors
+export class ErrorToken extends Schema.TaggedError<ErrorToken>()(
+  "ErrorToken",
+  { cause: Schema.Unknown } // Store the original cause
+) {}
 
 export class InviteToken extends Context.Tag("core/token")<
   InviteToken,
   {
     sign: (claims: {
       invitationId: InvitationId;
-      doId: DurableObjectId;
+      doId: string;
     }) => Effect.Effect<string, ErrorToken>;
     verify: (
-      token: string,
+      token: string
     ) => Effect.Effect<
-      { doId: DurableObjectId; invitationId: InvitationId },
+      { doId: string; invitationId: InvitationId },
       ErrorToken
     >;
   }
@@ -58,7 +56,7 @@ export const InviteTokenLive = Layer.effect(
           },
           catch: (error) => {
             console.error("error signing token", error);
-            return new ErrorToken(String(error));
+            return new ErrorToken({ cause: error });
           },
         }),
 
@@ -66,7 +64,7 @@ export const InviteTokenLive = Layer.effect(
         Effect.tryPromise({
           try: async () => {
             const { payload } = await jwtVerify<{
-              doId: DurableObjectId;
+              doId: string;
               invitationId: InvitationId;
             }>(token, secretKey);
 
@@ -78,9 +76,9 @@ export const InviteTokenLive = Layer.effect(
           },
           catch: (error) => {
             console.error("error verifying token", error);
-            return new ErrorToken(String(error));
+            return new ErrorToken({ cause: error });
           },
         }),
     };
-  }),
+  })
 );

@@ -7,6 +7,7 @@ import {
 import { OrgService } from "@/domain/tenant/organization/service";
 import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { makeOrgDrizzleAdapter } from "@/infrastructure/persistence/tenant/sqlite/OrgDrizzleAdapter";
+import type { Member } from "@/domain/tenant/member/model";
 
 const mapToOrgDbError = (error: unknown): OrgDbError => {
   return new OrgDbError({ cause: error });
@@ -38,9 +39,11 @@ export const OrgRepoLive = Layer.effect(
             catch: mapToOrgDbError,
           });
           // Now, create the initial member
-          const createdMemberEffect = memberRepoService.createMember(
-            result.memberCreateData
-          );
+          const createdMemberEffect = memberRepoService.createMember({
+            ...result.memberCreateData,
+            userId: result.memberCreateData
+              .userId as unknown as Member["userId"],
+          });
 
           yield* createdMemberEffect.pipe(Effect.mapError(mapToOrgDbError));
           return result.org;

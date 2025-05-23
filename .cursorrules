@@ -1,0 +1,341 @@
+## effect-architecture
+
+description: Effect-TS Clean Architecture patterns for scalable applications
+globs: src/domain/**/\*.ts,src/application/**/_.ts,src/infrastructure/\*\*/_.ts,src/config/layers.ts,src/app/actions/\*_/_.ts
+alwaysApply: true
+
+---
+
+# Effect-TS Clean Architecture Patterns
+
+You are an expert in building scalable applications using Effect-TS with Clean Architecture principles. Follow these patterns when adding new features or modifying existing ones.
+
+## Architecture Layers
+
+### 1. Domain Layer (`src/domain/`)
+
+- **Models**: Define core business entities, value objects, and branded types
+- **Services**: Abstract interfaces using `Context.Tag` for repositories and use cases
+- **Errors**: Custom error types extending `Data.TaggedError` or using branded types
+- **Rules**: Pure business logic and validation rules
+
+### 2. Application Layer (`src/application/`)
+
+- **Use Cases**: Business logic orchestration using Effect-TS
+- **Services**: Concrete implementations of domain services
+- **Orchestration**: Compose multiple domain services to fulfill business requirements
+
+### 3. Infrastructure Layer (`src/infrastructure/`)
+
+- **Persistence**: Database repositories using Drizzle ORM and Effect
+- **External Services**: API clients, email services, etc.
+- **Cloudflare**: Durable Objects, Workers bindings
+- **HTTP API**: RESTful endpoints using `@effect/platform`
+
+### 4. Configuration Layer (`src/config/`)
+
+- **Layers**: Effect layers that wire dependencies together
+- **Environment**: Environment-specific configurations
+
+### 5. Application/UI Layer (`src/app/`)
+
+- **Actions**: Server actions that orchestrate use cases
+- **Components**: React components (Server/Client)
+- **Pages**: Route handlers and layouts
+
+## Implementation Patterns
+
+### Adding a New Feature End-to-End
+
+When adding a new feature (e.g., "list invitations"), follow this exact sequence:
+
+#### 1. Domain Layer
+
+```typescript
+// src/domain/[entity]/service.ts
+export abstract class EntityRepo extends Context.Tag("@core/EntityRepo")<
+  EntityRepo,
+  {
+    readonly methodName: (
+      params: ParamType
+    ) => Effect.Effect<ReturnType, ErrorType>;
+  }
+>() {}
+
+export class EntityUseCase extends Context.Tag("@core/EntityUseCase")<
+  EntityUseCase,
+  {
+    readonly methodName: (
+      params: ParamType
+    ) => Effect.Effect<ReturnType, BusinessErrorType>;
+  }
+>() {}
+```
+
+#### 2. Infrastructure - Repository Implementation
+
+```typescript
+// src/infrastructure/persistence/tenant/sqlite/EntityRepoLive.ts
+export const EntityRepoLive = Layer.effect(
+  EntityRepo,
+  Effect.gen(function* () {
+    const drizzleClient = yield* DrizzleDOClient;
+    return {
+      methodName: (params: ParamType) =>
+        Effect.gen(function* () {
+          // Database operations using drizzle
+          const result = yield* Effect.tryPromise({
+            try: () => drizzleClient.db.select()...,
+            catch: (error) => new DbError({ cause: error }),
+          });
+          return result;
+        }),
+    };
+  })
+);
+```
+
+#### 3. Application - Use Case Implementation
+
+```typescript
+// src/application/tenant/[entity]/service.ts
+export const EntityUseCaseLive = (doId: DurableObjectId) =>
+  Layer.effect(
+    EntityUseCase,
+    Effect.gen(function* () {
+      const entityRepo = yield* EntityRepo;
+      return {
+        methodName: (params: ParamType) => {
+          return Effect.gen(function* () {
+            // Business logic orchestration
+            const result = yield* entityRepo.methodName(params);
+            // Additional business rules, transformations
+            return result;
+          }).pipe(Effect.withSpan("EntityUseCase.methodName"));
+        },
+      };
+    })
+  );
+```
+
+#### 4. Infrastructure - Durable Object Service
+
+```typescript
+// src/infrastructure/cloudflare/durable-objects/EntityDO.ts
+export const EntityDOServiceLive = Layer.effect(
+  EntityDOService,
+  Effect.gen(function* () {
+    const entityDONamespace = yield* EntityDONamespace;
+    return {
+      methodName: (organizationSlug: string) => {
+        return Effect.gen(function* () {
+          const doId = entityDONamespace.idFromName(organizationSlug);
+          const stub = entityDONamespace.get(doId);
+          const response = yield* Effect.tryPromise({
+            try: async () => {
+              const response = await stub.fetch("http://internal/entities", {
+                method: "GET",
+                headers: Headers.unsafeFromRecord({
+                  "Content-Type": "application/json",
+                }),
+              });
+
+              if (!response.ok) {
+                throw new DOError({
+                  /* ... */
+                });
+              }
+
+              return (await response.json()) as EntityType[];
+            },
+            catch: (error) => new DOError({ cause: error }),
+          });
+          return response;
+        });
+      },
+    };
+  })
+);
+```
+
+#### 5. Infrastructure - HTTP API Handler
+
+```typescript
+// src/infrastructure/cloudflare/durable-objects/organization/api/handlers.ts
+
+// 1. Define endpoint
+const getEntities = HttpApiEndpoint.get("getEntities", "/entities")
+  .addSuccess(Schema.Array(EntitySchema))
+  .addError(HttpApiError.NotFound);
+
+// 2. Add to group
+const organizationsGroup = HttpApiGroup.make("organizations")
+  .add(getEntities)
+  // ... other endpoints
+
+  // 3. Add handler
+  .handle("getEntities", () => {
+    return Effect.gen(function* () {
+      const entityService = yield* EntityUseCase;
+      return yield* entityService.methodName().pipe(
+        Effect.map((entities) => entities),
+        Effect.mapError(
+          (error) =>
+            new HttpApiError.HttpApiDecodeError({
+              message: error.message || String(error),
+              issues: [],
+            })
+        )
+      );
+    });
+  });
+```
+
+#### 6. Configuration - Wire Layers
+
+```typescript
+// src/config/layers.ts
+export function EntityDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
+  const doNamespaceLayer = Layer.succeed(EntityDONamespace, doEnv.ORG_DO);
+  return Layer.provide(EntityDOServiceLive, doNamespaceLayer);
+}
+
+export const EntityLayerLive = (doId: DurableObjectId) => {
+  const EntityRepoLayer = Layer.provide(EntityRepoLive, DrizzleDOClientLive);
+  const EntityUseCaseLayer = Layer.provide(
+    EntityUseCaseLive(doId),
+    EntityRepoLayer
+  );
+  return EntityUseCaseLayer;
+};
+```
+
+#### 7. Server Action
+
+```typescript
+// src/app/actions/entities/list.ts
+"use server";
+
+import { env } from "cloudflare:workers";
+import { Effect, pipe } from "effect";
+import { EntityDOService } from "@/application/tenant/entities/service";
+import { EntityDOLive } from "@/config/layers";
+
+export async function getEntities(organizationSlug: string): Promise<{
+  entities: SerializableEntity[];
+}> {
+  const program = pipe(
+    Effect.gen(function* (_) {
+      const entityProgram = EntityDOService.pipe(
+        Effect.flatMap((service) => service.methodName(organizationSlug))
+      );
+
+      const fullLayer = EntityDOLive({ ORG_DO: env.ORG_DO });
+
+      const entities = yield* _(
+        Effect.tryPromise({
+          try: () =>
+            Effect.runPromise(entityProgram.pipe(Effect.provide(fullLayer))),
+          catch: (error) => new EntityListError("Failed to fetch entities"),
+        })
+      );
+
+      return { entities: entities.map(convertToSerializable) };
+    }),
+    Effect.catchAll((error) => {
+      console.error("Error in getEntities:", error);
+      return Effect.succeed({ entities: [] });
+    })
+  );
+
+  return Effect.runPromise(program);
+}
+```
+
+#### 8. UI Integration
+
+```typescript
+// In layout or page component
+export async function Layout({ params }: RequestInfo) {
+  const { entities } = await getEntities(params.orgSlug);
+  return <ComponentThatNeedsEntities entities={entities} />;
+}
+```
+
+## Best Practices
+
+### Error Handling
+
+- Use branded error types in domain layer
+- Map infrastructure errors to domain errors
+- Always provide meaningful error messages
+- Use `Effect.catchAll` for graceful degradation
+
+### Type Safety
+
+- Use branded types for IDs and value objects
+- Define serializable interfaces for client components
+- Validate inputs at service boundaries
+- Use schema validation with `@effect/schema`
+
+### Dependency Injection
+
+- Use `Context.Tag` for all dependencies
+- Layer composition in `src/config/layers.ts`
+- Provide layers at the highest level (usually in actions)
+
+### Performance
+
+- Use `Effect.withSpan` for observability
+- Implement proper caching strategies
+- Consider streaming for large datasets
+- Use Suspense boundaries for async components
+
+### Testing
+
+- Mock dependencies using Effect layers
+- Test use cases in isolation
+- Use `Effect.runPromise` for async testing
+- Provide test layers for repositories
+
+## Code Organization
+
+```
+src/
+├── domain/
+│   ├── global/           # Cross-tenant entities
+│   └── tenant/           # Tenant-specific entities
+│       └── [entity]/
+│           ├── models.ts      # Types, schemas, errors
+│           └── service.ts     # Abstract interfaces
+├── application/
+│   ├── global/
+│   └── tenant/
+│       └── [entity]/
+│           └── service.ts     # Use case implementations
+├── infrastructure/
+│   ├── persistence/
+│   ├── cloudflare/
+│   │   └── durable-objects/
+│   └── external/
+├── config/
+│   └── layers.ts         # Dependency wiring
+└── app/
+    ├── actions/          # Server actions
+    └── components/       # React components
+```
+
+## Common Pitfalls
+
+1. **Forgetting to add methods to interfaces**: Always update both repo and use case interfaces
+2. **Missing layer wiring**: Ensure all dependencies are properly provided in layers
+3. **Error type mismatches**: Map errors correctly between layers
+4. **Async/await mixing**: Stick to Effect-TS patterns, avoid mixing with Promise.then
+5. **Missing serialization**: Convert domain objects to serializable types for client components
+
+## Performance Considerations
+
+- **Layer Composition**: Heavy - consider caching layers
+- **Effect Chains**: Lightweight - compose freely
+- **Durable Object Calls**: Heavy - batch when possible
+- **Database Queries**: Optimize with proper indexing and query patterns

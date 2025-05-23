@@ -4,6 +4,7 @@ export * from "./Breadcrumb";
 export * from "./Button";
 export * from "./Card";
 export * from "./DefinitionList";
+export * from "./Dialog";
 export { EntityList } from "./EntityList";
 export * from "./Heading";
 export * from "./Icon";
@@ -26,6 +27,7 @@ export * from "./Link";
 export * from "./List";
 export * from "./ListItem";
 export * from "./Pill";
+export * from "./Select";
 export * from "./Tabs";
 // Explicit exports from Text.tsx
 export { Text, type TextProps } from "./Text";

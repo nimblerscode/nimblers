@@ -136,7 +136,7 @@ export const MemberRepoLive = Layer.effect(
 
           return {
             id: dbRow.id,
-            userId: dbRow.userId,
+            userId: dbRow.userId as Member["userId"],
             role: dbRow.role,
             createdAt: createdAtDate,
             updatedAt: createdAtDate,

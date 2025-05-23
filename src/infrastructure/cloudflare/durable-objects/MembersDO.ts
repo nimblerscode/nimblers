@@ -28,6 +28,8 @@ export const MembersDOServiceLive = Layer.effect(
           },
         });
 
+        console.log("Response members", response);
+
         if (!response.ok) {
           throw new MemberDOError({ cause: response });
         }

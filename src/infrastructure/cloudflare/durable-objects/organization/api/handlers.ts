@@ -131,6 +131,10 @@ const getMembers = HttpApiEndpoint.get(
     })
   );
 
+const getInvitations = HttpApiEndpoint.get("getInvitations", "/invitations")
+  .addSuccess(Schema.Array(InvitationSchema))
+  .addError(HttpApiError.NotFound);
+
 // Group all user-related endpoints
 const organizationsGroup = HttpApiGroup.make("organizations")
   // .add(getOrganizations)
@@ -138,6 +142,7 @@ const organizationsGroup = HttpApiGroup.make("organizations")
   .add(createOrganization)
   .add(createInvitation)
   .add(getInvitation)
+  .add(getInvitations)
   .add(getMembers)
   // .add(acceptInvitation)
   // .add(deleteOrganization)
@@ -241,6 +246,22 @@ const organizationsGroupLive = HttpApiBuilder.group(
             const memberRepo = yield* MemberRepo;
             return yield* memberRepo.getMembers.pipe(
               Effect.map((members) => members),
+              Effect.mapError(
+                (error) =>
+                  new HttpApiError.HttpApiDecodeError({
+                    message: error.message || String(error),
+                    issues: [],
+                  })
+              )
+            );
+          });
+        })
+        .handle("getInvitations", () => {
+          return Effect.gen(function* () {
+            console.log("getInvitations handler");
+            const invitationService = yield* InvitationUseCase;
+            return yield* invitationService.list().pipe(
+              Effect.map((invitations) => invitations),
               Effect.mapError(
                 (error) =>
                   new HttpApiError.HttpApiDecodeError({
