@@ -48,7 +48,7 @@ export const InvitationDOServiceLive = Layer.effect(
             )
           );
 
-          const id = invitationDONamespace.idFromString(doId.toString());
+          const id = invitationDONamespace.idFromName(doId.toString());
           const stub = invitationDONamespace.get(id);
           const response = yield* Effect.tryPromise({
             try: async () => {

@@ -13,7 +13,7 @@ type ActionState = {
 
 export async function handleAcceptInvitation(
   _prevState: ActionState,
-  formData: FormData,
+  formData: FormData
 ): Promise<ActionState> {
   const token = formData.get("token") as string;
 
@@ -22,7 +22,7 @@ export async function handleAcceptInvitation(
   }
 
   const invitationProgram = InvitationDOService.pipe(
-    Effect.flatMap((service) => service.accept(token)),
+    Effect.flatMap((service) => service.accept(token))
   );
 
   const fullLayer = InvitationDOLive({
@@ -34,6 +34,7 @@ export async function handleAcceptInvitation(
 
     return { success: true };
   } catch (error) {
+    console.error("Error accepting invitation:", error);
     return {
       error:
         error instanceof Error ? error.message : "Failed to accept invitation",

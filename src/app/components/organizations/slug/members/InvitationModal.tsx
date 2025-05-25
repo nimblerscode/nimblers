@@ -1,17 +1,17 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Dialog, DialogFooter } from "@/app/design-system/Dialog";
-import { Button } from "@/app/design-system/Button";
-import { TextFieldRoot as TextField } from "@/app/design-system/Input";
-import { Text } from "@/app/design-system/Text";
-import { VStack, Flex } from "@/app/design-system/Layout";
+import { inviteUserAction, type InviteUserState, type SerializableInvitation } from "@/app/actions/invitations/create";
 import { Banner } from "@/app/design-system/Banner";
+import { Button } from "@/app/design-system/Button";
 import { Card, CardContent } from "@/app/design-system/Card";
+import { Dialog, DialogFooter } from "@/app/design-system/Dialog";
 import { Heading } from "@/app/design-system/Heading";
-import { cva } from "../../../../../../styled-system/css";
+import { TextFieldRoot as TextField } from "@/app/design-system/Input";
+import { Flex, VStack } from "@/app/design-system/Layout";
+import { Text } from "@/app/design-system/Text";
 import type { User } from "@/domain/global/user/model";
-import { inviteUserAction, type InviteUserState, type SerializableInvitation } from "./inviteAction";
+import { useActionState, useState } from "react";
+import { cva } from "../../../../../../styled-system/css";
 
 // Styling for the note section
 const noteStyles = cva({

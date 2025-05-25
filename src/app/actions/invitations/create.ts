@@ -202,7 +202,7 @@ export async function inviteUserAction(
             {
               inviterId: prevState.user.id as UserId,
               inviteeEmail: email as Email,
-              role: "admin",
+              role: role,
             },
             organizationSlug
           )
@@ -213,22 +213,30 @@ export async function inviteUserAction(
         ORG_DO: env.ORG_DO,
       });
 
-      const invitation = yield* Effect.tryPromise({
-        try: () =>
-          Effect.runPromise(invitationProgram.pipe(Effect.provide(fullLayer))),
-        catch: (error) => {
-          console.error("Error creating invitation:", error);
-          return Effect.fail(
-            new InvitationError("Failed to create invitation")
-          );
-        },
-      });
+      const invitation = yield* _(
+        Effect.tryPromise({
+          try: () =>
+            Effect.runPromise(
+              invitationProgram.pipe(Effect.provide(fullLayer))
+            ),
+          catch: (error) => {
+            console.error("Error creating invitation:", error);
+            return new InvitationError("Failed to create invitation");
+          },
+        })
+      );
 
       return buildSuccessState(user, email, invitation);
     }),
     Effect.catchAll((error) => {
-      console.error("Error creating invitation:", error);
-      return Effect.fail(new InvitationError("Failed to create invitation"));
+      console.error("Error in invitation action:", error);
+      const serializableError = convertToSerializableError(error);
+      return Effect.succeed({
+        success: false,
+        message: error.message || "Failed to send invitation",
+        errors: serializableError,
+        user: prevState.user,
+      } as InviteUserState);
     })
   );
 

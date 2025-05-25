@@ -2,6 +2,7 @@ import { Clock, Context, Effect, Layer, Option } from "effect";
 // Type-only imports
 import { sendEmail as sendEmailEffect } from "@/application/global/email/sendEmail";
 import { EmailService } from "@/domain/global/email/service";
+import { generateInvitationEmailHTML } from "@/app/email-templates/invitation-email";
 import {
   DuplicatePendingInvitation,
   type GetInvitationError,
@@ -116,20 +117,34 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
 
             const token = yield* inviteToken
               .sign({
-                doId: doId.name,
+                doId: doId.name || "default",
                 invitationId: createdInvitation.id,
               })
               .pipe(
                 Effect.mapError((error) => new OrgDbError({ cause: error }))
               );
 
-            const invitationLink = `https://app.example.com/invite?token=${token}`;
+            const invitationLink = `https://app.example.com/invite/${token}`;
+
+            // Get inviter details (you may need to fetch this from user repo)
+            const inviterName = "Team Member"; // TODO: Fetch actual inviter name
+            const organizationName = doId.name || "Organization"; // Fallback name
+
+            const emailProps = {
+              inviteeEmail,
+              inviterName,
+              organizationName,
+              organizationSlug: organizationName,
+              role,
+              invitationLink,
+              expiresAt: _expiresAt,
+            };
 
             const emailSendingEffect = sendEmailEffect({
               from: "welcome@email.nimblers.co",
               to: inviteeEmail,
-              subject: "You're invited to join an organization!",
-              body: `Please click the following link to accept your invitation: ${invitationLink}`,
+              subject: `You're invited to join ${organizationName}!`,
+              body: generateInvitationEmailHTML(emailProps),
             });
 
             yield* emailSendingEffect.pipe(

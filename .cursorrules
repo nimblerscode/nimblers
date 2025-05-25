@@ -339,3 +339,49 @@ src/
 - **Effect Chains**: Lightweight - compose freely
 - **Durable Object Calls**: Heavy - batch when possible
 - **Database Queries**: Optimize with proper indexing and query patterns
+
+## Design System & Styling
+
+### Panda CSS Usage
+
+- NEVER use Tailwind CSS classes in this project
+- Use Panda CSS's `css()` function for custom styles
+- Import styling functions from `styled-system/css`, `styled-system/patterns`, etc.
+- Use design system components from `@/app/design-system/` for layouts
+- For layouts, use: `VStack`, `HStack`, `Flex`, `Grid`, `Box` instead of div with classes
+- Example: `<VStack gap="4">` instead of `<div className="flex flex-col gap-4">`
+- For responsive design, use Panda CSS breakpoints: `css({ md: { fontSize: 'lg' } })`
+
+### Design System Components
+
+- Always prefer design system components over custom HTML elements
+- Use `Button`, `Card`, `Text`, `Heading`, `Banner`, `Icon` from design system
+- Use `Layout.tsx` components: `VStack`, `HStack`, `Flex` for structure
+- Check `@/app/design-system/index.ts` for available exports
+- Icons should use `Icon` component with imported icons from `@/app/design-system/icons`
+
+## Invitation System Flow
+
+### User State Handling
+
+- Always check user existence and authentication state server-side
+- Handle three user states:
+  1. User doesn't exist → `/signup?token={token}&email={email}`
+  2. User exists, not logged in → `/login?token={token}&email={email}`
+  3. User exists, logged in → Verify email match before accepting
+- Preserve invitation context through signup/login flows with token parameter
+- Use atomic operations for user creation + organization membership
+
+### Security Requirements
+
+- Verify logged-in user email matches invitation email
+- Implement single-use token consumption
+- Use server-side validation for all invitation operations
+- Include CSRF protection in forms
+
+### UX Patterns
+
+- Pre-fill email fields (read-only) when possible
+- Show clear next steps and progress indicators
+- Provide specific error messages for each failure case
+- Use progressive disclosure for complex flows
