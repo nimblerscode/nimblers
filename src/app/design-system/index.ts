@@ -26,8 +26,24 @@ export * from "./Layout";
 export * from "./Link";
 export * from "./List";
 export * from "./ListItem";
+// Layout components
+export { MainLayout } from "../components/layout/MainLayout";
 export * from "./Pill";
 export * from "./Select";
+// Sidebar components
+export {
+  Sidebar,
+  SidebarProvider,
+  SidebarHeader,
+  SidebarGroup,
+  SidebarItem,
+  SidebarFooter,
+  useSidebar,
+  type SidebarContextType,
+  type SidebarItemProps,
+  type SidebarProps,
+  type SidebarGroupProps,
+} from "./Sidebar";
 export * from "./Tabs";
 // Explicit exports from Text.tsx
 export { Text, type TextProps } from "./Text";

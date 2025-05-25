@@ -16,7 +16,7 @@ import {
 import { cva, cx } from "../../../styled-system/css";
 import { VStack } from "../../../styled-system/jsx";
 import { Icon } from "./Icon";
-import { ChevronDown, Check } from "./icons";
+import { ChevronDown } from "./icons";
 import { Label } from "./Input";
 
 // Select trigger styling
@@ -44,8 +44,9 @@ const selectStyles = cva({
       borderColor: "border.strong",
     },
     _focusVisible: {
-      ring: "focusRing.default solid 2px",
-      ringOffset: "0.5",
+      ring: "2px solid",
+      ringColor: "focusRing.default",
+      ringOffset: "1px",
       borderColor: "border.focus",
     },
     _disabled: {
@@ -156,14 +157,17 @@ const listBoxItemStyles = cva({
       bg: "border.subtle",
     },
     "&[data-focused]": {
-      bg: "brand.background",
-      color: "brand.solid",
+      bg: "border.subtle",
+      color: "content.primary",
+      ring: "2px solid",
+      ringColor: "focusRing.default",
+      ringOffset: "1px",
     },
     "&[data-selected]": {
-      bg: "brand.solid",
-      color: "brand.onSolid",
+      bg: "border.default",
+      color: "content.primary",
       _hover: {
-        bg: "brand.solidHover",
+        bg: "border.strong",
       },
     },
     "&[data-disabled]": {
@@ -235,12 +239,7 @@ export function SelectItem({ className, children, ...props }: SelectItemProps) {
   return (
     <AriaListBoxItem className={cx(listBoxItemStyles(), className)} {...props}>
       {(renderProps) => (
-        <>
-          <span>{typeof children === "function" ? children(renderProps) : children}</span>
-          {renderProps.isSelected && (
-            <Icon icon={Check} size={16} className={cx(selectIconStyles())} />
-          )}
-        </>
+        <span>{typeof children === "function" ? children(renderProps) : children}</span>
       )}
     </AriaListBoxItem>
   );

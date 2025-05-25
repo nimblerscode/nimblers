@@ -19,6 +19,33 @@ export const NewOrganizationD1Schema = S.Struct({
 
 export type NewOrganizationD1 = S.Schema.Type<typeof NewOrganizationD1Schema>;
 
+// Organization with membership information (from D1 database)
+export const OrganizationWithMembershipSchema = S.Struct({
+  id: S.String,
+  slug: S.String,
+  status: S.String,
+  role: S.String,
+  createdAt: S.String,
+});
+
+export type OrganizationWithMembership = S.Schema.Type<
+  typeof OrganizationWithMembershipSchema
+>;
+
+// Organization with membership and name (includes data from Durable Object)
+export const OrganizationWithMembershipAndNameSchema = S.Struct({
+  id: S.String,
+  slug: S.String,
+  name: S.String,
+  status: S.String,
+  role: S.String,
+  createdAt: S.String,
+});
+
+export type OrganizationWithMembershipAndName = S.Schema.Type<
+  typeof OrganizationWithMembershipAndNameSchema
+>;
+
 // === Errors ===
 export class OrgDbError extends S.TaggedError<OrgDbError>()(
   "OrgDbError",

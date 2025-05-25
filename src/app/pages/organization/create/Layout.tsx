@@ -1,21 +1,52 @@
-"use client";
-import { CreateOrganization } from "@/app/components/organizations/create/Create";
-import { Container, Heading, VStack } from "@/app/design-system";
+"use server";
 
-export function Layout() {
+import type { RequestInfo } from "rwsdk/worker";
+import type { AppContext } from "@/infrastructure/cloudflare/worker";
+import { getUserOrganizations } from "@/app/actions/organization/get";
+import { getActiveOrganization } from "@/app/actions/organization/switch";
+import { CreateWrapper } from "@/app/components/organization/create/CreateWrapper";
+
+export async function Layout({ ctx, request }: RequestInfo) {
+  const appCtx = ctx as AppContext;
+
+  if (!appCtx.user) {
+    throw new Error("User not found in context");
+  }
+
+  const user = {
+    ...appCtx.user,
+    id: appCtx.user.id as any,
+    email: appCtx.user.email as any,
+    name: appCtx.user.name || null,
+    image: appCtx.user.image || null,
+    role: null,
+  };
+
+  // Fetch organizations data and active organization
+  let organizations: Awaited<ReturnType<typeof getUserOrganizations>>;
+  let activeOrganizationId: string | null;
+
+  try {
+    [organizations, activeOrganizationId] = await Promise.all([
+      getUserOrganizations(),
+      getActiveOrganization()
+    ]);
+  } catch (error) {
+    console.error("Failed to fetch organizations or active organization:", error);
+    organizations = [];
+    activeOrganizationId = null;
+  }
+
+  // Get current path for sidebar active state
+  const url = new URL(request.url);
+  const currentPath = url.pathname;
+
   return (
-    <Container
-      display="flex"
-      maxW="3xl"
-      mx="auto"
-      alignItems="center"
-      minH="100vh"
-      justifyContent="center"
-    >
-      <VStack gap="8" alignItems="stretch" w="full">
-        <Heading as="h1">Nimblers</Heading>
-        <CreateOrganization />
-      </VStack>
-    </Container>
+    <CreateWrapper
+      user={user}
+      organizations={organizations}
+      activeOrganizationId={activeOrganizationId}
+      currentPath={currentPath}
+    />
   );
 }

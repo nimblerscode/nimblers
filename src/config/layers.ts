@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { Layer } from "effect";
 import { InvitationUseCaseLive } from "@/application/tenant/invitations/service";
+import { SessionUseCaseLive } from "@/application/global/session/service";
 import { InviteTokenLive } from "@/domain/tenant/invitations/tokenUtils";
 import { createBetterAuthServiceAdapter } from "@/infrastructure/auth/better-auth/adapter";
 import { BetterAuthConfigLive } from "@/infrastructure/auth/better-auth/config";
@@ -18,6 +19,7 @@ import {
   D1BindingLive,
   DrizzleD1ClientLive,
 } from "@/infrastructure/persistence/global/d1/drizzle";
+import { SessionRepoLive } from "@/infrastructure/persistence/global/d1/SessionRepoLive";
 import { DrizzleDOClientLive } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { InvitationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/InvitationRepoLive";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
@@ -28,6 +30,21 @@ export function DatabaseLive(db: { DB: D1Database }) {
   const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
   return drizzleLayer;
 }
+
+export const SessionLayerLive = () => {
+  const sessionRepoLayer = Layer.provide(SessionRepoLive, DrizzleD1ClientLive);
+  const sessionUseCaseLayer = Layer.provide(
+    SessionUseCaseLive,
+    sessionRepoLayer
+  );
+  return sessionUseCaseLayer;
+};
+
+export const SessionLayerWithDBLive = (db: { DB: D1Database }) => {
+  const databaseLayer = DatabaseLive(db);
+  const sessionLayer = SessionLayerLive();
+  return Layer.provide(sessionLayer, databaseLayer);
+};
 
 export const AuthServiceLive = (req: Request) =>
   createBetterAuthServiceAdapter(req) // needs AuthLayer + cookies

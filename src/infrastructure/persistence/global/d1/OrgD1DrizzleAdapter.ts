@@ -1,11 +1,11 @@
+import { eq, and } from "drizzle-orm";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import * as schema from "./schema";
+import type { OrganizationWithMembership } from "@/domain/global/organization/model";
 import type {
   NewOrganizationD1,
   OrganizationD1,
 } from "@/domain/global/organization/model";
-import { eq } from "drizzle-orm";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
-import * as schema from "./schema";
-import { and } from "drizzle-orm";
 
 export const makeOrgD1DrizzleAdapter = (
   db: DrizzleD1Database<typeof schema>
@@ -71,5 +71,28 @@ export const makeOrgD1DrizzleAdapter = (
     }
 
     return orgResults[0].slug as unknown as string;
+  },
+  getOrganizationsForUser: async (
+    userId: string
+  ): Promise<OrganizationWithMembership[]> => {
+    const results = await db
+      .select({
+        id: schema.organization.id,
+        slug: schema.organization.slug,
+        status: schema.organization.status,
+        role: schema.organizationMembership.role,
+        createdAt: schema.organization.createdAt,
+      })
+      .from(schema.organization)
+      .innerJoin(
+        schema.organizationMembership,
+        eq(schema.organization.id, schema.organizationMembership.organizationId)
+      )
+      .where(eq(schema.organizationMembership.userId, userId));
+
+    return results.map((result) => ({
+      ...result,
+      createdAt: result.createdAt.toISOString(),
+    }));
   },
 });

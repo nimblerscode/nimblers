@@ -5,6 +5,7 @@ import { VStack, Flex, Container } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
 import UserInfoSidebar from "./UserInfoSidebar";
 import { OrganizationsSection } from "./OrganizationsSection";
+import type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";
 
 interface User {
   id: any;
@@ -17,20 +18,12 @@ interface User {
   updatedAt: Date;
 }
 
-interface Organization {
-  id: string;
-  name: string;
-  role: "Owner" | "Admin" | "Editor" | "Member";
-  memberCount: number;
-  slug: string;
-}
-
 interface ProfilePageProps {
   user: User;
-  initialOrganizations?: Organization[];
+  organizations: OrganizationWithMembershipAndName[];
 }
 
-export function ProfilePage({ user, initialOrganizations = [] }: ProfilePageProps) {
+export function ProfilePage({ user, organizations }: ProfilePageProps) {
   return (
     <Container maxW="6xl" py="8" minH="100vh">
       <VStack gap="8" alignItems="stretch">
@@ -50,7 +43,7 @@ export function ProfilePage({ user, initialOrganizations = [] }: ProfilePageProp
           <UserInfoSidebar user={user} />
 
           {/* Right Content - Organizations */}
-          <OrganizationsSection initialOrganizations={initialOrganizations} />
+          <OrganizationsSection organizations={organizations} />
         </Flex>
       </VStack>
     </Container>

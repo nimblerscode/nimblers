@@ -3,6 +3,7 @@
 import { Text, HStack, EntityList, Button } from "@/app/design-system";
 import { OrganizationActions } from "./OrganizationActions";
 import { getRoleColorScheme, RolePill } from "./RolePill";
+import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 
 interface Organization {
   id: string;
@@ -21,9 +22,7 @@ export function OrganizationsList({ organizations }: OrganizationsListProps) {
     <EntityList
       title={`Your Organizations (${organizations.length})`}
       action={
-        <Button variant="outline" size="sm">
-          Add Organization
-        </Button>
+        <CreateOrganizationDialog />
       }
     >
       {organizations.map((org) => (

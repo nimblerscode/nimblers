@@ -1,6 +1,8 @@
 "use server";
 import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
 import { OrgD1Service } from "@/domain/global/organization/service";
+import type { UserId } from "@/domain/global/user/model";
+import type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";
 
 import { OrganizationDOService } from "@/domain/tenant/organization/service";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
@@ -9,6 +11,9 @@ import { env } from "cloudflare:workers";
 import { Effect, Layer } from "effect";
 import { requestInfo } from "rwsdk/worker";
 
+// Re-export for backward compatibility
+export type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";
+
 function checkIfOrgExists(organizationSlug: string) {
   const ctx = requestInfo.ctx as AppContext;
 
@@ -16,7 +21,7 @@ function checkIfOrgExists(organizationSlug: string) {
     throw new Error("User not authenticated");
   }
 
-  const userId = ctx.session.userId;
+  const userId = ctx.session.userId as UserId;
 
   const getOrgIdBySlugProgram = OrgD1Service.pipe(
     Effect.flatMap((service) =>
@@ -61,4 +66,79 @@ export async function getOrganization(organizationSlug: string) {
   const program = await Effect.runPromise(runnableEffect);
 
   return program;
+}
+
+export async function getUserOrganizations(): Promise<
+  OrganizationWithMembershipAndName[]
+> {
+  const ctx = requestInfo.ctx as AppContext;
+
+  if (!ctx.session || !ctx.session.userId) {
+    console.error(
+      "getUserOrganizations: No session or userId found. User might not be authenticated."
+    );
+    return [];
+  }
+
+  const userId = ctx.session.userId as UserId;
+
+  // First, get organizations with membership info from D1
+  const getOrganizationsProgram = OrgD1Service.pipe(
+    Effect.flatMap((service) => service.getOrganizationsForUser(userId))
+  );
+
+  const d1Layer = OrgRepoD1LayerLive.pipe(
+    Layer.provide(DatabaseLive({ DB: env.DB }))
+  );
+
+  try {
+    const organizations = await Effect.runPromise(
+      getOrganizationsProgram.pipe(Effect.provide(d1Layer))
+    );
+
+    // Now fetch organization details (including name) from Durable Objects
+    const doLayer = OrganizationDOLive({ ORG_DO: env.ORG_DO });
+
+    const organizationsWithNames = await Promise.all(
+      organizations.map(async (org) => {
+        try {
+          const getOrgDetailsProgram = OrganizationDOService.pipe(
+            Effect.flatMap((service) => service.getOrganization(org.slug))
+          );
+
+          const orgDetails = await Effect.runPromise(
+            getOrgDetailsProgram.pipe(Effect.provide(doLayer))
+          );
+
+          return {
+            id: org.id,
+            slug: org.slug,
+            name: orgDetails.name,
+            status: org.status,
+            role: org.role,
+            createdAt: org.createdAt,
+          };
+        } catch (error) {
+          console.error(
+            `Failed to get details for organization ${org.slug}:`,
+            error
+          );
+          // Fallback to slug as name if we can't get the details
+          return {
+            id: org.id,
+            slug: org.slug,
+            name: org.slug,
+            status: org.status,
+            role: org.role,
+            createdAt: org.createdAt,
+          };
+        }
+      })
+    );
+
+    return organizationsWithNames;
+  } catch (error) {
+    console.error("Failed to get user organizations:", error);
+    return [];
+  }
 }

@@ -9,7 +9,7 @@ import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
 import { Layout as ProfileLayout } from "@/app/pages/profile/Layout";
 import { authResponse, sessionHandler } from "@/infrastructure/auth/middleware";
 import AcceptInvitePage from "@/app/pages/invite/AcceptInvitePage";
-import { POST as acceptInvitationHandler } from "@/app/actions/invitations/accept";
+import { acceptInvitationAction } from "@/app/actions/invitations/accept";
 import type { RequestInfo } from "rwsdk/worker";
 
 // Wrapper for the invitation accept API
@@ -17,7 +17,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   if (requestInfo.request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
-  return acceptInvitationHandler(requestInfo.request, requestInfo);
+  return acceptInvitationAction(requestInfo.request, requestInfo);
 };
 
 export const organizationRoutes = [

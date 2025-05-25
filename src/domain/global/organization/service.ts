@@ -1,24 +1,42 @@
-import { Context, type Effect } from "effect";
-import type { OrganizationId } from "@/domain/tenant/organization/model";
+import { Context, Effect } from "effect";
+import type { UserId } from "../user/model";
 import type {
-  NewOrganizationD1,
   OrganizationD1,
+  NewOrganizationD1,
   OrgDbError,
-  OrgNotFoundError,
+  OrganizationWithMembership,
 } from "./model";
 
-export class OrgD1Service extends Context.Tag("core/organization/OrgD1Service")<
+// === Organization D1 Repository ===
+export abstract class OrgD1Repo extends Context.Tag("@core/OrgD1Repo")<
+  OrgD1Repo,
+  {
+    readonly create: (
+      organization: NewOrganizationD1
+    ) => Effect.Effect<OrganizationD1, OrgDbError>;
+    readonly getOrgIdBySlug: (
+      slug: string,
+      userId: UserId
+    ) => Effect.Effect<string, OrgDbError>;
+    readonly getOrganizationsForUser: (
+      userId: UserId
+    ) => Effect.Effect<OrganizationWithMembership[], OrgDbError>;
+  }
+>() {}
+
+// === Organization D1 Service ===
+export abstract class OrgD1Service extends Context.Tag("@core/OrgD1Service")<
   OrgD1Service,
   {
-    create: (
-      org: NewOrganizationD1
+    readonly create: (
+      organization: NewOrganizationD1
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
-    getOrgIdBySlug: (
+    readonly getOrgIdBySlug: (
       slug: string,
-      userId: string
-    ) => Effect.Effect<string, OrgNotFoundError | OrgDbError>;
-    getOrgById: (
-      id: OrganizationId
-    ) => Effect.Effect<OrganizationD1, OrgNotFoundError | OrgDbError>;
+      userId: UserId
+    ) => Effect.Effect<string, OrgDbError>;
+    readonly getOrganizationsForUser: (
+      userId: UserId
+    ) => Effect.Effect<OrganizationWithMembership[], OrgDbError>;
   }
 >() {}

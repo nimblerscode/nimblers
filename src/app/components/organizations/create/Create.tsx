@@ -1,7 +1,9 @@
 "use client";
+import { Building2, Loader2 } from "lucide-react";
+import { useActionState, useState } from "react";
 import {
+  type CreateOrganizationActionState,
   createOrganizationAction,
-  CreateOrganizationActionState,
 } from "@/app/actions/organization/create";
 import {
   Banner,
@@ -26,8 +28,6 @@ import {
   PricingPlanCardHeader,
   PricingPlanGroup,
 } from "@/app/design-system/PricingPlanSelector";
-import { Building2, Loader2 } from "lucide-react";
-import { useActionState, useState } from "react";
 import { PlanDurationSelector } from "./PlanDurationSelector";
 
 const PRICING_PLANS = [
