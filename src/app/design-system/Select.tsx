@@ -2,22 +2,22 @@
 
 import {
   Button as AriaButton,
-  Header,
   ListBox as AriaListBox,
   ListBoxItem as AriaListBoxItem,
   Popover as AriaPopover,
   Select as AriaSelect,
+  type SelectProps as AriaSelectProps,
   SelectValue as AriaSelectValue,
-  Separator,
+  Header,
   type ListBoxItemProps,
   type PopoverProps,
-  type SelectProps as AriaSelectProps,
+  Separator,
 } from "react-aria-components";
 import { cva, cx } from "../../../styled-system/css";
 import { VStack } from "../../../styled-system/jsx";
 import { Icon } from "./Icon";
-import { ChevronDown } from "./icons";
 import { Label } from "./Input";
+import { ChevronDown } from "./icons";
 
 // Select trigger styling
 const selectStyles = cva({
@@ -217,7 +217,8 @@ export interface SelectSection {
   items: SelectItem[];
 }
 
-export interface SelectProps<T extends object> extends Omit<AriaSelectProps<T>, "children"> {
+export interface SelectProps<T extends object>
+  extends Omit<AriaSelectProps<T>, "children"> {
   label?: string;
   description?: string;
   errorMessage?: string | ((validationErrors: string[]) => string);
@@ -239,7 +240,9 @@ export function SelectItem({ className, children, ...props }: SelectItemProps) {
   return (
     <AriaListBoxItem className={cx(listBoxItemStyles(), className)} {...props}>
       {(renderProps) => (
-        <span>{typeof children === "function" ? children(renderProps) : children}</span>
+        <span>
+          {typeof children === "function" ? children(renderProps) : children}
+        </span>
       )}
     </AriaListBoxItem>
   );
@@ -249,8 +252,16 @@ export function SelectSeparator({ className }: { className?: string }) {
   return <Separator className={cx(separatorStyles(), className)} />;
 }
 
-export function SelectHeader({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <Header className={cx(sectionHeaderStyles(), className)}>{children}</Header>;
+export function SelectHeader({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Header className={cx(sectionHeaderStyles(), className)}>{children}</Header>
+  );
 }
 
 export function Select<T extends object>({
@@ -281,7 +292,7 @@ export function Select<T extends object>({
               className={cx(
                 selectIconStyles(),
                 "transition-transform duration-200",
-                renderProps.isOpen && "rotate-180"
+                renderProps.isOpen && "rotate-180",
               )}
             />
           </AriaButton>
@@ -293,7 +304,9 @@ export function Select<T extends object>({
           </AriaPopover>
 
           {description && !renderProps.isInvalid && (
-            <div className="text-sm text-content-secondary mt-1">{description}</div>
+            <div className="text-sm text-content-secondary mt-1">
+              {description}
+            </div>
           )}
 
           {errorMessage && renderProps.isInvalid && (
@@ -318,5 +331,5 @@ export {
   listBoxStyles,
   listBoxItemStyles,
   sectionHeaderStyles,
-  separatorStyles
-}; 
+  separatorStyles,
+};

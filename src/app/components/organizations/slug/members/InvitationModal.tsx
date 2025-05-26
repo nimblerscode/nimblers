@@ -1,6 +1,11 @@
 "use client";
 
-import { inviteUserAction, type InviteUserState, type SerializableInvitation } from "@/app/actions/invitations/create";
+import { useActionState, useState } from "react";
+import {
+  type InviteUserState,
+  inviteUserAction,
+  type SerializableInvitation,
+} from "@/app/actions/invitations/create";
 import { Banner } from "@/app/design-system/Banner";
 import { Button } from "@/app/design-system/Button";
 import { Card, CardContent } from "@/app/design-system/Card";
@@ -10,7 +15,6 @@ import { TextFieldRoot as TextField } from "@/app/design-system/Input";
 import { Flex, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
 import type { User } from "@/domain/global/user/model";
-import { useActionState, useState } from "react";
 import { cva } from "../../../../../../styled-system/css";
 
 // Styling for the note section
@@ -67,12 +71,11 @@ export function InvitationModal({
   );
 
   const handleReset = () => {
-    setResetKey(prev => prev + 1);
+    setResetKey((prev) => prev + 1);
   };
 
   // Defensive check for user - after hooks are called
   if (!user || !user.id) {
-    console.error("InvitationModal: user prop is required and must have an id");
     return (
       <Dialog
         trigger={trigger || <Button>Invite User</Button>}
@@ -83,7 +86,8 @@ export function InvitationModal({
         {(close: () => void) => (
           <VStack gap="4" alignItems="stretch">
             <div className="text-sm text-status-danger-text font-medium">
-              Error: User authentication required. Please refresh the page and try again.
+              Error: User authentication required. Please refresh the page and
+              try again.
             </div>
             <DialogFooter>
               <Button variant="primary" onPress={close} type="button">
@@ -97,7 +101,7 @@ export function InvitationModal({
   }
 
   // Call onSuccess callback when invitation is sent successfully
-  if (state.success && onSuccess && 'invitation' in state) {
+  if (state.success && onSuccess && "invitation" in state) {
     onSuccess(state.invitation);
   }
 
@@ -121,14 +125,24 @@ export function InvitationModal({
           return (
             <VStack gap="6" alignItems="stretch" p="6">
               {/* Success Banner */}
-              <Banner variant="success" icon={true} title="Invitation Sent Successfully!">
+              <Banner
+                variant="success"
+                icon={true}
+                title="Invitation Sent Successfully!"
+              >
                 The invitation has been sent to{" "}
-                <strong>{state.invitation?.email || "the recipient"}</strong> and they'll
-                receive an email with instructions to join your organization.
+                <strong>{state.invitation?.email || "the recipient"}</strong>{" "}
+                and they'll receive an email with instructions to join your
+                organization.
               </Banner>
 
               {/* Success Details Card */}
-              <Card css={{ borderColor: "status.success.border", backgroundColor: "status.success.background" }}>
+              <Card
+                css={{
+                  borderColor: "status.success.border",
+                  backgroundColor: "status.success.background",
+                }}
+              >
                 <CardContent>
                   <VStack gap="4" alignItems="stretch">
                     {/* What happens next section */}
@@ -138,27 +152,62 @@ export function InvitationModal({
                       </Heading>
                       <VStack gap="2" alignItems="stretch">
                         <Flex alignItems="flex-start" gap="3">
-                          <Text css={{ fontSize: "sm", color: "status.success.text", minWidth: "6" }}>
+                          <Text
+                            css={{
+                              fontSize: "sm",
+                              color: "status.success.text",
+                              minWidth: "6",
+                            }}
+                          >
                             1.
                           </Text>
-                          <Text css={{ fontSize: "sm", color: "status.success.text" }}>
+                          <Text
+                            css={{
+                              fontSize: "sm",
+                              color: "status.success.text",
+                            }}
+                          >
                             The recipient will receive an email invitation
                           </Text>
                         </Flex>
                         <Flex alignItems="flex-start" gap="3">
-                          <Text css={{ fontSize: "sm", color: "status.success.text", minWidth: "6" }}>
+                          <Text
+                            css={{
+                              fontSize: "sm",
+                              color: "status.success.text",
+                              minWidth: "6",
+                            }}
+                          >
                             2.
                           </Text>
-                          <Text css={{ fontSize: "sm", color: "status.success.text" }}>
-                            They'll click the link to accept and join your organization
+                          <Text
+                            css={{
+                              fontSize: "sm",
+                              color: "status.success.text",
+                            }}
+                          >
+                            They'll click the link to accept and join your
+                            organization
                           </Text>
                         </Flex>
                         <Flex alignItems="flex-start" gap="3">
-                          <Text css={{ fontSize: "sm", color: "status.success.text", minWidth: "6" }}>
+                          <Text
+                            css={{
+                              fontSize: "sm",
+                              color: "status.success.text",
+                              minWidth: "6",
+                            }}
+                          >
                             3.
                           </Text>
-                          <Text css={{ fontSize: "sm", color: "status.success.text" }}>
-                            You'll be notified when they join and can manage their permissions
+                          <Text
+                            css={{
+                              fontSize: "sm",
+                              color: "status.success.text",
+                            }}
+                          >
+                            You'll be notified when they join and can manage
+                            their permissions
                           </Text>
                         </Flex>
                       </VStack>
@@ -172,18 +221,41 @@ export function InvitationModal({
                         </Heading>
                         <VStack gap="1" alignItems="stretch">
                           <Flex justifyContent="space-between">
-                            <Text css={{ fontSize: "sm", color: "status.success.text" }}>
+                            <Text
+                              css={{
+                                fontSize: "sm",
+                                color: "status.success.text",
+                              }}
+                            >
                               Email:
                             </Text>
-                            <Text css={{ fontSize: "sm", color: "status.success.text", fontWeight: "medium" }}>
+                            <Text
+                              css={{
+                                fontSize: "sm",
+                                color: "status.success.text",
+                                fontWeight: "medium",
+                              }}
+                            >
                               {state.invitation.email}
                             </Text>
                           </Flex>
                           <Flex justifyContent="space-between">
-                            <Text css={{ fontSize: "sm", color: "status.success.text" }}>
+                            <Text
+                              css={{
+                                fontSize: "sm",
+                                color: "status.success.text",
+                              }}
+                            >
                               Role:
                             </Text>
-                            <Text css={{ fontSize: "sm", color: "status.success.text", fontWeight: "medium", textTransform: "capitalize" }}>
+                            <Text
+                              css={{
+                                fontSize: "sm",
+                                color: "status.success.text",
+                                fontWeight: "medium",
+                                textTransform: "capitalize",
+                              }}
+                            >
                               {state.invitation.role}
                             </Text>
                           </Flex>
@@ -244,7 +316,10 @@ export function InvitationModal({
 
                 {/* Role Selection */}
                 <div>
-                  <label htmlFor="role" className="block text-sm font-medium text-content-primary mb-2">
+                  <label
+                    htmlFor="role"
+                    className="block text-sm font-medium text-content-primary mb-2"
+                  >
                     Role
                   </label>
                   <select
@@ -268,15 +343,16 @@ export function InvitationModal({
                 {/* Note Section */}
                 <div className={noteStyles()}>
                   <Text>
-                    <strong>Note:</strong> The invited user will receive an email with
-                    instructions to join your organization.
+                    <strong>Note:</strong> The invited user will receive an
+                    email with instructions to join your organization.
                   </Text>
                 </div>
 
                 {/* Error Message */}
                 {state.errors && !state.success && (
                   <div className="text-sm text-status-danger-text font-medium">
-                    {state.message || "Failed to send invitation. Please try again."}
+                    {state.message ||
+                      "Failed to send invitation. Please try again."}
                   </div>
                 )}
               </VStack>
@@ -294,11 +370,7 @@ export function InvitationModal({
                 >
                   Cancel
                 </Button>
-                <Button
-                  variant="primary"
-                  isDisabled={pending}
-                  type="submit"
-                >
+                <Button variant="primary" isDisabled={pending} type="submit">
                   {pending ? "Sending..." : "Send Invitation"}
                 </Button>
               </DialogFooter>
@@ -332,4 +404,4 @@ export function SimpleInvitationModal({
       onSuccess={onSuccess}
     />
   );
-} 
+}

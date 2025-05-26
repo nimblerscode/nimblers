@@ -60,17 +60,13 @@ export const DrizzleDOClientLive = Layer.scoped(
           yield* Effect.tryPromise({
             try: () =>
               doState.blockConcurrencyWhile(async () => {
-                console.log("Migrating Drizzle DB");
                 try {
                   await migrate(db, migrations);
-                  console.log("Drizzle DB migrated");
-                } catch (error) {
-                  console.error("Drizzle migration failed:", error);
+                } catch (_error) {
                   throw new Error("Drizzle migration failed");
                 }
               }),
-            catch: (error) => {
-              console.error("Drizzle migration failed:", error);
+            catch: (_error) => {
               return new Error("Drizzle migration failed");
             },
           });

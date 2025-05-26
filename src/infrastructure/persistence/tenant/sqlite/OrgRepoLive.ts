@@ -1,4 +1,5 @@
 import { Effect, Layer } from "effect";
+import type { Member } from "@/domain/tenant/member/model";
 import { MemberRepo } from "@/domain/tenant/member/service";
 import {
   type NewOrganization,
@@ -7,7 +8,6 @@ import {
 import { OrgService } from "@/domain/tenant/organization/service";
 import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { makeOrgDrizzleAdapter } from "@/infrastructure/persistence/tenant/sqlite/OrgDrizzleAdapter";
-import type { Member } from "@/domain/tenant/member/model";
 
 const mapToOrgDbError = (error: unknown): OrgDbError => {
   return new OrgDbError({ cause: error });
@@ -49,5 +49,5 @@ export const OrgRepoLive = Layer.effect(
           return result.org;
         }),
     };
-  })
+  }),
 );

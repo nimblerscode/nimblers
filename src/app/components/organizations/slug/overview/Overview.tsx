@@ -25,7 +25,11 @@ export function Overview({ organization }: { organization: Organization }) {
             <DList.Term>Organization ID</DList.Term>
             <DList.Description>
               <HStack gap="2">
-                <Icon icon={Building2} color="colors.content.subtle" size={16} />
+                <Icon
+                  icon={Building2}
+                  color="colors.content.subtle"
+                  size={16}
+                />
                 <Text>{organization.id}</Text>
               </HStack>
             </DList.Description>
@@ -34,7 +38,9 @@ export function Overview({ organization }: { organization: Organization }) {
             <DList.Description>
               <HStack gap="2">
                 <Icon icon={Calendar} color="colors.content.subtle" size={16} />
-                <Text>{new Date(organization.createdAt).toLocaleDateString()}</Text>
+                <Text>
+                  {new Date(organization.createdAt).toLocaleDateString()}
+                </Text>
               </HStack>
             </DList.Description>
 

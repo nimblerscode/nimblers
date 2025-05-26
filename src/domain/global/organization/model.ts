@@ -49,10 +49,10 @@ export type OrganizationWithMembershipAndName = S.Schema.Type<
 // === Errors ===
 export class OrgDbError extends S.TaggedError<OrgDbError>()(
   "OrgDbError",
-  { cause: S.Unknown } // Store the original cause
+  { cause: S.Unknown }, // Store the original cause
 ) {}
 
 export class OrgNotFoundError extends S.TaggedError<OrgNotFoundError>()(
   "OrgNotFoundError",
-  { cause: S.Unknown } // Store the original cause
+  { cause: S.Unknown }, // Store the original cause
 ) {}

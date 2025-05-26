@@ -1,4 +1,5 @@
 import { Context, Effect, Layer, Schema } from "effect";
+import type { NewMembership } from "@/domain/global/user/model";
 // --- Services ---
 import { UserRepo } from "@/domain/global/user/service";
 // --- Schemas and Models ---
@@ -14,7 +15,6 @@ import {
 } from "@/domain/tenant/invitations/service";
 import type { Member, NewMember } from "@/domain/tenant/member/model";
 import { MemberRepo } from "@/domain/tenant/member/service";
-import type { NewMembership } from "@/domain/global/user/model";
 
 // --- AcceptInvitation Use Case Definition ---
 export const makeAcceptInvitationUseCase = Effect.gen(function* () {
@@ -25,7 +25,7 @@ export const makeAcceptInvitationUseCase = Effect.gen(function* () {
 
   return {
     accept: (
-      input: AcceptInvitationInput
+      input: AcceptInvitationInput,
     ): Effect.Effect<Member, AcceptInvitationError> => {
       return Effect.gen(function* (_) {
         // Note: `invitation` here is of type `Invitation` from `../models`
@@ -61,15 +61,15 @@ export const makeAcceptInvitationUseCase = Effect.gen(function* () {
         yield* invitationRepo.updateStatus(
           invitation.id,
           Schema.decodeUnknownSync(InvitationStatusSchema)(
-            InvitationStatusLiterals.accepted
-          )
+            InvitationStatusLiterals.accepted,
+          ),
         );
 
         // Return the created organization member
         return orgMember;
       }).pipe(
         Effect.catchAll((e) => Effect.fail(e as AcceptInvitationError)), // Ensure error type
-        Effect.withSpan("AcceptInvitationUseCase.accept")
+        Effect.withSpan("AcceptInvitationUseCase.accept"),
       );
     },
   };
@@ -77,12 +77,12 @@ export const makeAcceptInvitationUseCase = Effect.gen(function* () {
 
 // --- Service Interface & Tag for AcceptInvitationUseCase ---
 export abstract class AcceptInvitationUseCase extends Context.Tag(
-  "@core/organization/invitations/use-cases/AcceptInvitationUseCase"
+  "@core/organization/invitations/use-cases/AcceptInvitationUseCase",
 )<
   AcceptInvitationUseCase,
   {
     readonly accept: (
-      input: AcceptInvitationInput
+      input: AcceptInvitationInput,
     ) => Effect.Effect<Member, AcceptInvitationError>;
   }
 >() {}
@@ -90,5 +90,5 @@ export abstract class AcceptInvitationUseCase extends Context.Tag(
 // --- Live Layer for AcceptInvitationUseCase ---
 export const AcceptInvitationUseCaseLive = Layer.effect(
   AcceptInvitationUseCase,
-  makeAcceptInvitationUseCase
+  makeAcceptInvitationUseCase,
 );

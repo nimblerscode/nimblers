@@ -1,11 +1,11 @@
 "use client";
 
 import { Heading } from "@/app/design-system/Heading";
-import { VStack, Flex, Container } from "@/app/design-system/Layout";
+import { Container, Flex, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
-import UserInfoSidebar from "./UserInfoSidebar";
-import { OrganizationsSection } from "./OrganizationsSection";
 import type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";
+import { OrganizationsSection } from "./OrganizationsSection";
+import UserInfoSidebar from "./UserInfoSidebar";
 
 interface User {
   id: any;
@@ -50,4 +50,4 @@ export function ProfilePage({ user, organizations }: ProfilePageProps) {
   );
 }
 
-export default ProfilePage; 
+export default ProfilePage;

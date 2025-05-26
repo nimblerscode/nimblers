@@ -5,7 +5,6 @@ import { authClient } from "@/app/lib/authClient";
 
 // Initialize the auth client (consider moving this outside if reused)
 export default function Login() {
-  console.log("Login component rendering...");
   // State for loading and error messages
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -13,9 +12,7 @@ export default function Login() {
   // const [fieldErrors, setFieldErrors] = useState<{ email?: string, password?: string }>({});
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    console.log("handleSubmit entered");
     e.preventDefault();
-    console.log("handleSubmit preventDefault called");
     setIsPending(true);
     setErrorMessage(null); // Clear previous errors
     // setFieldErrors({}); // Clear field errors
@@ -28,16 +25,10 @@ export default function Login() {
       { email, password },
       {
         onSuccess: () => {
-          // If the sign-in is successful, better-auth handler should have set the cookie.
-          // We can now redirect the user client-side.
-          // Check if response indicates success (better-auth client might not throw for all logical errors)
-          // Assuming success if no error is thrown, redirect. Adjust if response has specific success flags.
-          console.log("Client-side sign-in successful:"); // Optional logging
           window.location.href = "/organization/create"; // Redirect on success
           setIsPending(false);
         },
-        onError: async (error) => {
-          console.error("Client-side sign-in error:", error);
+        onError: async (_error) => {
           setErrorMessage("Login failed. Please check your credentials.");
           setIsPending(false);
         },

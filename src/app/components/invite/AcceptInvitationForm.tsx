@@ -1,15 +1,20 @@
 "use client";
 
 import { useActionState } from "react";
+import { Banner } from "@/app/design-system/Banner";
 import { Button } from "@/app/design-system/Button";
 import { Card, CardContent } from "@/app/design-system/Card";
-import { VStack, HStack, Flex, Box, Container } from "@/app/design-system/Layout";
-import { Text } from "@/app/design-system/Text";
 import { Heading } from "@/app/design-system/Heading";
-import { Banner } from "@/app/design-system/Banner";
 import { Icon } from "@/app/design-system/Icon";
 import { CheckCircle } from "@/app/design-system/icons";
-import { handleAcceptInvitation } from "../../invitation/accept";
+import {
+  Box,
+  Container,
+  Flex,
+  HStack,
+  VStack,
+} from "@/app/design-system/Layout";
+import { Text } from "@/app/design-system/Text";
 import { css } from "../../../../styled-system/css";
 
 interface AcceptInvitationFormProps {
@@ -27,18 +32,37 @@ type ActionState = {
   error?: string;
 };
 
-export function AcceptInvitationForm({ token, invitation }: AcceptInvitationFormProps) {
+export function AcceptInvitationForm({
+  token,
+  invitation,
+}: AcceptInvitationFormProps) {
   const [state, action, isPending] = useActionState<ActionState, FormData>(
-    async (prevState, formData) => {
+    async (_prevState, _formData) => {
       try {
-        const result = await handleAcceptInvitation(prevState, formData);
+        // Call the API endpoint directly
+        const response = await fetch("/api/invitations/accept", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token }),
+        });
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          message?: string;
+        };
+
         if (result.success) {
           return { success: true };
         }
-        return { error: result.error || "Failed to accept invitation" };
+        return { error: result.message || "Failed to accept invitation" };
       } catch (error) {
         return {
-          error: error instanceof Error ? error.message : "Failed to accept invitation",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to accept invitation",
         };
       }
     },
@@ -57,14 +81,17 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
   // Success state - show confirmation and next steps
   if (state.success) {
     return (
-      <Box className={css({
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, var(--colors-blue-50) 0%, var(--colors-indigo-100) 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "4"
-      })}>
+      <Box
+        className={css({
+          minHeight: "100vh",
+          background:
+            "linear-gradient(135deg, var(--colors-blue-50) 0%, var(--colors-indigo-100) 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "4",
+        })}
+      >
         <Card
           css={{
             maxWidth: "28rem",
@@ -72,7 +99,7 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
             borderWidth: "thin",
             borderColor: "status.success.border",
             backgroundColor: "white",
-            boxShadow: "lg"
+            boxShadow: "lg",
           }}
         >
           <CardContent css={{ padding: "8" }}>
@@ -80,7 +107,11 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
               <Icon icon={CheckCircle} size="lg" />
 
               <VStack gap="2" alignItems="center">
-                <Heading as="h1" levelStyle="h3" css={{ textAlign: "center", color: "status.success.text" }}>
+                <Heading
+                  as="h1"
+                  levelStyle="h3"
+                  css={{ textAlign: "center", color: "status.success.text" }}
+                >
                   Welcome to {invitation.organizationName}!
                 </Heading>
                 <Text css={{ textAlign: "center", color: "content.subtle" }}>
@@ -89,22 +120,20 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
               </VStack>
 
               <Banner variant="success" icon={true}>
-                You're now part of the team! You can start collaborating right away.
+                You're now part of the team! You can start collaborating right
+                away.
               </Banner>
 
               <VStack gap="3" alignItems="stretch" css={{ width: "100%" }}>
                 <Button
                   variant="primary"
                   onPress={() => {
-                    window.location.href = "/organization/overview";
+                    window.location.href = "/profile";
                   }}
                 >
                   Go to Dashboard
                 </Button>
-                <Button
-                  variant="outline"
-                  onPress={() => window.close()}
-                >
+                <Button variant="outline" onPress={() => window.close()}>
                   Close Window
                 </Button>
               </VStack>
@@ -125,24 +154,30 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
           borderWidth: "thin",
           borderColor: "border.default",
           backgroundColor: "white",
-          boxShadow: "lg"
+          boxShadow: "lg",
         }}
       >
         <CardContent css={{ padding: "8" }}>
           <VStack gap="6" alignItems="stretch">
             {/* Header */}
             <VStack gap="3" alignItems="center">
-              <Box className={css({
-                width: "12",
-                height: "12",
-                backgroundColor: "blue.100",
-                borderRadius: "full",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              })}>
+              <Box
+                className={css({
+                  width: "12",
+                  height: "12",
+                  backgroundColor: "blue.100",
+                  borderRadius: "full",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                })}
+              >
                 <svg
-                  className={css({ width: "6", height: "6", color: "blue.600" })}
+                  className={css({
+                    width: "6",
+                    height: "6",
+                    color: "blue.600",
+                  })}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -173,40 +208,56 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
               css={{
                 backgroundColor: "page.background",
                 borderWidth: "thin",
-                borderColor: "border.subtle"
+                borderColor: "border.subtle",
               }}
             >
               <CardContent css={{ padding: "4" }}>
                 <VStack gap="3">
-                  <Heading as="h3" levelStyle="h6" css={{ color: "content.primary" }}>
+                  <Heading
+                    as="h3"
+                    levelStyle="h6"
+                    css={{ color: "content.primary" }}
+                  >
                     Invitation Details
                   </Heading>
 
                   <VStack gap="2">
                     <Flex justifyContent="space-between" alignItems="center">
-                      <Text css={{ fontSize: "sm", color: "content.subtle" }}>Email:</Text>
-                      <Text css={{ fontSize: "sm", fontWeight: "medium" }}>{invitation.email}</Text>
+                      <Text css={{ fontSize: "sm", color: "content.subtle" }}>
+                        Email:
+                      </Text>
+                      <Text css={{ fontSize: "sm", fontWeight: "medium" }}>
+                        {invitation.email}
+                      </Text>
                     </Flex>
 
                     <Flex justifyContent="space-between" alignItems="center">
-                      <Text css={{ fontSize: "sm", color: "content.subtle" }}>Role:</Text>
-                      <Box className={css({
-                        fontSize: "sm",
-                        fontWeight: "medium",
-                        textTransform: "capitalize",
-                        color: "accent.text",
-                        backgroundColor: "accent.background",
-                        paddingX: "2",
-                        paddingY: "1",
-                        borderRadius: "sm"
-                      })}>
+                      <Text css={{ fontSize: "sm", color: "content.subtle" }}>
+                        Role:
+                      </Text>
+                      <Box
+                        className={css({
+                          fontSize: "sm",
+                          fontWeight: "medium",
+                          textTransform: "capitalize",
+                          color: "accent.text",
+                          backgroundColor: "accent.background",
+                          paddingX: "2",
+                          paddingY: "1",
+                          borderRadius: "sm",
+                        })}
+                      >
                         {invitation.role}
                       </Box>
                     </Flex>
 
                     <Flex justifyContent="space-between" alignItems="center">
-                      <Text css={{ fontSize: "sm", color: "content.subtle" }}>Expires:</Text>
-                      <Text css={{ fontSize: "sm", fontWeight: "medium" }}>{formattedExpiresAt}</Text>
+                      <Text css={{ fontSize: "sm", color: "content.subtle" }}>
+                        Expires:
+                      </Text>
+                      <Text css={{ fontSize: "sm", fontWeight: "medium" }}>
+                        {formattedExpiresAt}
+                      </Text>
                     </Flex>
                   </VStack>
                 </VStack>
@@ -233,15 +284,21 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
                     className={css({ width: "100%" })}
                   >
                     {isPending ? (
-                      <HStack gap="2" alignItems="center" justifyContent="center">
-                        <Box className={css({
-                          width: "4",
-                          height: "4",
-                          border: "2px solid white",
-                          borderTopColor: "transparent",
-                          borderRadius: "full",
-                          animation: "spin 1s linear infinite"
-                        })} />
+                      <HStack
+                        gap="2"
+                        alignItems="center"
+                        justifyContent="center"
+                      >
+                        <Box
+                          className={css({
+                            width: "4",
+                            height: "4",
+                            border: "2px solid white",
+                            borderTopColor: "transparent",
+                            borderRadius: "full",
+                            animation: "spin 1s linear infinite",
+                          })}
+                        />
                         <span>Accepting...</span>
                       </HStack>
                     ) : (
@@ -250,24 +307,29 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
                   </Button>
                 </Box>
 
-                <Text css={{
-                  fontSize: "xs",
-                  color: "content.subtle",
-                  textAlign: "center",
-                  lineHeight: "relaxed"
-                }}>
-                  By accepting this invitation, you agree to join {invitation.organizationName} and
-                  collaborate with the team. You can always leave the organization later if needed.
+                <Text
+                  css={{
+                    fontSize: "xs",
+                    color: "content.subtle",
+                    textAlign: "center",
+                    lineHeight: "relaxed",
+                  }}
+                >
+                  By accepting this invitation, you agree to join{" "}
+                  {invitation.organizationName} and collaborate with the team.
+                  You can always leave the organization later if needed.
                 </Text>
               </VStack>
             </form>
 
             {/* Help Link */}
-            <Text css={{
-              fontSize: "xs",
-              color: "content.subtle",
-              textAlign: "center"
-            }}>
+            <Text
+              css={{
+                fontSize: "xs",
+                color: "content.subtle",
+                textAlign: "center",
+              }}
+            >
               Having trouble? Contact your team administrator for assistance.
             </Text>
           </VStack>
@@ -275,4 +337,4 @@ export function AcceptInvitationForm({ token, invitation }: AcceptInvitationForm
       </Card>
     </Container>
   );
-} 
+}

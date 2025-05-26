@@ -1,9 +1,4 @@
-import {
-  integer,
-  sqliteTable,
-  text,
-  primaryKey,
-} from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { normalizeDate } from "@/infrastructure/persistence/common/utils"; // Import the helper
 
 // === Better Auth Aligned Schema ===

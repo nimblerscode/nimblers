@@ -11,7 +11,7 @@ import { OrganizationDOService } from "@/domain/tenant/organization/service";
 
 // The DO namespace needed by the adapter
 export class OrganizationDONamespace extends Context.Tag(
-  "cloudflare/bindings/ORG_DO_NAMESPACE"
+  "cloudflare/bindings/ORG_DO_NAMESPACE",
 )<OrganizationDONamespace, typeof env.ORG_DO>() {}
 
 // Layer that provides the adapter
@@ -22,7 +22,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
 
     const createOrganizationDO = (
       organization: NewOrganization,
-      creatorId: UserId
+      creatorId: UserId,
     ) => {
       return Effect.gen(function* () {
         // Create the organization in the Durable Object
@@ -122,5 +122,5 @@ export const OrganizationDOAdapterLive = Layer.effect(
       createOrganization: createOrganizationDO,
       getOrganization: getOrganizationDO,
     };
-  })
+  }),
 );

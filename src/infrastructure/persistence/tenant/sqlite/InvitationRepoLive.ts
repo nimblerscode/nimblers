@@ -85,7 +85,7 @@ export const InvitationRepoLive = Layer.effect(
             return new OrgDbError({
               cause: error,
             });
-          })
+          }),
         ),
 
       findPendingByEmail: (email: Email) =>
@@ -129,25 +129,31 @@ export const InvitationRepoLive = Layer.effect(
               ...row,
               expiresAt: Number(row.expiresAt),
               createdAt: Number(row.createdAt),
-            })
+            }),
           );
         }),
 
       updateStatus: (invitationId: InvitationId, status: InvitationStatus) =>
         Effect.gen(function* () {
           const result = yield* Effect.tryPromise({
-            try: () =>
-              drizzleClient.db
+            try: async () => {
+              const updateResult = await drizzleClient.db
                 .update(schema.invitation)
                 .set({ status })
                 .where(eq(schema.invitation.id, invitationId))
-                .returning(),
+                .returning();
+              return updateResult;
+            },
             catch: (error: unknown) => {
               return new OrgDbError({
                 cause: error,
               });
             },
           });
+
+          if (!result || !result[0]) {
+            throw new Error("Update operation returned no results");
+          }
 
           const invitation = mapDbInvitationToDomain({
             ...result[0],
@@ -159,7 +165,6 @@ export const InvitationRepoLive = Layer.effect(
 
       getInvitation: (invitationId: InvitationId) =>
         Effect.gen(function* () {
-          console.log("invitationId", invitationId);
           const result = yield* Effect.tryPromise({
             try: () =>
               drizzleClient.db
@@ -173,8 +178,6 @@ export const InvitationRepoLive = Layer.effect(
             },
           });
 
-          console.log("result", result);
-
           if (!result[0]) return Option.none();
 
           const invitation = mapDbInvitationToDomain({
@@ -187,5 +190,5 @@ export const InvitationRepoLive = Layer.effect(
     };
 
     return invitationRepo;
-  })
+  }),
 );

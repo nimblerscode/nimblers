@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { Dialog, DialogBody, DialogFooter } from "./Dialog";
+import { VStack } from "../../../styled-system/jsx";
 import { Button } from "./Button";
+import { Dialog, DialogBody, DialogFooter } from "./Dialog";
 import { TextFieldRoot as TextField } from "./Input";
 import { Text } from "./Text";
-import { VStack } from "../../../styled-system/jsx";
 
 const meta: Meta<typeof Dialog> = {
   title: "Design System/Dialog",
@@ -45,16 +45,8 @@ export const WithForm: Story = {
     children: (close: () => void) => (
       <VStack gap="6" alignItems="stretch">
         <VStack gap="4" alignItems="stretch">
-          <TextField
-            label="First Name"
-            defaultValue="John"
-            isRequired
-          />
-          <TextField
-            label="Last Name"
-            defaultValue="Doe"
-            isRequired
-          />
+          <TextField label="First Name" defaultValue="John" isRequired />
+          <TextField label="Last Name" defaultValue="Doe" isRequired />
           <TextField
             label="Email"
             type="email"
@@ -221,4 +213,4 @@ export const CompoundComponents: Story = {
       )}
     </Dialog>
   ),
-}; 
+};

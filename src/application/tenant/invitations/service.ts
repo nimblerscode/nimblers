@@ -1,8 +1,9 @@
 import { Clock, Context, Effect, Layer, Option } from "effect";
+import { generateInvitationEmailHTML } from "@/app/email-templates/invitation-email";
 // Type-only imports
 import { sendEmail as sendEmailEffect } from "@/application/global/email/sendEmail";
 import { EmailService } from "@/domain/global/email/service";
-import { generateInvitationEmailHTML } from "@/app/email-templates/invitation-email";
+import type { UserId } from "@/domain/global/user/model";
 import {
   DuplicatePendingInvitation,
   type GetInvitationError,
@@ -35,7 +36,8 @@ export class InvitationDOService extends Context.Tag(
       token: string
     ) => Effect.Effect<Invitation, GetInvitationError | InvalidToken>;
     readonly accept: (
-      token: string
+      token: string,
+      userId: UserId
     ) => Effect.Effect<void, GetInvitationError | InvalidToken>;
     readonly create: (
       input: NewInvitation,
@@ -104,16 +106,11 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               .create(newInvitationData)
               .pipe(
                 Effect.catchAll((error) => {
-                  console.log("error", error);
                   return Effect.fail(
                     new InvitationNotFound({ message: error.message })
                   );
                 })
               );
-
-            console.log("createdInvitation----->", createdInvitation);
-            console.log("inviteToken----->", inviteToken);
-            console.log("doId----->", doId.name);
 
             const token = yield* inviteToken
               .sign({
@@ -124,7 +121,10 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 Effect.mapError((error) => new OrgDbError({ cause: error }))
               );
 
-            const invitationLink = `https://app.example.com/invite/${token}`;
+            // change for the url, could be localhost or production
+            // add the localhost url for development
+            const invitationLink = `http://localhost:5173/invite/${token}`;
+            // const invitationLink = `https://app.nimblers.co/invite/${token}`;
 
             // Get inviter details (you may need to fetch this from user repo)
             const inviterName = "Team Member"; // TODO: Fetch actual inviter name
@@ -150,8 +150,6 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
             yield* emailSendingEffect.pipe(
               Effect.provideService(EmailService, resolvedEmailService)
             );
-
-            console.log("createdInvitation", createdInvitation);
 
             return createdInvitation;
           }).pipe(
@@ -204,9 +202,6 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
 
             const invitation = invitationOpt.value;
 
-            console.log("invitation checking DO service...", invitation);
-            console.log("continue here....");
-
             if (invitation.status === "accepted") {
               return yield* Effect.fail(
                 new InvitationAlreadyAccepted({
@@ -216,10 +211,6 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               );
             }
 
-            console.log(
-              "invitation status checker....",
-              invitation.status === "pending"
-            );
             if (invitation.status === "revoked") {
               return yield* Effect.fail(
                 new InvitationAlreadyRevoked({
@@ -234,8 +225,6 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               return invitation.expiresAt < currentTime;
             });
 
-            console.log("isInvitationExpired", isInvitationExpired);
-
             if (isInvitationExpired) {
               return yield* Effect.fail(
                 new InvitationExpired({
@@ -245,8 +234,6 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 })
               );
             }
-
-            console.log("invitation status", invitation.status);
 
             if (invitation.status === "expired") {
               return yield* Effect.fail(
@@ -258,8 +245,6 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               );
             }
 
-            console.log("invitation status", invitation.status);
-
             // At this point, invitation should be pending and not yet past its expiresAt time.
             if (invitation.status !== "pending") {
               return yield* Effect.fail(
@@ -269,17 +254,6 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               );
             }
 
-            console.log("invitation status", invitation.status);
-
-            // update the invitation status to accepted
-            // const updatedInvitation = yield* invitationRepo.updateStatus(
-            //   invitationId,
-            //   "accepted"
-            // );
-
-            // console.log("updatedInvitation", updatedInvitation);
-
-            // return updatedInvitation; // Return the valid invitation
             return invitation;
           }).pipe(Effect.withSpan("GetInvitationUseCase.get"));
         },
@@ -288,6 +262,78 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
             const invitations = yield* invitationRepo.findAll();
             return invitations;
           }).pipe(Effect.withSpan("InvitationUseCase.list"));
+        },
+        accept: (token: string, userId: UserId) => {
+          return Effect.gen(function* () {
+            // First verify the token and get the invitation
+            const verifiedToken = yield* inviteToken.verify(token).pipe(
+              Effect.mapError((error) => {
+                return new OrgDbError({
+                  cause: error,
+                });
+              })
+            );
+
+            const invitationId = verifiedToken.invitationId;
+
+            // Get the invitation
+            const invitationOpt = yield* invitationRepo.getInvitation(
+              invitationId
+            );
+
+            if (Option.isNone(invitationOpt)) {
+              return yield* Effect.fail(
+                new InvitationNotFound({
+                  message: "Invitation not found",
+                })
+              );
+            }
+
+            const invitation = invitationOpt.value;
+
+            // Check if invitation is already accepted
+            if (invitation.status === "accepted") {
+              return yield* Effect.fail(
+                new InvitationAlreadyAccepted({
+                  message: "Invitation has already been accepted",
+                  invitationId,
+                })
+              );
+            }
+
+            // Check if invitation is expired
+            if (
+              invitation.status === "expired" ||
+              invitation.expiresAt < Date.now()
+            ) {
+              return yield* Effect.fail(
+                new InvitationExpired({
+                  message: "Invitation has expired",
+                  invitationId,
+                  expiredAt: new Date(invitation.expiresAt),
+                })
+              );
+            }
+
+            // Update invitation status to accepted
+
+            yield* invitationRepo.updateStatus(invitationId, "accepted");
+
+            // Create organization membership
+
+            yield* orgMemberRepo
+              .createMember({
+                userId,
+                role: invitation.role,
+              })
+              .pipe(
+                Effect.mapError((error) => {
+                  return new OrgDbError({ cause: error });
+                })
+              );
+
+            return;
+          }).pipe(Effect.withSpan("InvitationUseCase.accept"));
         },
       };
     })

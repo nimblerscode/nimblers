@@ -16,13 +16,20 @@ import {
 } from "@/app/design-system";
 import { authClient } from "@/app/lib/authClient";
 
-export function LoginForm() {
+export function LoginForm({
+  token,
+  redirect,
+  email,
+}: {
+  token: string | null;
+  redirect: string | null;
+  email: string | null;
+}) {
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("handleSubmit preventDefault called");
     setIsPending(true);
     setErrorMessage(null); // Clear previous errors
     // setFieldErrors({}); // Clear field errors
@@ -37,14 +44,20 @@ export function LoginForm() {
         onSuccess: () => {
           // If the sign-in is successful, better-auth handler should have set the cookie.
           // We can now redirect the user client-side.
-          // Check if response indicates success (better-auth client might not throw for all logical errors)
-          // Assuming success if no error is thrown, redirect. Adjust if response has specific success flags.
-          console.log("Client-side sign-in successful:"); // Optional logging
-          window.location.href = "/organization/create"; // Redirect on success
+
+          // If there's an invitation token, redirect back to the invitation page
+          if (token) {
+            window.location.href = `/invite/${token}`;
+          } else if (redirect) {
+            // Use the redirect URL if provided
+            window.location.href = redirect;
+          } else {
+            // Default redirect for normal login
+            window.location.href = "/organization/create";
+          }
           setIsPending(false);
         },
         onError: async (error) => {
-          console.error("Client-side sign-in error:", error);
           setErrorMessage(error.error.message);
           setIsPending(false);
         },
@@ -73,6 +86,7 @@ export function LoginForm() {
                       required: true,
                       variantSize: "lg",
                       placeholder: "john.doe@example.com",
+                      defaultValue: email || "",
                     }}
                     label="Email"
                     type="email"

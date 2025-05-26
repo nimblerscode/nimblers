@@ -1,10 +1,10 @@
 "use server";
 
 import type { RequestInfo } from "rwsdk/worker";
-import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { getUserOrganizations } from "@/app/actions/organization/get";
 import { getActiveOrganization } from "@/app/actions/organization/switch";
 import { CreateWrapper } from "@/app/components/organization/create/CreateWrapper";
+import type { AppContext } from "@/infrastructure/cloudflare/worker";
 
 export async function Layout({ ctx, request }: RequestInfo) {
   const appCtx = ctx as AppContext;
@@ -29,10 +29,9 @@ export async function Layout({ ctx, request }: RequestInfo) {
   try {
     [organizations, activeOrganizationId] = await Promise.all([
       getUserOrganizations(),
-      getActiveOrganization()
+      getActiveOrganization(),
     ]);
-  } catch (error) {
-    console.error("Failed to fetch organizations or active organization:", error);
+  } catch (_error) {
     organizations = [];
     activeOrganizationId = null;
   }

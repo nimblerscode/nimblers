@@ -1,17 +1,19 @@
 "use client";
 
-import { VStack } from "@/app/design-system/Layout";
-import { Text } from "@/app/design-system/Text";
+import { Building2 } from "lucide-react";
 import { Heading } from "@/app/design-system/Heading";
 import { Icon } from "@/app/design-system/Icon";
-import { Building2 } from "lucide-react";
+import { VStack } from "@/app/design-system/Layout";
+import { Text } from "@/app/design-system/Text";
 import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 
 interface EmptyOrganizationsStateProps {
   onOrganizationCreated?: () => void;
 }
 
-export function EmptyOrganizationsState({ onOrganizationCreated }: EmptyOrganizationsStateProps) {
+export function EmptyOrganizationsState({
+  onOrganizationCreated,
+}: EmptyOrganizationsStateProps) {
   return (
     <VStack gap="6" alignItems="center" py="12">
       <VStack gap="3" alignItems="center">
@@ -27,4 +29,4 @@ export function EmptyOrganizationsState({ onOrganizationCreated }: EmptyOrganiza
       <CreateOrganizationDialog onOrganizationCreated={onOrganizationCreated} />
     </VStack>
   );
-} 
+}

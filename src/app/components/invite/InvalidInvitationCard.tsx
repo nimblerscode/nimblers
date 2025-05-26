@@ -1,10 +1,10 @@
 "use client";
 
-import { Card, CardContent } from "@/app/design-system/Card";
-import { VStack, Box } from "@/app/design-system/Layout";
-import { Text } from "@/app/design-system/Text";
-import { Heading } from "@/app/design-system/Heading";
 import { Button } from "@/app/design-system/Button";
+import { Card, CardContent } from "@/app/design-system/Card";
+import { Heading } from "@/app/design-system/Heading";
+import { Box, VStack } from "@/app/design-system/Layout";
+import { Text } from "@/app/design-system/Text";
 import { css } from "../../../../styled-system/css";
 
 interface InvalidInvitationCardProps {
@@ -12,36 +12,46 @@ interface InvalidInvitationCardProps {
   showLoginLink?: boolean;
 }
 
-export function InvalidInvitationCard({ reason, showLoginLink = false }: InvalidInvitationCardProps) {
+export function InvalidInvitationCard({
+  reason,
+  showLoginLink = false,
+}: InvalidInvitationCardProps) {
   return (
-    <Box className={css({
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, var(--colors-red-50) 0%, var(--colors-orange-100) 100%)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "4"
-    })}>
-      <Card css={{
-        maxWidth: "28rem",
-        width: "100%",
-        borderWidth: "thin",
-        borderColor: "status.danger.border",
-        backgroundColor: "white",
-        boxShadow: "lg"
-      }}>
+    <Box
+      className={css({
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, var(--colors-red-50) 0%, var(--colors-orange-100) 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "4",
+      })}
+    >
+      <Card
+        css={{
+          maxWidth: "28rem",
+          width: "100%",
+          borderWidth: "thin",
+          borderColor: "status.danger.border",
+          backgroundColor: "white",
+          boxShadow: "lg",
+        }}
+      >
         <CardContent css={{ padding: "8" }}>
           <VStack gap="6" alignItems="center">
             {/* Error Icon */}
-            <Box className={css({
-              width: "16",
-              height: "16",
-              backgroundColor: "red.100",
-              borderRadius: "full",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            })}>
+            <Box
+              className={css({
+                width: "16",
+                height: "16",
+                backgroundColor: "red.100",
+                borderRadius: "full",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
+            >
               <svg
                 className={css({ width: "8", height: "8", color: "red.600" })}
                 fill="none"
@@ -60,7 +70,11 @@ export function InvalidInvitationCard({ reason, showLoginLink = false }: Invalid
             </Box>
 
             <VStack gap="3" alignItems="center">
-              <Heading as="h1" levelStyle="h3" css={{ textAlign: "center", color: "status.danger.text" }}>
+              <Heading
+                as="h1"
+                levelStyle="h3"
+                css={{ textAlign: "center", color: "status.danger.text" }}
+              >
                 Invalid Invitation
               </Heading>
               <Text css={{ textAlign: "center", color: "content.subtle" }}>
@@ -89,16 +103,19 @@ export function InvalidInvitationCard({ reason, showLoginLink = false }: Invalid
               </Button>
             </VStack>
 
-            <Text css={{
-              fontSize: "xs",
-              color: "content.subtle",
-              textAlign: "center"
-            }}>
-              If you believe this is an error, please contact your team administrator.
+            <Text
+              css={{
+                fontSize: "xs",
+                color: "content.subtle",
+                textAlign: "center",
+              }}
+            >
+              If you believe this is an error, please contact your team
+              administrator.
             </Text>
           </VStack>
         </CardContent>
       </Card>
     </Box>
   );
-} 
+}

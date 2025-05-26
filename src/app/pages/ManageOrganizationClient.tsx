@@ -36,10 +36,6 @@ export default function ManageOrganizationClient({
     setFeedback(null);
 
     if (!targetOrgId) {
-      // Slug in URL doesn't match any known organization for this user
-      console.error(
-        `Client: Org slug "${orgSlug}" not found in user's organizations.`,
-      );
       setFeedback(
         `Error: Organization slug "${orgSlug}" not found or you're not a member.`,
       );
@@ -54,9 +50,6 @@ export default function ManageOrganizationClient({
       activeOrganizationId &&
       targetOrgId !== activeOrganizationId
     ) {
-      console.log(
-        `Client: URL slug "${orgSlug}" (ID: ${targetOrgId}) differs from active session org (${activeOrganizationId}). Attempting switch...`,
-      );
       setFeedback("Syncing active organization with URL...");
 
       startTransition(async () => {
@@ -64,38 +57,23 @@ export default function ManageOrganizationClient({
           const result = await switchActiveOrganization(targetOrgId);
 
           if (result.success) {
-            console.log(
-              `Client: Successfully switched session to org ${targetOrgId}. Reloading page to reflect change.`,
-            );
             setFeedback("Organization synced successfully! Reloading...");
             // Reload the page to ensure all server components re-render with the new session context
             window.location.reload();
           } else {
-            console.error(
-              "Client: Failed to switch session via action:",
-              result.message,
-              result.error,
-            );
             setFeedback(`Error syncing organization: ${result.message}`);
             // TODO: Handle failure - maybe redirect to the previously active org's page?
             // const previousActiveOrg = organizations.find(org => org.organizationId === activeOrganizationId);
             // if (previousActiveOrg) window.location.href = `/${previousActiveOrg.slug}/manage`;
             // else window.location.href = '/'; // Fallback redirect
           }
-        } catch (error) {
-          console.error(
-            "Client: Unexpected error during switch action call:",
-            error,
-          );
+        } catch (_error) {
           setFeedback(
             "An unexpected error occurred while syncing organization.",
           );
         }
       });
     } else if (targetOrgId === activeOrganizationId) {
-      console.log(
-        `Client: URL slug "${orgSlug}" matches active session org (${activeOrganizationId}). No switch needed.`,
-      );
       // Optionally clear feedback if it was showing the switching message
       // setFeedback(null); // Or let it fade naturally
     }

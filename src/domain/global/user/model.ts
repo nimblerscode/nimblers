@@ -44,7 +44,7 @@ export class UserNotFoundError extends Data.TaggedError("UserNotFoundError")<{
 }> {}
 
 export class UserAlreadyExistsError extends Data.TaggedError(
-  "UserAlreadyExistsError"
+  "UserAlreadyExistsError",
 )<{
   message: string;
   email: Email;

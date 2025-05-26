@@ -28,6 +28,9 @@
   "linter": {
     "enabled": true,
     "rules": {
+      "suspicious": {
+        "noConsole": "error"
+      },
       "recommended": true,
       "correctness": {
         "noUnusedImports": "error"

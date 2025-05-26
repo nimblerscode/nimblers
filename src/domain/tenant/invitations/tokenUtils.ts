@@ -13,7 +13,7 @@ const getSecretKey = (secret: string) => encoder.encode(secret);
 // Placeholder for generic Org DB errors
 export class ErrorToken extends Schema.TaggedError<ErrorToken>()(
   "ErrorToken",
-  { cause: Schema.Unknown } // Store the original cause
+  { cause: Schema.Unknown }, // Store the original cause
 ) {}
 
 export class InviteToken extends Context.Tag("core/token")<
@@ -24,7 +24,7 @@ export class InviteToken extends Context.Tag("core/token")<
       doId: string;
     }) => Effect.Effect<string, ErrorToken>;
     verify: (
-      token: string
+      token: string,
     ) => Effect.Effect<
       { doId: string; invitationId: InvitationId },
       ErrorToken
@@ -44,18 +44,14 @@ export const InviteTokenLive = Layer.effect(
       sign: ({ doId, invitationId }) =>
         Effect.tryPromise({
           try: async () => {
-            console.log("signing token with claims", { doId, invitationId });
             // Use the secretKey directly (Uint8Array)
             const token = await new SignJWT({ doId, invitationId })
               .setProtectedHeader({ alg: "HS256" })
               .setExpirationTime("7d")
               .sign(secretKey);
-
-            console.log("token signed successfully");
             return token;
           },
           catch: (error) => {
-            console.error("error signing token", error);
             return new ErrorToken({ cause: error });
           },
         }),
@@ -67,18 +63,15 @@ export const InviteTokenLive = Layer.effect(
               doId: string;
               invitationId: InvitationId;
             }>(token, secretKey);
-
-            console.log("payload from token verification", payload);
             return {
               doId: payload.doId,
               invitationId: payload.invitationId,
             };
           },
           catch: (error) => {
-            console.error("error verifying token", error);
             return new ErrorToken({ cause: error });
           },
         }),
     };
-  })
+  }),
 );

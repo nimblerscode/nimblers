@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { Effect, Layer, Option, Schema as S } from "effect";
 import { v4 as uuidv4 } from "uuid";
+import type { Email } from "@/domain/global/email/model";
 import {
   type Member,
   MemberDbError,
@@ -8,7 +9,6 @@ import {
   NewMemberSchema,
 } from "@/domain/tenant/member/model";
 import { MemberRepo } from "@/domain/tenant/member/service";
-import type { Email } from "@/domain/global/email/model";
 import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { member as memberTable } from "@/infrastructure/persistence/tenant/sqlite/schema";
 
@@ -29,12 +29,11 @@ export const MemberRepoLive = Layer.effect(
 
             // Validate input data
             yield* S.decodeUnknown(NewMemberSchema)(data).pipe(
-              Effect.mapError(
-                (e) =>
-                  new MemberDbError({
-                    cause: `Input data validation error: ${e}`,
-                  })
-              )
+              Effect.mapError((e) => {
+                return new MemberDbError({
+                  cause: `Input data validation error: ${e}`,
+                });
+              }),
             );
 
             const dbRow = yield* Effect.tryPromise({
@@ -44,6 +43,7 @@ export const MemberRepoLive = Layer.effect(
                   .values(memberToInsert)
                   .returning()
                   .get();
+
                 if (!res) {
                   throw new MemberDbError({
                     cause: "Failed to insert member, no result returned.",
@@ -61,18 +61,15 @@ export const MemberRepoLive = Layer.effect(
               dbRow.createdAt instanceof Date
                 ? dbRow.createdAt
                 : new Date((dbRow.createdAt as unknown as number) * 1000);
-            const updatedAtDate =
-              dbRow.updatedAt instanceof Date
-                ? dbRow.updatedAt
-                : new Date((dbRow.updatedAt as unknown as number) * 1000);
 
-            return {
+            const finalMember = {
               id: dbRow.id,
               userId: dbRow.userId,
               role: dbRow.role,
               createdAt: createdAtDate,
-              updatedAt: updatedAtDate,
             } satisfies Member;
+
+            return finalMember;
           }).pipe(Effect.withSpan("MemberRepo.createMember"));
 
         return effectLogic;
@@ -91,7 +88,7 @@ export const MemberRepoLive = Layer.effect(
               },
               catch: (unknownError) =>
                 new MemberDbError({ cause: unknownError }),
-            })
+            }),
           );
 
           if (!dbResult || dbResult.length === 0) {
@@ -104,17 +101,12 @@ export const MemberRepoLive = Layer.effect(
             dbRow.createdAt instanceof Date
               ? dbRow.createdAt
               : new Date((dbRow.createdAt as unknown as number) * 1000);
-          const updatedAtDate =
-            dbRow.updatedAt instanceof Date
-              ? dbRow.updatedAt
-              : new Date((dbRow.updatedAt as unknown as number) * 1000);
 
           const member = {
             id: dbRow.id,
             userId: dbRow.userId,
             role: dbRow.role,
             createdAt: createdAtDate,
-            updatedAt: updatedAtDate,
           } satisfies Member;
 
           return Option.some(member);
@@ -139,10 +131,9 @@ export const MemberRepoLive = Layer.effect(
             userId: dbRow.userId as Member["userId"],
             role: dbRow.role,
             createdAt: createdAtDate,
-            updatedAt: createdAtDate,
           } satisfies Member;
         });
       }).pipe(Effect.withSpan("MemberRepo.getMembers")),
     };
-  })
+  }),
 );

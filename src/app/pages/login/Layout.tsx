@@ -1,22 +1,10 @@
-"use client";
+import { LoginWrapper } from "@/app/components/login/Wrapper";
 
-import { Heading } from "@/app/design-system";
-import { LoginForm } from "../../components/login/Form";
-import { Container, VStack } from "../../design-system/Layout";
-export function Layout() {
-  return (
-    <Container
-      display="flex"
-      maxW="md"
-      mx="auto"
-      alignItems="center"
-      minH="100vh"
-      justifyContent="center"
-    >
-      <VStack gap="8" alignItems="stretch" w="full">
-        <Heading as="h1">Nimblers</Heading>
-        <LoginForm />
-      </VStack>
-    </Container>
-  );
+export function Layout({ request }: { request: Request }) {
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token");
+  const redirect = url.searchParams.get("redirect");
+  const email = url.searchParams.get("email");
+
+  return <LoginWrapper token={token} redirect={redirect} email={email} />;
 }

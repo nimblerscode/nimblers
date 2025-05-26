@@ -1,9 +1,9 @@
 "use client";
 
+import { MoreHorizontal, Settings, Star } from "lucide-react";
 import { Button } from "@/app/design-system/Button";
 import { Icon } from "@/app/design-system/Icon";
 import { HStack } from "@/app/design-system/Layout";
-import { Star, Settings, MoreHorizontal } from "lucide-react";
 
 interface OrganizationActionsProps {
   organizationId: string;
@@ -12,19 +12,13 @@ interface OrganizationActionsProps {
 
 export function OrganizationActions({
   organizationId,
-  isStarred = false
+  isStarred = false,
 }: OrganizationActionsProps) {
-  const handleStar = () => {
-    console.log(`Toggle star for organization ${organizationId}`);
-  };
+  const handleStar = () => {};
 
-  const handleSettings = () => {
-    console.log(`Open settings for organization ${organizationId}`);
-  };
+  const handleSettings = () => {};
 
-  const handleMore = () => {
-    console.log(`Open more options for organization ${organizationId}`);
-  };
+  const handleMore = () => {};
 
   return (
     <HStack gap="0.5">
@@ -39,4 +33,4 @@ export function OrganizationActions({
       </Button>
     </HStack>
   );
-} 
+}

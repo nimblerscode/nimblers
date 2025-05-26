@@ -1,9 +1,9 @@
 "use client";
 
-import { Text, HStack, EntityList, Button } from "@/app/design-system";
+import { EntityList, HStack, Text } from "@/app/design-system";
+import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 import { OrganizationActions } from "./OrganizationActions";
 import { getRoleColorScheme, RolePill } from "./RolePill";
-import { CreateOrganizationDialog } from "./CreateOrganizationDialog";
 
 interface Organization {
   id: string;
@@ -21,9 +21,7 @@ export function OrganizationsList({ organizations }: OrganizationsListProps) {
   return (
     <EntityList
       title={`Your Organizations (${organizations.length})`}
-      action={
-        <CreateOrganizationDialog />
-      }
+      action={<CreateOrganizationDialog />}
     >
       {organizations.map((org) => (
         <EntityList.Item

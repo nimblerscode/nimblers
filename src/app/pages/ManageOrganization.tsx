@@ -32,8 +32,6 @@ async function OrganizationListContainer({
   activeOrganizationId,
   organizations, // Receive organizations as prop
 }: OrganizationListContainerProps) {
-  console.log("OrganizationListContainer", organizations);
-
   // Data fetching is now done in the parent ManageOrganization component
   // const organizationData = await getOrganizationsForUser(userId);
 
@@ -77,11 +75,6 @@ async function ManageOrganization({ ctx, params }: ManageOrganizationProps) {
   // rendering the client wrapper unnecessarily if the slug is fundamentally invalid.
   const currentOrgFromSlug = organizations.find((org) => org.slug === orgSlug);
   if (!currentOrgFromSlug) {
-    // Handle invalid slug case early - user isn't member or slug doesn't exist
-    // You might want to redirect or show a specific error page
-    console.error(
-      `ManageOrganization (Server): User ${userId} attempted to access slug "${orgSlug}" but is not a member or slug is invalid.`,
-    );
     return (
       <div>
         <h2>Error</h2>
@@ -90,10 +83,6 @@ async function ManageOrganization({ ctx, params }: ManageOrganizationProps) {
       </div>
     );
   }
-
-  console.log(
-    `ManageOrganization (Server): Rendering page for slug: ${orgSlug}, User: ${userId}, Active Session Org: ${activeOrganizationId}`,
-  );
 
   return (
     // Wrap the main content with the Client Component

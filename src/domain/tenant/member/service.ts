@@ -17,7 +17,7 @@ export class MemberRepo extends Context.Tag("core/member/MemberRepo")<
 
     // // Find membership by userId and organizationId
     findMembership: (
-      email: Email
+      email: Email,
     ) => Effect.Effect<
       Option.Option<Member>,
       MemberNotFoundError | MemberDbError

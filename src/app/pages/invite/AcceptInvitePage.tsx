@@ -1,19 +1,37 @@
-
+import { env } from "cloudflare:workers";
+import { Effect, Layer } from "effect";
+import type { RequestInfo } from "rwsdk/worker";
 import { ExpiredInvitationCard } from "@/app/components/invite/ExpiredInvitationCard";
 import { InvalidInvitationCard } from "@/app/components/invite/InvalidInvitationCard";
 import { InvitationLandingPage } from "@/app/components/invite/InvitationLandingPage";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
-import { InvitationDOLive } from "@/config/layers";
-import { env } from "cloudflare:workers";
-import { Effect } from "effect";
-import type { RequestInfo } from "rwsdk/worker";
+import { DatabaseLive, InvitationDOLive } from "@/config/layers";
+import type { Email } from "@/domain/global/email/model";
+import type { User } from "@/domain/global/user/model";
+import { UserRepo } from "@/domain/global/user/service";
+import { UserRepoLive } from "@/infrastructure/persistence/global/d1/UserRepoAdapter";
+
 // Using Response redirect instead of router redirect for server components
 
-// Helper to get user by email - you'll need to implement this based on your user service
-async function getUserByEmail(email: string) {
-  // TODO: Implement user lookup logic
-  // This should check if a user exists with the given email
-  return null; // Placeholder
+// Helper to get user by email using the UserRepo service
+async function getUserByEmail(email: string): Promise<User | null> {
+  try {
+    const getUserProgram = UserRepo.pipe(
+      Effect.flatMap((service) => service.findByEmail(email as Email)),
+    );
+
+    const userRepoLayer = UserRepoLive.pipe(
+      Layer.provide(DatabaseLive({ DB: env.DB })),
+    );
+
+    const user = await Effect.runPromise(
+      getUserProgram.pipe(Effect.provide(userRepoLayer)),
+    );
+
+    return user;
+  } catch (_error) {
+    return null;
+  }
 }
 
 // This is a server component (no "use client" directive)
@@ -69,16 +87,18 @@ export default async function AcceptInvitePage({ params, ctx }: RequestInfo) {
     // Check if invitation is revoked
     if (invitation.status === "revoked") {
       return (
-        <InvalidInvitationCard
-          reason="This invitation has been revoked"
-        />
+        <InvalidInvitationCard reason="This invitation has been revoked" />
       );
     }
 
     // Determine user state for the invitation landing page
     const invitedUser = await getUserByEmail(invitation.email);
 
-    let userState: "user_not_exists" | "user_exists_not_logged_in" | "user_logged_in_email_mismatch" | "user_logged_in_email_match";
+    let userState:
+      | "user_not_exists"
+      | "user_exists_not_logged_in"
+      | "user_logged_in_email_mismatch"
+      | "user_logged_in_email_match";
 
     if (!invitedUser) {
       userState = "user_not_exists";
@@ -109,12 +129,8 @@ export default async function AcceptInvitePage({ params, ctx }: RequestInfo) {
     if (error instanceof Response) {
       throw error;
     }
-
-    console.error("Error loading invitation:", error);
     return (
-      <InvalidInvitationCard
-        reason="Failed to load invitation. Please try again later."
-      />
+      <InvalidInvitationCard reason="Failed to load invitation. Please try again later." />
     );
   }
-} 
+}

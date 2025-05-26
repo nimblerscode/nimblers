@@ -1,8 +1,15 @@
 import { EntityList, Text } from "@/app/design-system";
 import type { User } from "@/domain/global/user/model";
 
-export function MembersList({ title, actions, members }: { title: string, actions?: React.ReactNode, members: User[] }) {
-  console.log("members", members);
+export function MembersList({
+  title,
+  actions,
+  members,
+}: {
+  title: string;
+  actions?: React.ReactNode;
+  members: User[];
+}) {
   return (
     <EntityList title={title}>
       {members.map((member) => (
@@ -23,5 +30,5 @@ export function MembersList({ title, actions, members }: { title: string, action
         />
       ))}
     </EntityList>
-  )
+  );
 }

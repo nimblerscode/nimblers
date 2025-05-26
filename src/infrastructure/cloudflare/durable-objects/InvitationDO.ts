@@ -2,6 +2,7 @@ import type { env } from "cloudflare:workers";
 import { Headers } from "@effect/platform";
 import { Context, Data, Effect, Layer } from "effect";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
+import type { UserId } from "@/domain/global/user/model";
 import type {
   Invitation,
   NewInvitation,
@@ -24,7 +25,7 @@ export class DOInteractionError extends Data.TaggedError("DOInteractionError")<{
 // --- Required Dependency Tag ---
 // The DO namespace needed by the live service
 export class InvitationDONamespace extends Context.Tag(
-  "cloudflare/bindings/INVITATION_DO_NAMESPACE"
+  "cloudflare/bindings/INVITATION_DO_NAMESPACE",
 )<
   InvitationDONamespace, // The service itself (though it's just holding the namespace)
   typeof env.ORG_DO // Use DurableObjectNamespace directly, let TS infer or it defaults appropriately
@@ -44,8 +45,8 @@ export const InvitationDOServiceLive = Layer.effect(
               (error) =>
                 new InvalidToken({
                   message: error.message,
-                })
-            )
+                }),
+            ),
           );
 
           const id = invitationDONamespace.idFromName(doId.toString());
@@ -56,9 +57,8 @@ export const InvitationDOServiceLive = Layer.effect(
                 `http://internal/invitations/${doId}?token=${token}`,
                 {
                   method: "GET",
-                }
+                },
               );
-              console.log("res from invitation do", res);
               const invitation = (await res.json()) as Invitation;
               if (!res.ok) {
                 throw new DOInteractionError({
@@ -66,7 +66,6 @@ export const InvitationDOServiceLive = Layer.effect(
                   status: res.status,
                 });
               }
-              console.log("invitation", invitation);
               return invitation;
             },
             catch: (error) => {
@@ -80,26 +79,35 @@ export const InvitationDOServiceLive = Layer.effect(
           return response;
         });
       },
-      accept: (token: string) => {
-        // TODO change the token param to the invitation id
-        console.log("InvitationDO accept", token);
+      accept: (token: string, userId: UserId) => {
         return Effect.gen(function* () {
-          const doId = invitationDONamespace.idFromName(token);
-          const stub = invitationDONamespace.get(doId);
+          const { doId, invitationId } = yield* inviteToken.verify(token).pipe(
+            Effect.mapError(
+              (error) =>
+                new InvalidToken({
+                  message: error.message,
+                }),
+            ),
+          );
+
+          const id = invitationDONamespace.idFromName(doId.toString());
+          const stub = invitationDONamespace.get(id);
           const response = yield* Effect.tryPromise({
             try: async () => {
-              const res = await stub.fetch("http://internal/invite/accept", {
-                method: "POST",
-                headers: Headers.unsafeFromRecord({
-                  "Content-Type": "application/json",
-                }),
-                body: JSON.stringify({
-                  token,
-                }),
-              });
-              const json = (await res.json()) as {
-                ok: boolean;
-              };
+              const res = await stub.fetch(
+                `http://internal/invitations/${invitationId}/accept`,
+                {
+                  method: "POST",
+                  headers: Headers.unsafeFromRecord({
+                    "Content-Type": "application/json",
+                  }),
+                  body: JSON.stringify({
+                    token,
+                    userId,
+                  }),
+                },
+              );
+              const json = await res.json();
               if (!res.ok) {
                 throw new DOInteractionError({
                   message: JSON.stringify(json),
@@ -107,7 +115,7 @@ export const InvitationDOServiceLive = Layer.effect(
                 });
               }
               return {
-                ok: json.ok,
+                ok: json,
               };
             },
             catch: (error) => {
@@ -122,16 +130,11 @@ export const InvitationDOServiceLive = Layer.effect(
         });
       },
       create: (newInvitation: NewInvitation, organizationSlug: string) => {
-        console.log("InvitationDO create", newInvitation, organizationSlug);
         return Effect.gen(function* () {
           const doId = invitationDONamespace.idFromName(organizationSlug);
           const stub = invitationDONamespace.get(doId);
-          console.log("newInvitation", newInvitation);
           const response = yield* Effect.tryPromise({
             try: async () => {
-              console.log("Creating invitation with payload:", {
-                newInvitation,
-              });
               const response = await stub.fetch("http://internal/invite", {
                 method: "POST",
                 headers: Headers.unsafeFromRecord({
@@ -139,16 +142,11 @@ export const InvitationDOServiceLive = Layer.effect(
                 }),
                 body: JSON.stringify({ newInvitation }),
               });
-              console.log("Response status:", response.status);
-              console.log(
-                "Response headers:",
-                Object.fromEntries(response.headers.entries())
-              );
               // If response is not ok, throw error regardless of body content
               if (!response.ok) {
                 throw new OrgDbError({
                   cause: new Error(
-                    `Server responded with status ${response.status}`
+                    `Server responded with status ${response.status}`,
                   ),
                 });
               }
@@ -163,7 +161,6 @@ export const InvitationDOServiceLive = Layer.effect(
               }
             },
             catch: (error) => {
-              console.error("Error in invitation creation:", error);
               if (error instanceof OrgDbError) {
                 return error;
               }
@@ -177,28 +174,22 @@ export const InvitationDOServiceLive = Layer.effect(
         });
       },
       list: (organizationSlug: string) => {
-        console.log("InvitationDO list", organizationSlug);
         return Effect.gen(function* () {
           const doId = invitationDONamespace.idFromName(organizationSlug);
           const stub = invitationDONamespace.get(doId);
           const response = yield* Effect.tryPromise({
             try: async () => {
-              console.log(
-                "Fetching invitations for organization:",
-                organizationSlug
-              );
               const response = await stub.fetch("http://internal/invitations", {
                 method: "GET",
                 headers: Headers.unsafeFromRecord({
                   "Content-Type": "application/json",
                 }),
               });
-              console.log("Response status:", response.status);
 
               if (!response.ok) {
                 throw new OrgDbError({
                   cause: new Error(
-                    `Server responded with status ${response.status}`
+                    `Server responded with status ${response.status}`,
                   ),
                 });
               }
@@ -213,7 +204,6 @@ export const InvitationDOServiceLive = Layer.effect(
               }
             },
             catch: (error) => {
-              console.error("Error in invitation listing:", error);
               if (error instanceof OrgDbError) {
                 return error;
               }
@@ -227,5 +217,5 @@ export const InvitationDOServiceLive = Layer.effect(
         });
       },
     };
-  })
+  }),
 );

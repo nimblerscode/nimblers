@@ -1,10 +1,10 @@
 "use client";
 
-import { Icon } from "@/app/design-system/Icon";
-import { VStack, HStack } from "@/app/design-system/Layout";
-import { Text } from "@/app/design-system/Text";
 import { Settings } from "lucide-react";
 import { useState } from "react";
+import { Icon } from "@/app/design-system/Icon";
+import { HStack, VStack } from "@/app/design-system/Layout";
+import { Text } from "@/app/design-system/Text";
 
 export function ProfilePageClient() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -19,7 +19,7 @@ export function ProfilePageClient() {
           cursor: "pointer",
           p: "2",
           borderRadius: "md",
-          _hover: { bg: "bg.subtle" }
+          _hover: { bg: "bg.subtle" },
         }}
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -35,17 +35,38 @@ export function ProfilePageClient() {
       {/* Expandable Settings Content */}
       {isExpanded && (
         <VStack gap="2" css={{ pl: "6" }}>
-          <Text css={{ fontSize: "sm", color: "content.subtle", cursor: "pointer", _hover: { color: "content.base" } }}>
+          <Text
+            css={{
+              fontSize: "sm",
+              color: "content.subtle",
+              cursor: "pointer",
+              _hover: { color: "content.base" },
+            }}
+          >
             Profile Settings
           </Text>
-          <Text css={{ fontSize: "sm", color: "content.subtle", cursor: "pointer", _hover: { color: "content.base" } }}>
+          <Text
+            css={{
+              fontSize: "sm",
+              color: "content.subtle",
+              cursor: "pointer",
+              _hover: { color: "content.base" },
+            }}
+          >
             Security
           </Text>
-          <Text css={{ fontSize: "sm", color: "content.subtle", cursor: "pointer", _hover: { color: "content.base" } }}>
+          <Text
+            css={{
+              fontSize: "sm",
+              color: "content.subtle",
+              cursor: "pointer",
+              _hover: { color: "content.base" },
+            }}
+          >
             Notifications
           </Text>
         </VStack>
       )}
     </VStack>
   );
-} 
+}

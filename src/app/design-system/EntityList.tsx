@@ -4,7 +4,7 @@ import { css, cx } from "../../../styled-system/css";
 import { styled } from "../../../styled-system/jsx";
 import { Avatar, type AvatarProps } from "./Avatar";
 import { Heading } from "./Heading";
-import { Box, HStack, VStack, Flex } from "./Layout";
+import { Box, Flex, HStack, VStack } from "./Layout";
 import { Text } from "./Text";
 
 // --- EntityList Root Component ---
@@ -42,18 +42,11 @@ const EntityListRoot = ({
             borderBottom="1px solid token(colors.border.default)"
           >
             {title && (
-              <Heading
-                as="h3"
-                color="content.primary"
-              >
+              <Heading as="h3" color="content.primary">
                 {title}
               </Heading>
             )}
-            {action && (
-              <Box>
-                {action}
-              </Box>
-            )}
+            {action && <Box>{action}</Box>}
           </Flex>
         )}
         <VStack alignItems="stretch" gap="0">
@@ -65,7 +58,8 @@ const EntityListRoot = ({
 };
 
 // --- EntityListItem Component ---
-interface EntityListItemProps extends Omit<React.HTMLAttributes<HTMLLIElement>, 'title'> {
+interface EntityListItemProps
+  extends Omit<React.HTMLAttributes<HTMLLIElement>, "title"> {
   avatarProps?: AvatarProps;
   title: ReactNode;
   subtitle?: string;
@@ -84,7 +78,7 @@ const EntityListItem: React.FC<EntityListItemProps> = ({
   className,
   ...props
 }) => {
-  const defaultAvatarName = title as string || "User";
+  const defaultAvatarName = (title as string) || "User";
 
   const itemStyles = css({
     p: { base: "4", md: "4", sm: "2" },
@@ -134,4 +128,3 @@ const EntityListItem: React.FC<EntityListItemProps> = ({
 export const EntityList = Object.assign(EntityListRoot, {
   Item: EntityListItem,
 });
-

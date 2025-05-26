@@ -1,23 +1,46 @@
 import { prefix, render, route } from "rwsdk/router";
-import { Layout as OrganizationSlugLayout } from "@/app/pages/organization/slug/Layout";
+import type { RequestInfo } from "rwsdk/worker";
+import { acceptInvitationAction } from "@/app/actions/invitations/accept";
 // import CreateOrganizationForm from "@/app/components/CreateOrganizationForm"; // No longer directly used here
 import { Document } from "@/app/Document";
 import InvitationsPage from "@/app/pages/InvitationsPage";
+import AcceptInvitePage from "@/app/pages/invite/AcceptInvitePage";
 import { Layout as LoginLayout } from "@/app/pages/login/Layout";
 import { Layout as OrganizationCreateLayout } from "@/app/pages/organization/create/Layout"; // Import the new wrapper page
-import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
+import { Layout as OrganizationSlugLayout } from "@/app/pages/organization/slug/Layout";
 import { Layout as ProfileLayout } from "@/app/pages/profile/Layout";
-import { authResponse, sessionHandler } from "@/infrastructure/auth/middleware";
-import AcceptInvitePage from "@/app/pages/invite/AcceptInvitePage";
-import { acceptInvitationAction } from "@/app/actions/invitations/accept";
-import type { RequestInfo } from "rwsdk/worker";
+import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
+import {
+  authResponse,
+  optionalSessionHandler,
+  redirectAuthenticatedUsers,
+  sessionHandler,
+} from "@/infrastructure/auth/middleware";
 
 // Wrapper for the invitation accept API
 const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   if (requestInfo.request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
-  return acceptInvitationAction(requestInfo.request, requestInfo);
+
+  try {
+    const result = await acceptInvitationAction(
+      requestInfo.request,
+      requestInfo
+    );
+    return Response.json(result, { status: 200 });
+  } catch (error) {
+    return Response.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to accept invitation",
+      },
+      { status: 400 }
+    );
+  }
 };
 
 export const organizationRoutes = [
@@ -29,13 +52,13 @@ export const organizationRoutes = [
 // Combine all routes into a single array
 export const allRoutes = [
   render(Document, [
-    route("/", [SignUpLayout]),
+    route("/", [redirectAuthenticatedUsers, SignUpLayout]),
     prefix("/organization", organizationRoutes),
     // route("/invitations/create", [sessionHandler, InvitationsPage]),
-    route("/invitations/:token", InvitationsPage),
-    route("/invite/:token", AcceptInvitePage), // New unauthenticated invite acceptance route
-    route("/login", [LoginLayout]),
-    route("/signup", [SignUpLayout]),
+    route("/invitations/:token", [InvitationsPage]),
+    route("/invite/:token", [optionalSessionHandler, AcceptInvitePage]), // Use optional session handler for invitation acceptance
+    route("/login", [redirectAuthenticatedUsers, LoginLayout]),
+    route("/signup", [redirectAuthenticatedUsers, SignUpLayout]),
     route("/profile", [sessionHandler, ProfileLayout]), // Add profile route
     // Add other UI routes within Document here if needed
     // route("/*", NotFoundPage), // Example: Needs NotFoundPage component
@@ -43,7 +66,10 @@ export const allRoutes = [
 
   // API Routes
   route("/api/auth/*", [authResponse]),
-  route("/api/invitations/accept", [sessionHandler, acceptInvitationRoute]),
+  route("/api/invitations/accept", [
+    optionalSessionHandler,
+    acceptInvitationRoute,
+  ]),
 
   // Fallback for routes defined outside of render(Document, ...)
   // If you intend this only for API-like routes, adjust the path pattern

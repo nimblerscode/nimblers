@@ -45,15 +45,12 @@ export type SwitchOrganizationActionState = {
 // === CREATE ORGANIZATION ACTION ===
 export async function createOrganizationAction(
   _prevState: CreateOrganizationActionState, // previous state from useActionState
-  formData: FormData
+  formData: FormData,
 ): Promise<CreateOrganizationActionState> {
   const ctx = requestInfo.ctx as AppContext;
 
   // --- Retrieve authenticated userId ---
   if (!ctx.session || !ctx.session.userId) {
-    console.error(
-      "createOrganizationAction: No session or userId found. User might not be authenticated."
-    );
     return {
       success: false,
       message: "Authentication required. Please log in and try again.",
@@ -80,8 +77,8 @@ export async function createOrganizationAction(
   // Create the Effect program using the service
   const createOrgProgram = OrganizationDOService.pipe(
     Effect.flatMap((service) =>
-      service.createOrganization(orgCreatePayload, creatorId as UserId)
-    )
+      service.createOrganization(orgCreatePayload, creatorId as UserId),
+    ),
   );
 
   const finalLayer = OrganizationDOLive({ ORG_DO: env.ORG_DO });
@@ -97,10 +94,8 @@ export async function createOrganizationAction(
 
     // Create the effect to insert into main DB
     const orgRepoLayer = OrgRepoD1LayerLive.pipe(
-      Layer.provide(DatabaseLive({ DB: env.DB }))
+      Layer.provide(DatabaseLive({ DB: env.DB })),
     );
-
-    console.log("organization", organization);
 
     const create = OrgD1Service.pipe(
       Effect.flatMap((service) =>
@@ -108,8 +103,8 @@ export async function createOrganizationAction(
           id: organization.id,
           slug: organization.slug,
           creatorId: creatorId as UserId,
-        })
-      )
+        }),
+      ),
     ).pipe(Effect.provide(orgRepoLayer));
 
     const result = await Effect.runPromiseExit(create);
@@ -128,7 +123,6 @@ export async function createOrganizationAction(
     }
 
     if (Exit.isFailure(result)) {
-      console.error("Failed to insert org to main DB:", result.cause);
       return {
         success: false,
         message: "Failed to insert organization into main DB.",
@@ -138,7 +132,6 @@ export async function createOrganizationAction(
   }
 
   if (Exit.isFailure(program)) {
-    console.error("Failed to create organization:", program.cause);
     return {
       success: false,
       message: `Failed to create organization: ${program.cause}`,

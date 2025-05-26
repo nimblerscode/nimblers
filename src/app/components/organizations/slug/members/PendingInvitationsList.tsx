@@ -1,17 +1,15 @@
-import { EntityList, Text } from "@/app/design-system";
 import type { SerializableInvitation } from "@/app/actions/invitations/list";
+import { EntityList, Text } from "@/app/design-system";
 
 export function PendingInvitationsList({
   title,
   actions,
-  invitations
+  invitations,
 }: {
   title: string;
   actions?: React.ReactNode;
   invitations: SerializableInvitation[];
 }) {
-  console.log("pending invitations", invitations);
-
   return (
     <EntityList title={title}>
       {invitations.map((invitation) => (
@@ -21,9 +19,7 @@ export function PendingInvitationsList({
           subtitle={invitation.role ?? "Member (Pending)"}
           avatarProps={{ name: invitation.email }}
           extraInfo={
-            <Text
-              color="content.subtle"
-            >
+            <Text color="content.subtle">
               Invited {new Date(invitation.createdAt).toLocaleDateString()}
             </Text>
           }
@@ -32,4 +28,4 @@ export function PendingInvitationsList({
       ))}
     </EntityList>
   );
-} 
+}

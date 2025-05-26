@@ -79,7 +79,7 @@ export const Default: Story = {
             {member.joinDate}
           </Text>
         } // css prop for size
-      // Default actions will be shown (ellipsis button)
+        // Default actions will be shown (ellipsis button)
       />
     )),
   },

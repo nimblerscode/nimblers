@@ -1,11 +1,11 @@
 "use client";
 
+import { Banner } from "@/app/design-system/Banner";
 import { Button } from "@/app/design-system/Button";
 import { Card, CardContent } from "@/app/design-system/Card";
-import { VStack, Flex, Box, Container } from "@/app/design-system/Layout";
-import { Text } from "@/app/design-system/Text";
 import { Heading } from "@/app/design-system/Heading";
-import { Banner } from "@/app/design-system/Banner";
+import { Box, Container, Flex, VStack } from "@/app/design-system/Layout";
+import { Text } from "@/app/design-system/Text";
 import { css } from "../../../../styled-system/css";
 import { AcceptInvitationForm } from "./AcceptInvitationForm";
 
@@ -17,7 +17,11 @@ interface InvitationLandingPageProps {
     organizationName: string;
     expiresAt: Date;
   };
-  userState: "user_not_exists" | "user_exists_not_logged_in" | "user_logged_in_email_mismatch" | "user_logged_in_email_match";
+  userState:
+    | "user_not_exists"
+    | "user_exists_not_logged_in"
+    | "user_logged_in_email_mismatch"
+    | "user_logged_in_email_match";
   currentUser?: any;
 }
 
@@ -25,7 +29,7 @@ export function InvitationLandingPage({
   token,
   invitation,
   userState,
-  currentUser
+  currentUser,
 }: InvitationLandingPageProps) {
   const formattedExpiresAt = invitation.expiresAt.toLocaleDateString("en-US", {
     weekday: "long",
@@ -42,25 +46,28 @@ export function InvitationLandingPage({
   };
 
   const handleLogin = () => {
-    const loginUrl = `/login?token=${token}&email=${encodeURIComponent(invitation.email)}&redirect=${encodeURIComponent('/organization/overview')}`;
+    const loginUrl = `/login?token=${token}&email=${encodeURIComponent(invitation.email)}`;
     window.location.href = loginUrl;
   };
 
   const handleLogout = () => {
     // TODO: Implement proper logout
-    window.location.href = '/api/auth/logout';
+    window.location.href = "/api/auth/logout";
   };
 
   // Main invitation page layout
   return (
-    <Box className={css({
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, var(--colors-blue-50) 0%, var(--colors-indigo-100) 100%)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "4"
-    })}>
+    <Box
+      className={css({
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, var(--colors-blue-50) 0%, var(--colors-indigo-100) 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "4",
+      })}
+    >
       <Container>
         <Card
           css={{
@@ -70,24 +77,30 @@ export function InvitationLandingPage({
             borderColor: "border.default",
             backgroundColor: "white",
             boxShadow: "lg",
-            margin: "0 auto"
+            margin: "0 auto",
           }}
         >
           <CardContent css={{ padding: "8" }}>
             <VStack gap="6" alignItems="stretch">
               {/* Header */}
               <VStack gap="3" alignItems="center">
-                <Box className={css({
-                  width: "12",
-                  height: "12",
-                  backgroundColor: "blue.100",
-                  borderRadius: "full",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                })}>
+                <Box
+                  className={css({
+                    width: "12",
+                    height: "12",
+                    backgroundColor: "blue.100",
+                    borderRadius: "full",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  })}
+                >
                   <svg
-                    className={css({ width: "6", height: "6", color: "blue.600" })}
+                    className={css({
+                      width: "6",
+                      height: "6",
+                      color: "blue.600",
+                    })}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -104,7 +117,11 @@ export function InvitationLandingPage({
                 </Box>
 
                 <VStack gap="1" alignItems="center">
-                  <Heading as="h1" levelStyle="h3" css={{ textAlign: "center" }}>
+                  <Heading
+                    as="h1"
+                    levelStyle="h3"
+                    css={{ textAlign: "center" }}
+                  >
                     Join {invitation.organizationName}
                   </Heading>
                   <Text css={{ textAlign: "center", color: "content.subtle" }}>
@@ -118,40 +135,56 @@ export function InvitationLandingPage({
                 css={{
                   backgroundColor: "page.background",
                   borderWidth: "thin",
-                  borderColor: "border.subtle"
+                  borderColor: "border.subtle",
                 }}
               >
                 <CardContent css={{ padding: "4" }}>
                   <VStack gap="3">
-                    <Heading as="h3" levelStyle="h6" css={{ color: "content.primary" }}>
+                    <Heading
+                      as="h3"
+                      levelStyle="h6"
+                      css={{ color: "content.primary" }}
+                    >
                       Invitation Details
                     </Heading>
 
                     <VStack gap="2">
                       <Flex justifyContent="space-between" alignItems="center">
-                        <Text css={{ fontSize: "sm", color: "content.subtle" }}>Email:</Text>
-                        <Text css={{ fontSize: "sm", fontWeight: "medium" }}>{invitation.email}</Text>
+                        <Text css={{ fontSize: "sm", color: "content.subtle" }}>
+                          Email:
+                        </Text>
+                        <Text css={{ fontSize: "sm", fontWeight: "medium" }}>
+                          {invitation.email}
+                        </Text>
                       </Flex>
 
                       <Flex justifyContent="space-between" alignItems="center">
-                        <Text css={{ fontSize: "sm", color: "content.subtle" }}>Role:</Text>
-                        <Box className={css({
-                          fontSize: "sm",
-                          fontWeight: "medium",
-                          textTransform: "capitalize",
-                          color: "accent.text",
-                          backgroundColor: "accent.background",
-                          paddingX: "2",
-                          paddingY: "1",
-                          borderRadius: "sm"
-                        })}>
+                        <Text css={{ fontSize: "sm", color: "content.subtle" }}>
+                          Role:
+                        </Text>
+                        <Box
+                          className={css({
+                            fontSize: "sm",
+                            fontWeight: "medium",
+                            textTransform: "capitalize",
+                            color: "accent.text",
+                            backgroundColor: "accent.background",
+                            paddingX: "2",
+                            paddingY: "1",
+                            borderRadius: "sm",
+                          })}
+                        >
                           {invitation.role}
                         </Box>
                       </Flex>
 
                       <Flex justifyContent="space-between" alignItems="center">
-                        <Text css={{ fontSize: "sm", color: "content.subtle" }}>Expires:</Text>
-                        <Text css={{ fontSize: "sm", fontWeight: "medium" }}>{formattedExpiresAt}</Text>
+                        <Text css={{ fontSize: "sm", color: "content.subtle" }}>
+                          Expires:
+                        </Text>
+                        <Text css={{ fontSize: "sm", fontWeight: "medium" }}>
+                          {formattedExpiresAt}
+                        </Text>
                       </Flex>
                     </VStack>
                   </VStack>
@@ -173,13 +206,16 @@ export function InvitationLandingPage({
                     Create Account & Accept Invitation
                   </Button>
 
-                  <Text css={{
-                    fontSize: "xs",
-                    color: "content.subtle",
-                    textAlign: "center",
-                    lineHeight: "relaxed"
-                  }}>
-                    Already have an account? <button
+                  <Text
+                    css={{
+                      fontSize: "xs",
+                      color: "content.subtle",
+                      textAlign: "center",
+                      lineHeight: "relaxed",
+                    }}
+                  >
+                    Already have an account?{" "}
+                    <button
                       type="button"
                       onClick={handleLogin}
                       className={css({
@@ -187,7 +223,7 @@ export function InvitationLandingPage({
                         textDecoration: "underline",
                         background: "none",
                         border: "none",
-                        cursor: "pointer"
+                        cursor: "pointer",
                       })}
                     >
                       Sign in instead
@@ -199,7 +235,8 @@ export function InvitationLandingPage({
               {userState === "user_exists_not_logged_in" && (
                 <VStack gap="4" alignItems="stretch">
                   <Banner variant="info" icon={true}>
-                    Please sign in to your existing account to accept this invitation.
+                    Please sign in to your existing account to accept this
+                    invitation.
                   </Banner>
 
                   <Button
@@ -210,13 +247,16 @@ export function InvitationLandingPage({
                     Sign In & Accept Invitation
                   </Button>
 
-                  <Text css={{
-                    fontSize: "xs",
-                    color: "content.subtle",
-                    textAlign: "center",
-                    lineHeight: "relaxed"
-                  }}>
-                    Don't have an account? <button
+                  <Text
+                    css={{
+                      fontSize: "xs",
+                      color: "content.subtle",
+                      textAlign: "center",
+                      lineHeight: "relaxed",
+                    }}
+                  >
+                    Don't have an account?{" "}
+                    <button
                       type="button"
                       onClick={handleSignup}
                       className={css({
@@ -224,7 +264,7 @@ export function InvitationLandingPage({
                         textDecoration: "underline",
                         background: "none",
                         border: "none",
-                        cursor: "pointer"
+                        cursor: "pointer",
                       })}
                     >
                       Create one instead
@@ -236,8 +276,9 @@ export function InvitationLandingPage({
               {userState === "user_logged_in_email_mismatch" && (
                 <VStack gap="4" alignItems="stretch">
                   <Banner variant="warning" icon={true}>
-                    This invitation is for {invitation.email}, but you're logged in as {currentUser?.email}.
-                    Please sign out and sign in with the correct email address.
+                    This invitation is for {invitation.email}, but you're logged
+                    in as {currentUser?.email}. Please sign out and sign in with
+                    the correct email address.
                   </Banner>
 
                   <VStack gap="2" alignItems="stretch">
@@ -261,24 +302,24 @@ export function InvitationLandingPage({
               )}
 
               {userState === "user_logged_in_email_match" && (
-                <AcceptInvitationForm
-                  token={token}
-                  invitation={invitation}
-                />
+                <AcceptInvitationForm token={token} invitation={invitation} />
               )}
 
               {/* Help Link */}
-              <Text css={{
-                fontSize: "xs",
-                color: "content.subtle",
-                textAlign: "center",
-                lineHeight: "relaxed"
-              }}>
-                Having trouble? <a
+              <Text
+                css={{
+                  fontSize: "xs",
+                  color: "content.subtle",
+                  textAlign: "center",
+                  lineHeight: "relaxed",
+                }}
+              >
+                Having trouble?{" "}
+                <a
                   href="mailto:support@example.com"
                   className={css({
                     color: "accent.text",
-                    textDecoration: "underline"
+                    textDecoration: "underline",
                   })}
                 >
                   Contact support
@@ -290,4 +331,4 @@ export function InvitationLandingPage({
       </Container>
     </Box>
   );
-} 
+}

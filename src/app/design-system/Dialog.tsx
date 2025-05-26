@@ -2,13 +2,13 @@
 
 import {
   Button as AriaButton,
+  type ButtonProps as AriaButtonProps,
   Dialog as AriaDialog,
+  type DialogProps as AriaDialogProps,
   DialogTrigger as AriaDialogTrigger,
   Heading as AriaHeading,
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
-  type ButtonProps as AriaButtonProps,
-  type DialogProps as AriaDialogProps,
   type ModalOverlayProps as AriaModalOverlayProps,
 } from "react-aria-components";
 import { cva, cx } from "../../../styled-system/css";
@@ -208,7 +208,11 @@ export interface DialogCloseButtonProps extends AriaButtonProps {
 }
 
 // Component implementations
-export function DialogOverlay({ className, children, ...props }: DialogOverlayProps) {
+export function DialogOverlay({
+  className,
+  children,
+  ...props
+}: DialogOverlayProps) {
   return (
     <AriaModalOverlay className={cx(overlayStyles(), className)} {...props}>
       {children}
@@ -224,7 +228,11 @@ export function DialogModal({ size, className, children }: DialogModalProps) {
   );
 }
 
-export function DialogContent({ className, children, ...props }: DialogContentProps) {
+export function DialogContent({
+  className,
+  children,
+  ...props
+}: DialogContentProps) {
   return (
     <AriaDialog className={cx(dialogStyles(), className)} {...props}>
       {children}
@@ -233,11 +241,7 @@ export function DialogContent({ className, children, ...props }: DialogContentPr
 }
 
 export function DialogHeader({ className, children }: DialogHeaderProps) {
-  return (
-    <div className={cx(headerStyles(), className)}>
-      {children}
-    </div>
-  );
+  return <div className={cx(headerStyles(), className)}>{children}</div>;
 }
 
 export function DialogTitle({ className, children }: DialogTitleProps) {
@@ -249,22 +253,18 @@ export function DialogTitle({ className, children }: DialogTitleProps) {
 }
 
 export function DialogBody({ className, children }: DialogBodyProps) {
-  return (
-    <div className={cx(bodyStyles(), className)}>
-      {children}
-    </div>
-  );
+  return <div className={cx(bodyStyles(), className)}>{children}</div>;
 }
 
 export function DialogFooter({ className, children }: DialogFooterProps) {
-  return (
-    <div className={cx(footerStyles(), className)}>
-      {children}
-    </div>
-  );
+  return <div className={cx(footerStyles(), className)}>{children}</div>;
 }
 
-export function DialogCloseButton({ className, children, ...props }: DialogCloseButtonProps) {
+export function DialogCloseButton({
+  className,
+  children,
+  ...props
+}: DialogCloseButtonProps) {
   return (
     <AriaButton className={cx(closeButtonStyles(), className)} {...props}>
       {children || <Icon icon={Close} size={16} />}
@@ -278,11 +278,7 @@ export interface DialogTriggerProps {
 }
 
 export function DialogTrigger({ children }: DialogTriggerProps) {
-  return (
-    <AriaDialogTrigger>
-      {children}
-    </AriaDialogTrigger>
-  );
+  return <AriaDialogTrigger>{children}</AriaDialogTrigger>;
 }
 
 // Complete dialog compound component
@@ -323,9 +319,7 @@ export function Dialog({
                     )}
                   </DialogHeader>
                 )}
-                <DialogBody>
-                  {children(renderProps.close)}
-                </DialogBody>
+                <DialogBody>{children(renderProps.close)}</DialogBody>
               </>
             )}
           </DialogContent>
@@ -336,4 +330,13 @@ export function Dialog({
 }
 
 // Export styles for external use
-export { overlayStyles, modalStyles, dialogStyles, headerStyles, titleStyles, bodyStyles, footerStyles, closeButtonStyles }; 
+export {
+  overlayStyles,
+  modalStyles,
+  dialogStyles,
+  headerStyles,
+  titleStyles,
+  bodyStyles,
+  footerStyles,
+  closeButtonStyles,
+};

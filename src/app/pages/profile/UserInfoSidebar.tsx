@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/app/design-system/Card";
-import { VStack, Box } from "@/app/design-system/Layout";
+import { Box, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
 import type { User } from "@/domain/global/user/model";
 import { ProfilePageClient } from "./ProfilePageClient";
@@ -14,9 +14,9 @@ interface UserInfoSidebarProps {
 function UserAvatar({ name, email }: { name: string | null; email: string }) {
   const displayName = name || email;
   const initials = displayName
-    .split(' ')
-    .map(part => part[0])
-    .join('')
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
     .toUpperCase()
     .slice(0, 2);
 
@@ -32,7 +32,7 @@ function UserAvatar({ name, email }: { name: string | null; email: string }) {
         justifyContent: "center",
         fontSize: "lg",
         fontWeight: "semibold",
-        color: "accent.text"
+        color: "accent.text",
       }}
     >
       {initials}
@@ -69,4 +69,4 @@ export function UserInfoSidebar({ user }: UserInfoSidebarProps) {
 }
 
 // Add default export
-export default UserInfoSidebar; 
+export default UserInfoSidebar;

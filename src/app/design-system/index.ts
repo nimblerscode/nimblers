@@ -1,3 +1,5 @@
+// Layout components
+export { MainLayout } from "../components/layout/MainLayout";
 export { Avatar, type AvatarProps } from "./Avatar";
 export * from "./Banner";
 export * from "./Breadcrumb";
@@ -26,23 +28,21 @@ export * from "./Layout";
 export * from "./Link";
 export * from "./List";
 export * from "./ListItem";
-// Layout components
-export { MainLayout } from "../components/layout/MainLayout";
 export * from "./Pill";
 export * from "./Select";
 // Sidebar components
 export {
   Sidebar,
-  SidebarProvider,
-  SidebarHeader,
-  SidebarGroup,
-  SidebarItem,
-  SidebarFooter,
-  useSidebar,
   type SidebarContextType,
+  SidebarFooter,
+  SidebarGroup,
+  type SidebarGroupProps,
+  SidebarHeader,
+  SidebarItem,
   type SidebarItemProps,
   type SidebarProps,
-  type SidebarGroupProps,
+  SidebarProvider,
+  useSidebar,
 } from "./Sidebar";
 export * from "./Tabs";
 // Explicit exports from Text.tsx

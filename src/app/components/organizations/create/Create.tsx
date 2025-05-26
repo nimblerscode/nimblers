@@ -41,7 +41,7 @@ const PRICING_PLANS = [
       "Basic analytics",
       "Basic support",
       "Basic permissions",
-      "Basic branding"
+      "Basic branding",
     ],
     isRecommended: false,
   },
@@ -91,7 +91,7 @@ export function CreateOrganization() {
   const [selectedPlan, setSelectedPlan] = useState(PRICING_PLANS[1]);
   const [state, formAction, pending] = useActionState(
     createOrganizationAction,
-    initialState
+    initialState,
   );
 
   if (state.success) {
@@ -99,8 +99,8 @@ export function CreateOrganization() {
   }
 
   return (
-    <Card>
-      <VStack gap="6" w="full" alignItems="flex-start">
+    <Card w="full">
+      <VStack gap="6" w="full" alignItems="stretch">
         <CardHeader>
           <HStack gap="3">
             <Flex
@@ -176,7 +176,7 @@ export function CreateOrganization() {
                   onChange={(value) =>
                     setSelectedPlan(
                       PRICING_PLANS.find((plan) => plan.id === value) ||
-                      PRICING_PLANS[0]
+                        PRICING_PLANS[0],
                     )
                   }
                 >

@@ -11,7 +11,6 @@ export const MemberSchema = S.Struct({
   userId: UserIdSchema, // Branded UserId from invitation models
   role: S.String, // Role of the user within the organization
   createdAt: S.Date,
-  updatedAt: S.Date,
 });
 
 export type Member = S.Schema.Type<typeof MemberSchema>;
@@ -21,18 +20,18 @@ export type NewMember = S.Schema.Type<typeof NewMemberSchema>;
 // Placeholder for generic Member DB errors
 export class MemberDbError extends S.TaggedError<MemberDbError>()(
   "MemberDbError",
-  { cause: S.Unknown }
+  { cause: S.Unknown },
 ) {}
 
 export class MemberNotFoundError extends S.TaggedError<MemberNotFoundError>()(
   "MemberNotFoundError",
   // Include relevant identifiers if needed, e.g., { userId: S.String, orgId: S.String }
-  {}
+  {},
 ) {}
 
 export class MemberDOError extends S.TaggedError<MemberDOError>()(
   "MemberDOError",
-  { cause: S.Unknown }
+  { cause: S.Unknown },
 ) {}
 
 export type MemberRepoError = MemberDbError | MemberNotFoundError;

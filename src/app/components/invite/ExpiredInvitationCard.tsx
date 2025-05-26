@@ -1,9 +1,9 @@
 "use client";
-import { Card, CardContent } from "@/app/design-system/Card";
-import { VStack, Box } from "@/app/design-system/Layout";
-import { Text } from "@/app/design-system/Text";
-import { Heading } from "@/app/design-system/Heading";
 import { Button } from "@/app/design-system/Button";
+import { Card, CardContent } from "@/app/design-system/Card";
+import { Heading } from "@/app/design-system/Heading";
+import { Box, VStack } from "@/app/design-system/Layout";
+import { Text } from "@/app/design-system/Text";
 import { css } from "../../../../styled-system/css";
 
 interface ExpiredInvitationCardProps {
@@ -11,7 +11,10 @@ interface ExpiredInvitationCardProps {
   expiresAt: Date;
 }
 
-export function ExpiredInvitationCard({ organizationName, expiresAt }: ExpiredInvitationCardProps) {
+export function ExpiredInvitationCard({
+  organizationName,
+  expiresAt,
+}: ExpiredInvitationCardProps) {
   const formattedExpiresAt = expiresAt.toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -22,36 +25,47 @@ export function ExpiredInvitationCard({ organizationName, expiresAt }: ExpiredIn
   });
 
   return (
-    <Box className={css({
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, var(--colors-orange-50) 0%, var(--colors-yellow-100) 100%)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "4"
-    })}>
-      <Card css={{
-        maxWidth: "28rem",
-        width: "100%",
-        borderWidth: "thin",
-        borderColor: "status.warning.border",
-        backgroundColor: "white",
-        boxShadow: "lg"
-      }}>
+    <Box
+      className={css({
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg, var(--colors-orange-50) 0%, var(--colors-yellow-100) 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "4",
+      })}
+    >
+      <Card
+        css={{
+          maxWidth: "28rem",
+          width: "100%",
+          borderWidth: "thin",
+          borderColor: "status.warning.border",
+          backgroundColor: "white",
+          boxShadow: "lg",
+        }}
+      >
         <CardContent css={{ padding: "8" }}>
           <VStack gap="6" alignItems="center">
             {/* Warning Icon */}
-            <Box className={css({
-              width: "16",
-              height: "16",
-              backgroundColor: "orange.100",
-              borderRadius: "full",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            })}>
+            <Box
+              className={css({
+                width: "16",
+                height: "16",
+                backgroundColor: "orange.100",
+                borderRadius: "full",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
+            >
               <svg
-                className={css({ width: "8", height: "8", color: "orange.600" })}
+                className={css({
+                  width: "8",
+                  height: "8",
+                  color: "orange.600",
+                })}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -68,11 +82,16 @@ export function ExpiredInvitationCard({ organizationName, expiresAt }: ExpiredIn
             </Box>
 
             <VStack gap="3" alignItems="center">
-              <Heading as="h1" levelStyle="h3" css={{ textAlign: "center", color: "status.warning.text" }}>
+              <Heading
+                as="h1"
+                levelStyle="h3"
+                css={{ textAlign: "center", color: "status.warning.text" }}
+              >
                 Invitation Expired
               </Heading>
               <Text css={{ textAlign: "center", color: "content.subtle" }}>
-                Your invitation to join {organizationName} has expired on {formattedExpiresAt}
+                Your invitation to join {organizationName} has expired on{" "}
+                {formattedExpiresAt}
               </Text>
             </VStack>
 
@@ -87,16 +106,19 @@ export function ExpiredInvitationCard({ organizationName, expiresAt }: ExpiredIn
               </Button>
             </VStack>
 
-            <Text css={{
-              fontSize: "xs",
-              color: "content.subtle",
-              textAlign: "center"
-            }}>
-              To join {organizationName}, please request a new invitation from your team administrator.
+            <Text
+              css={{
+                fontSize: "xs",
+                color: "content.subtle",
+                textAlign: "center",
+              }}
+            >
+              To join {organizationName}, please request a new invitation from
+              your team administrator.
             </Text>
           </VStack>
         </CardContent>
       </Card>
     </Box>
   );
-} 
+}

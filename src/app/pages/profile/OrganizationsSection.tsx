@@ -1,7 +1,7 @@
 "use server";
 
-import type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";
 import { VStack } from "@/app/design-system/Layout";
+import type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";
 import { EmptyOrganizationsState } from "./EmptyOrganizationsState";
 import { OrganizationsList } from "./OrganizationsList";
 
@@ -19,7 +19,9 @@ interface OrganizationsSectionProps {
   onOrganizationCreated?: () => void;
 }
 
-function transformOrganization(org: OrganizationWithMembershipAndName): Organization {
+function transformOrganization(
+  org: OrganizationWithMembershipAndName,
+): Organization {
   return {
     id: org.id,
     name: org.name,
@@ -29,7 +31,10 @@ function transformOrganization(org: OrganizationWithMembershipAndName): Organiza
   };
 }
 
-export function OrganizationsSection({ organizations, onOrganizationCreated }: OrganizationsSectionProps) {
+export function OrganizationsSection({
+  organizations,
+  onOrganizationCreated,
+}: OrganizationsSectionProps) {
   const transformedOrganizations = organizations.map(transformOrganization);
 
   return (
@@ -37,7 +42,9 @@ export function OrganizationsSection({ organizations, onOrganizationCreated }: O
       {transformedOrganizations.length > 0 ? (
         <OrganizationsList organizations={transformedOrganizations} />
       ) : (
-        <EmptyOrganizationsState onOrganizationCreated={onOrganizationCreated} />
+        <EmptyOrganizationsState
+          onOrganizationCreated={onOrganizationCreated}
+        />
       )}
     </VStack>
   );

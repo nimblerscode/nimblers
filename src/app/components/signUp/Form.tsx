@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -36,18 +36,20 @@ export function SignUpForm() {
     isLoading: false,
   });
 
-  const [invitationContext, setInvitationContext] = useState<InvitationContext>({
-    token: null,
-    email: null,
-    isInvited: false,
-  });
+  const [invitationContext, setInvitationContext] = useState<InvitationContext>(
+    {
+      token: null,
+      email: null,
+      isInvited: false,
+    },
+  );
 
   // Read URL parameters on component mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const token = params.get('token');
-      const email = params.get('email');
+      const token = params.get("token");
+      const email = params.get("email");
 
       if (token && email) {
         setInvitationContext({
@@ -86,10 +88,10 @@ export function SignUpForm() {
             if (invitationContext.isInvited && invitationContext.token) {
               try {
                 // Call the invitation acceptance endpoint
-                const acceptResponse = await fetch('/api/invitations/accept', {
-                  method: 'POST',
+                const acceptResponse = await fetch("/api/invitations/accept", {
+                  method: "POST",
                   headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                   },
                   body: JSON.stringify({
                     token: invitationContext.token,
@@ -101,7 +103,8 @@ export function SignUpForm() {
                   setFormState({
                     isLoading: false,
                     error: null,
-                    message: "Account created and invitation accepted! Redirecting to your profile...",
+                    message:
+                      "Account created and invitation accepted! Redirecting to your profile...",
                   });
 
                   // Wait a moment to show the success message, then redirect
@@ -112,7 +115,8 @@ export function SignUpForm() {
                   // Account created but invitation acceptance failed
                   setFormState({
                     isLoading: false,
-                    error: "Account created successfully, but there was an issue accepting the invitation. Please try accepting it manually.",
+                    error:
+                      "Account created successfully, but there was an issue accepting the invitation. Please try accepting it manually.",
                     message: null,
                   });
 
@@ -121,11 +125,11 @@ export function SignUpForm() {
                     window.location.href = "/profile";
                   }, 3000);
                 }
-              } catch (invitationError) {
-                console.error('Failed to accept invitation:', invitationError);
+              } catch (_invitationError) {
                 setFormState({
                   isLoading: false,
-                  error: "Account created successfully, but there was an issue accepting the invitation. Please try accepting it manually.",
+                  error:
+                    "Account created successfully, but there was an issue accepting the invitation. Please try accepting it manually.",
                   message: null,
                 });
 
@@ -150,7 +154,7 @@ export function SignUpForm() {
           },
         },
       );
-    } catch (error) {
+    } catch (_error) {
       setFormState({
         isLoading: false,
         error: "An unexpected error occurred. Please try again.",
@@ -164,13 +168,16 @@ export function SignUpForm() {
       <VStack gap="6" alignItems="stretch">
         <CardHeader>
           <CardTitle>
-            {invitationContext.isInvited ? "Complete Your Invitation" : "Get Started"}
+            {invitationContext.isInvited
+              ? "Complete Your Invitation"
+              : "Get Started"}
           </CardTitle>
 
           {/* Show invitation context banner */}
           {invitationContext.isInvited && (
             <Banner variant="info" icon={true}>
-              You've been invited to join an organization. Create your account below to accept the invitation.
+              You've been invited to join an organization. Create your account
+              below to accept the invitation.
             </Banner>
           )}
 
@@ -212,7 +219,11 @@ export function SignUpForm() {
                       disabled: formState.isLoading,
                       readOnly: invitationContext.isInvited,
                     }}
-                    label={invitationContext.isInvited ? "Email (from invitation)" : "Email"}
+                    label={
+                      invitationContext.isInvited
+                        ? "Email (from invitation)"
+                        : "Email"
+                    }
                     type="email"
                     value={invitationContext.email || undefined}
                     description={
@@ -243,8 +254,7 @@ export function SignUpForm() {
                     ? "Creating Account..."
                     : invitationContext.isInvited
                       ? "Create Account & Join Organization"
-                      : "Sign up with email"
-                  }
+                      : "Sign up with email"}
                 </Button>
               </VStack>
             </form>
@@ -254,13 +264,21 @@ export function SignUpForm() {
               <>
                 <Flex alignItems="center" gap="4">
                   <Box flex="1" height="1px" bg="content.secondary" />
-                  <Text color="content.secondary" fontSize="sm" whiteSpace="nowrap">
+                  <Text
+                    color="content.secondary"
+                    fontSize="sm"
+                    whiteSpace="nowrap"
+                  >
                     or
                   </Text>
                   <Box flex="1" height="1px" bg="content.secondary" />
                 </Flex>
 
-                <Button variant="outline" size="lg" isDisabled={formState.isLoading}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  isDisabled={formState.isLoading}
+                >
                   <HStack gap="2" alignItems="center">
                     <svg width="20" height="20" viewBox="0 0 24 24">
                       <title>Sign up with Google</title>
@@ -289,18 +307,26 @@ export function SignUpForm() {
 
             <VStack gap="2" alignItems="center">
               <Text fontSize="sm" color="page.textSecondary">
-                Already have an account? <Link href={
-                  invitationContext.isInvited
-                    ? `/login?token=${invitationContext.token}&email=${encodeURIComponent(invitationContext.email || '')}`
-                    : "/login"
-                }>
+                Already have an account?{" "}
+                <Link
+                  href={
+                    invitationContext.isInvited
+                      ? `/login?token=${invitationContext.token}&email=${encodeURIComponent(invitationContext.email || "")}`
+                      : "/login"
+                  }
+                >
                   Log in
                 </Link>
               </Text>
 
               {invitationContext.isInvited && (
-                <Text fontSize="xs" color="content.subtle" css={{ textAlign: "center" }}>
-                  By creating an account, you'll automatically join the organization you were invited to.
+                <Text
+                  fontSize="xs"
+                  color="content.subtle"
+                  css={{ textAlign: "center" }}
+                >
+                  By creating an account, you'll automatically join the
+                  organization you were invited to.
                 </Text>
               )}
             </VStack>

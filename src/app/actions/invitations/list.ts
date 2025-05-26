@@ -9,7 +9,10 @@ import type { Invitation } from "@/domain/tenant/invitations/models";
 // Define error types
 export class InvitationListError extends Error {
   readonly _tag = "InvitationListError";
-  constructor(message: string, public code = "LIST_FAILED") {
+  constructor(
+    message: string,
+    public code = "LIST_FAILED",
+  ) {
     super(message);
   }
 }
@@ -38,7 +41,7 @@ const safeToISOString = (dateValue: unknown): string => {
 };
 
 const convertToSerializableInvitation = (
-  invitation: Invitation
+  invitation: Invitation,
 ): SerializableInvitation => ({
   id: invitation.id,
   email: invitation.email,
@@ -54,7 +57,7 @@ export async function getPendingInvitations(organizationSlug: string): Promise<{
   const program = pipe(
     Effect.gen(function* (_) {
       const invitationProgram = InvitationDOService.pipe(
-        Effect.flatMap((service) => service.list(organizationSlug))
+        Effect.flatMap((service) => service.list(organizationSlug)),
       );
 
       const fullLayer = InvitationDOLive({
@@ -65,13 +68,12 @@ export async function getPendingInvitations(organizationSlug: string): Promise<{
         Effect.tryPromise({
           try: () =>
             Effect.runPromise(
-              invitationProgram.pipe(Effect.provide(fullLayer))
+              invitationProgram.pipe(Effect.provide(fullLayer)),
             ),
-          catch: (error) => {
-            console.error("Error fetching invitations:", error);
+          catch: (_error) => {
             return new InvitationListError("Failed to fetch invitations");
           },
-        })
+        }),
       );
 
       // Filter for pending invitations and convert to serializable format
@@ -81,11 +83,10 @@ export async function getPendingInvitations(organizationSlug: string): Promise<{
 
       return { pendingInvitations };
     }),
-    Effect.catchAll((error) => {
-      console.error("Error in getPendingInvitations:", error);
+    Effect.catchAll((_error) => {
       // Return empty array on error to prevent breaking the UI
       return Effect.succeed({ pendingInvitations: [] });
-    })
+    }),
   );
 
   return Effect.runPromise(program);

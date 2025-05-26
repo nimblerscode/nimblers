@@ -1,8 +1,8 @@
-import { Effect, Layer } from "effect";
-import { MemberDOService } from "@/domain/tenant/member/service";
 import { Headers } from "@effect/platform";
-import { OrganizationDONamespace } from "./OrganizationDONameSpace";
+import { Effect, Layer } from "effect";
 import { type Member, MemberDOError } from "@/domain/tenant/member/model";
+import { MemberDOService } from "@/domain/tenant/member/service";
+import { OrganizationDONamespace } from "./OrganizationDONameSpace";
 
 export const MembersDOServiceLive = Layer.effect(
   MemberDOService,
@@ -28,8 +28,6 @@ export const MembersDOServiceLive = Layer.effect(
           },
         });
 
-        console.log("Response members", response);
-
         if (!response.ok) {
           throw new MemberDOError({ cause: response });
         }
@@ -50,5 +48,5 @@ export const MembersDOServiceLive = Layer.effect(
     return {
       get,
     };
-  })
+  }),
 );

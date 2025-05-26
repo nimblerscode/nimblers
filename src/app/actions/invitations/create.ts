@@ -5,27 +5,36 @@ import { Effect, pipe } from "effect";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InvitationDOLive } from "@/config/layers";
 import type { Email } from "@/domain/global/email/model";
-import type { UserId, User } from "@/domain/global/user/model";
+import type { User, UserId } from "@/domain/global/user/model";
 import type { Invitation } from "@/domain/tenant/invitations/models";
 
 // Define explicit error types following Effect-TS patterns
 export class AuthenticationError extends Error {
   readonly _tag = "AuthenticationError";
-  constructor(message: string, public code = "USER_NOT_FOUND") {
+  constructor(
+    message: string,
+    public code = "USER_NOT_FOUND",
+  ) {
     super(message);
   }
 }
 
 export class ValidationError extends Error {
   readonly _tag = "ValidationError";
-  constructor(message: string, public code: string) {
+  constructor(
+    message: string,
+    public code: string,
+  ) {
     super(message);
   }
 }
 
 export class InvitationError extends Error {
   readonly _tag = "InvitationError";
-  constructor(message: string, public code = "INVITATION_FAILED") {
+  constructor(
+    message: string,
+    public code = "INVITATION_FAILED",
+  ) {
     super(message);
   }
 }
@@ -69,19 +78,19 @@ export type InviteUserState =
 
 // Validation functions using Effect
 const validateUser = (
-  user: User | undefined
+  user: User | undefined,
 ): Effect.Effect<User, AuthenticationError> =>
   pipe(
     Effect.succeed(user),
     Effect.filterOrFail(
       (u): u is User =>
         u !== undefined && u.id !== undefined && u.id !== "unknown",
-      () => new AuthenticationError("User authentication required")
-    )
+      () => new AuthenticationError("User authentication required"),
+    ),
   );
 
 const validateFormData = (
-  formData: FormData
+  formData: FormData,
 ): Effect.Effect<
   {
     email: Email;
@@ -99,8 +108,8 @@ const validateFormData = (
     if (!email || !role || !organizationSlug) {
       yield* _(
         Effect.fail(
-          new ValidationError("All fields are required", "MISSING_FIELDS")
-        )
+          new ValidationError("All fields are required", "MISSING_FIELDS"),
+        ),
       );
     }
 
@@ -111,9 +120,9 @@ const validateFormData = (
         Effect.fail(
           new ValidationError(
             "Please enter a valid email address",
-            "INVALID_EMAIL"
-          )
-        )
+            "INVALID_EMAIL",
+          ),
+        ),
       );
     }
 
@@ -125,7 +134,7 @@ const validateFormData = (
   });
 
 const convertToSerializableError = (
-  error: InviteUserError
+  error: InviteUserError,
 ): SerializableError => {
   switch (error._tag) {
     case "AuthenticationError":
@@ -165,7 +174,7 @@ const safeToISOString = (dateValue: unknown): string => {
 const buildSuccessState = (
   user: User,
   email: Email,
-  invitation: Invitation
+  invitation: Invitation,
 ): InviteUserState => ({
   success: true,
   message: `Invitation sent to ${email} successfully!`,
@@ -184,7 +193,7 @@ const buildSuccessState = (
 
 export async function inviteUserAction(
   prevState: InviteUserState,
-  formData: FormData
+  formData: FormData,
 ): Promise<InviteUserState> {
   const program = pipe(
     Effect.gen(function* (_) {
@@ -193,7 +202,7 @@ export async function inviteUserAction(
 
       // Validate and extract form data
       const { email, role, organizationSlug } = yield* _(
-        validateFormData(formData)
+        validateFormData(formData),
       );
 
       const invitationProgram = InvitationDOService.pipe(
@@ -204,9 +213,9 @@ export async function inviteUserAction(
               inviteeEmail: email as Email,
               role: role,
             },
-            organizationSlug
-          )
-        )
+            organizationSlug,
+          ),
+        ),
       );
 
       const fullLayer = InvitationDOLive({
@@ -217,19 +226,17 @@ export async function inviteUserAction(
         Effect.tryPromise({
           try: () =>
             Effect.runPromise(
-              invitationProgram.pipe(Effect.provide(fullLayer))
+              invitationProgram.pipe(Effect.provide(fullLayer)),
             ),
-          catch: (error) => {
-            console.error("Error creating invitation:", error);
+          catch: (_error) => {
             return new InvitationError("Failed to create invitation");
           },
-        })
+        }),
       );
 
       return buildSuccessState(user, email, invitation);
     }),
     Effect.catchAll((error) => {
-      console.error("Error in invitation action:", error);
       const serializableError = convertToSerializableError(error);
       return Effect.succeed({
         success: false,
@@ -237,7 +244,7 @@ export async function inviteUserAction(
         errors: serializableError,
         user: prevState.user,
       } as InviteUserState);
-    })
+    }),
   );
 
   return Effect.runPromise(program);

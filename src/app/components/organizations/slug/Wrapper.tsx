@@ -1,13 +1,13 @@
 "use client";
 
+import type { SerializableInvitation } from "@/app/actions/invitations/list";
+import type { getUserOrganizations } from "@/app/actions/organization/get";
 import { Container, VStack } from "@/app/design-system";
 import type { User } from "@/domain/global/user/model";
 import type { Organization } from "@/domain/tenant/organization/model";
+import { MainLayout } from "../../layout/MainLayout";
 import { Header } from "./Header";
 import { Tabs } from "./Tabs";
-import type { SerializableInvitation } from "@/app/actions/invitations/list";
-import type { getUserOrganizations } from "@/app/actions/organization/get";
-import { MainLayout } from "../../layout/MainLayout";
 
 export function Wrapper({
   organization,

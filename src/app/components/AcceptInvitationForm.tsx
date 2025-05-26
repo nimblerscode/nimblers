@@ -17,8 +17,7 @@ export function AcceptInvitationForm({ token }: AcceptInvitationFormProps) {
   const [state, action] = useActionState<ActionState, FormData>(
     async (prevState, formData) => {
       try {
-        const result = await handleAcceptInvitation(prevState, formData);
-        console.log("result", result);
+        const _result = await handleAcceptInvitation(prevState, formData);
         return { success: true };
       } catch (error) {
         return {

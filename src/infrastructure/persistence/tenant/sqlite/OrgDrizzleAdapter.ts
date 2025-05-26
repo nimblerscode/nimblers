@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { v4 as uuidv4 } from "uuid";
 import type {
@@ -6,9 +7,8 @@ import type {
 } from "@/domain/tenant/organization/model";
 import type { schema } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { organization as organizationTable } from "@/infrastructure/persistence/tenant/sqlite/schema";
-import { eq } from "drizzle-orm";
 export const makeOrgDrizzleAdapter = (
-  db: DrizzleSqliteDODatabase<typeof schema>
+  db: DrizzleSqliteDODatabase<typeof schema>,
 ) => ({
   getOrgBySlug: async (slug: string) => {
     const orgResults = await db

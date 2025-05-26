@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Option } from "effect";
 import { DbError } from "@/domain/global/auth/service";
 import type { Email } from "@/domain/global/email/model";
 import {
@@ -30,7 +30,7 @@ export const UserRepoLive = Layer.effect(
               new UserNotFoundError({
                 message: "User not found",
                 identifier: { type: "id", value: userId },
-              })
+              }),
             );
           }
           return userResult;
@@ -42,7 +42,7 @@ export const UserRepoLive = Layer.effect(
             Effect.tryPromise({
               try: () => drizzleAdapter.findByEmail(email),
               catch: (error) => new DbError({ cause: error }),
-            })
+            }),
           );
           if (!userResult) {
             return yield* _(
@@ -50,8 +50,8 @@ export const UserRepoLive = Layer.effect(
                 new UserNotFoundError({
                   message: "User not found",
                   identifier: { type: "email", value: email },
-                })
-              )
+                }),
+              ),
             );
           }
           return userResult;
@@ -71,7 +71,33 @@ export const UserRepoLive = Layer.effect(
           });
           return users;
         }),
+
+      createOrganization: (
+        data: import("@/domain/global/user/service").NewOrganization,
+      ) =>
+        Effect.tryPromise({
+          try: () => drizzleAdapter.createOrganization(data),
+          catch: (error: unknown) => new DbError({ cause: error }),
+        }),
+
+      findOrganizationById: (organizationId: string) =>
+        Effect.gen(function* () {
+          const org = yield* Effect.tryPromise({
+            try: () => drizzleAdapter.findOrganizationById(organizationId),
+            catch: (error) => new DbError({ cause: error }),
+          });
+          return Option.fromNullable(org);
+        }),
+
+      findOrganizationBySlug: (slug: string) =>
+        Effect.gen(function* () {
+          const org = yield* Effect.tryPromise({
+            try: () => drizzleAdapter.findOrganizationBySlug(slug),
+            catch: (error) => new DbError({ cause: error }),
+          });
+          return Option.fromNullable(org);
+        }),
     };
     return serviceMethods;
-  })
+  }),
 );

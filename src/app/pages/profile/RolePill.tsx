@@ -19,4 +19,4 @@ export function RolePill({ role }: { role: string }) {
       {role}
     </Pill>
   );
-};
+}

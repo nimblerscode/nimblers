@@ -23,8 +23,6 @@ export const BetterAuthConfigLive: Layer.Layer<
 
     // Initialize betterAuth with the Drizzle adapter, EmailService, and config
     const authInstance = auth(drizzleClient, emailService);
-
-    console.log("Better Auth Initialized (Placeholder) with EmailService");
     return authInstance;
   }),
 );

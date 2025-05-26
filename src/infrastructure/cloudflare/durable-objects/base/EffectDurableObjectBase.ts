@@ -36,28 +36,16 @@ export abstract class EffectDurableObjectBase {
         const fullyScopedEffect = Effect.scoped(layeredMigrationEffect);
         const effectToRun = fullyScopedEffect.pipe(
           Effect.catchAll((e) => {
-            console.error(
-              `DO (${this.doId}): Migration failed inside blockConcurrencyWhile! Aborting constructor.`,
-              e,
-            );
             return Effect.die(e);
           }),
         );
         await Effect.runPromise(effectToRun);
-        console.log(`DO (${this.doId}): Migrations run successfully.`);
-        console.log(`DO (${this.doId}): Runtime built successfully.`);
       } catch (e) {
-        console.error(
-          `DO (${this.doId}): Error during blockConcurrencyWhile (migrations/runtime setup)! Aborting constructor.`,
-          e,
-        );
         throw new Error(
           `Failed to initialize DO during blockConcurrencyWhile: ${e}`,
         );
       }
     });
-
-    console.log(`DO (${this.doId}): Constructed.`);
   }
 
   // Subclasses must implement this

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { InvitationModal, SimpleInvitationModal } from "./InvitationModal";
 import { Button } from "@/app/design-system/Button";
+import { InvitationModal, SimpleInvitationModal } from "./InvitationModal";
 
 // Mock user for stories
 const mockUser = {
@@ -26,9 +26,7 @@ export const Default: Story = {
     slug: "my-project",
     user: mockUser,
     trigger: <Button>Invite to Project</Button>,
-    onSuccess: (invitation) => {
-      console.log("Invitation sent:", invitation);
-    },
+    onSuccess: (_invitation) => {},
   },
 };
 
@@ -48,12 +46,8 @@ export const WithCallbacks: Story = {
     slug: "callback-demo",
     user: mockUser,
     trigger: <Button variant="primary">Invite with Callbacks</Button>,
-    onSuccess: (invitation) => {
-      console.log("Success callback:", invitation);
-    },
-    onClose: () => {
-      console.log("Modal closed");
-    },
+    onSuccess: (_invitation) => {},
+    onClose: () => {},
   },
 };
 
@@ -61,8 +55,6 @@ export const SimpleExample = () => (
   <SimpleInvitationModal
     slug="design-system"
     user={mockUser}
-    onSuccess={(invitation) => {
-      console.log("Simple invitation sent:", invitation);
-    }}
+    onSuccess={(_invitation) => {}}
   />
-); 
+);
