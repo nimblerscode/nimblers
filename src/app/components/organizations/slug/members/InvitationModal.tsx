@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
 import {
-  type InviteUserState,
   inviteUserAction,
+  type InviteUserState,
   type SerializableInvitation,
 } from "@/app/actions/invitations/create";
 import { Banner } from "@/app/design-system/Banner";
@@ -11,10 +10,13 @@ import { Button } from "@/app/design-system/Button";
 import { Card, CardContent } from "@/app/design-system/Card";
 import { Dialog, DialogFooter } from "@/app/design-system/Dialog";
 import { Heading } from "@/app/design-system/Heading";
+import { Icon } from "@/app/design-system/Icon";
 import { TextFieldRoot as TextField } from "@/app/design-system/Input";
-import { Flex, VStack } from "@/app/design-system/Layout";
+import { Flex, HStack, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
 import type { User } from "@/domain/global/user/model";
+import { UserPlus } from "lucide-react";
+import { useActionState, useState } from "react";
 import { cva } from "../../../../../../styled-system/css";
 
 // Styling for the note section
@@ -78,7 +80,14 @@ export function InvitationModal({
   if (!user || !user.id) {
     return (
       <Dialog
-        trigger={trigger || <Button>Invite User</Button>}
+        trigger={
+          trigger || (
+            <Button>
+              <Icon icon={UserPlus} />
+              <Text>Invite Member</Text>
+            </Button>
+          )
+        }
         title={`Invite to ${slug}`}
         size="md"
         showCloseButton={true}
@@ -114,7 +123,16 @@ export function InvitationModal({
   return (
     <Dialog
       key={resetKey}
-      trigger={trigger || <Button>Invite User</Button>}
+      trigger={
+        trigger || (
+          <Button>
+            <HStack gap="2" alignItems="center">
+              <Icon icon={UserPlus} />
+              Invite Member
+            </HStack>
+          </Button>
+        )
+      }
       title={`Invite to ${slug}`}
       size="md"
       showCloseButton={true}

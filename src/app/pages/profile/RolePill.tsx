@@ -15,7 +15,7 @@ export const getRoleColorScheme = (role: string) => {
 
 export function RolePill({ role }: { role: string }) {
   return (
-    <Pill variant={getRoleColorScheme(role)} size="sm">
+    <Pill variant={getRoleColorScheme(role)} size="md">
       {role}
     </Pill>
   );

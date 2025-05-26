@@ -42,8 +42,8 @@ export function CreateWrapper({
         minH="100vh"
         justifyContent="center"
       >
-        <VStack gap="6" w="full" maxW="3xl" alignItems="stretch">
-          <Heading as="h1" levelStyle="h2" textAlign="center">
+        <VStack gap="6" w="full" maxW="8xl" alignItems="stretch">
+          <Heading as="h1" levelStyle="h2">
             Create Organization
           </Heading>
           <CreateOrganization />

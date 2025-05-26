@@ -11,13 +11,28 @@ export type AppContext = {
 
 const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
   if (request.method === "OPTIONS") {
+    const origin = request.headers.get("Origin");
+    const allowedOrigins = [
+      "https://nimblers.co",
+      "https://www.nimblers.co",
+      "http://localhost:5173", // Development
+      "http://localhost:3000", // Alternative dev port
+    ];
+
+    const isAllowedOrigin = origin && allowedOrigins.includes(origin);
+
     return new Response(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": "*", // Or your specific origin
+        "Access-Control-Allow-Origin": isAllowedOrigin
+          ? origin
+          : "https://nimblers.co",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Max-Age": "86400", // Optional: Cache preflight response
+        "Access-Control-Allow-Headers":
+          "Content-Type, Authorization, X-Requested-With",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400",
+        Vary: "Origin",
       },
     });
   }

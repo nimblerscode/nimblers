@@ -1,6 +1,6 @@
 import type { Key } from "react-aria-components";
 import type { SerializableInvitation } from "@/app/actions/invitations/list";
-import { Grid, TTabs } from "@/app/design-system";
+import { Flex, Grid, TTabs, VStack } from "@/app/design-system";
 import type { User } from "@/domain/global/user/model";
 import type { Organization } from "@/domain/tenant/organization/model";
 import { InvitationModal } from "./members/InvitationModal";
@@ -42,17 +42,25 @@ export function Tabs({
         </Grid>
       </TTabs.Panel>
       <TTabs.Panel id="members">
-        <MembersList
-          title={`Active Members (${members.length})`}
-          members={members}
-        />
-        {pendingInvitations.length > 0 && (
-          <PendingInvitationsList
-            title={`Pending Invitations (${pendingInvitations.length})`}
-            invitations={pendingInvitations}
-          />
-        )}
-        <InvitationModal slug={organization.slug} user={user} />
+        <VStack gap="6" alignItems="stretch">
+          <VStack gap="6" w="full" alignItems="flex-end">
+            <Flex justifyContent="flex-end" display="inline-flex">
+              <InvitationModal slug={organization.slug} user={user} />
+            </Flex>
+          </VStack>
+          <VStack gap="6" alignItems="stretch">
+            <MembersList
+              title={`Active Members (${members.length})`}
+              members={members}
+            />
+            {pendingInvitations.length > 0 && (
+              <PendingInvitationsList
+                title={`Pending Invitations (${pendingInvitations.length})`}
+                invitations={pendingInvitations}
+              />
+            )}
+          </VStack>
+        </VStack>
       </TTabs.Panel>
     </TTabs.Root>
   );

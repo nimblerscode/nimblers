@@ -23,7 +23,6 @@ const EntityListRoot = ({
 }: EntityListProps) => {
   return (
     <VStack
-      p={{ base: "4", md: "2", sm: "0" }}
       className={className}
       alignItems="stretch"
       {...props}

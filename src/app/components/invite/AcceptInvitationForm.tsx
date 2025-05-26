@@ -66,7 +66,7 @@ export function AcceptInvitationForm({
         };
       }
     },
-    {},
+    {}
   );
 
   const formattedExpiresAt = invitation.expiresAt.toLocaleDateString("en-US", {
@@ -81,17 +81,7 @@ export function AcceptInvitationForm({
   // Success state - show confirmation and next steps
   if (state.success) {
     return (
-      <Box
-        className={css({
-          minHeight: "100vh",
-          background:
-            "linear-gradient(135deg, var(--colors-blue-50) 0%, var(--colors-indigo-100) 100%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "4",
-        })}
-      >
+      <Container>
         <Card
           css={{
             maxWidth: "28rem",
@@ -140,24 +130,15 @@ export function AcceptInvitationForm({
             </VStack>
           </CardContent>
         </Card>
-      </Box>
+      </Container>
     );
   }
 
   // Main invitation acceptance form
   return (
     <Container>
-      <Card
-        css={{
-          maxWidth: "28rem",
-          width: "100%",
-          borderWidth: "thin",
-          borderColor: "border.default",
-          backgroundColor: "white",
-          boxShadow: "lg",
-        }}
-      >
-        <CardContent css={{ padding: "8" }}>
+      <Card>
+        <CardContent p="8">
           <VStack gap="6" alignItems="stretch">
             {/* Header */}
             <VStack gap="3" alignItems="center">
