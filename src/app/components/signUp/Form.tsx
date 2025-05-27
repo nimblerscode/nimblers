@@ -74,14 +74,12 @@ export function SignUpForm() {
       await authClient.signUp.email(
         { name, email, password },
         {
-          onSuccess: async (context) => {
+          onSuccess: async (_context) => {
             setFormState({
               isLoading: false,
               error: null,
               message:
-                context.data?.message ||
-                context.data ||
-                "Account created successfully!",
+                "Account created successfully! Please check your email to verify your account.",
             });
 
             // If this is an invitation-based signup, attempt to accept the invitation

@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { Layer } from "effect";
+import { EmailVerificationUseCaseLive } from "@/application/global/auth/emailVerification";
 import { SessionUseCaseLive } from "@/application/global/session/service";
 import { InvitationUseCaseLive } from "@/application/tenant/invitations/service";
 import { InviteTokenLive } from "@/domain/tenant/invitations/tokenUtils";
@@ -21,6 +22,7 @@ import {
   DrizzleD1ClientLive,
 } from "@/infrastructure/persistence/global/d1/drizzle";
 import { SessionRepoLive } from "@/infrastructure/persistence/global/d1/SessionRepoLive";
+import { UserRepoLive } from "@/infrastructure/persistence/global/d1/UserRepoAdapter";
 import { DrizzleDOClientLive } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { InvitationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/InvitationRepoLive";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
@@ -35,7 +37,7 @@ export const SessionLayerLive = () => {
   const sessionRepoLayer = Layer.provide(SessionRepoLive, DrizzleD1ClientLive);
   const sessionUseCaseLayer = Layer.provide(
     SessionUseCaseLive,
-    sessionRepoLayer,
+    sessionRepoLayer
   );
   return sessionUseCaseLayer;
 };
@@ -63,7 +65,7 @@ export function OrganizationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 
   const OrgServiceLayer = Layer.provide(
     OrganizationDOAdapterLive,
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 
   return OrgServiceLayer;
@@ -73,7 +75,7 @@ export function InvitationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
   const doNamespaceLayer = Layer.succeed(InvitationDONamespace, doEnv.ORG_DO);
   return Layer.provide(
     InvitationDOServiceLive.pipe(Layer.provide(InviteTokenLive)),
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 }
 
@@ -83,21 +85,22 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation repository layer
   const InvitationRepoLayer = Layer.provide(
     InvitationRepoLive,
-    DrizzleDOClientLive,
+    DrizzleDOClientLive
   );
 
   // Email service layer
   const EmailLayer = Layer.provide(
     ResendEmailAdapterLive,
-    Layer.merge(ResendConfigLive, MemberServiceLayer),
+    Layer.merge(ResendConfigLive, MemberServiceLayer)
   );
 
-  // User repository layer
+  // Note: UserRepo is not available in Durable Object context
+  // The invitation service will handle the missing dependency gracefully
 
   // Invitation use case layer with all its dependencies
   const InvitationUseCaseLayer = Layer.provide(
     InvitationUseCaseLive(doId).pipe(Layer.provide(InviteTokenLive)),
-    Layer.mergeAll(EmailLayer, MemberServiceLayer),
+    Layer.mergeAll(EmailLayer, MemberServiceLayer)
   );
 
   return InvitationUseCaseLayer.pipe(Layer.provide(InvitationRepoLayer));
@@ -108,8 +111,26 @@ export function MemberDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 
   const MemberServiceLayer = Layer.provide(
     MembersDOServiceLive,
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 
   return MemberServiceLayer;
 }
+
+export const EmailVerificationLayerLive = (db: { DB: D1Database }) => {
+  // Complete database layer with D1Binding
+  const d1Layer = D1BindingLive(db);
+  const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
+
+  // User repository layer
+  const UserRepoLayer = Layer.provide(UserRepoLive, drizzleLayer);
+
+  // Email service layer
+  const EmailLayer = Layer.provide(ResendEmailAdapterLive, ResendConfigLive);
+
+  // Email verification use case layer with all dependencies
+  return Layer.provide(
+    EmailVerificationUseCaseLive,
+    Layer.mergeAll(UserRepoLayer, EmailLayer)
+  );
+};

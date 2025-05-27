@@ -68,12 +68,14 @@ export function LoginForm({
     <Card>
       <VStack gap="6" alignItems="stretch">
         <CardHeader>
-          <CardTitle>Sign in to your account</CardTitle>
-          {errorMessage ? (
-            <Banner variant="error">
-              <Text>{errorMessage}</Text>
-            </Banner>
-          ) : null}
+          <VStack gap="2" alignItems="flex-start">
+            <CardTitle>Sign in to your account</CardTitle>
+            {errorMessage ? (
+              <Banner variant="error">
+                <Text>{errorMessage}</Text>
+              </Banner>
+            ) : null}
+          </VStack>
         </CardHeader>
         <CardContent>
           <VStack gap="8" alignItems="stretch">

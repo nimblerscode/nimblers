@@ -12,14 +12,19 @@ import {
   useSidebar,
   VStack,
 } from "@/app/design-system";
-import { Home, LogOut, User, Users } from "@/app/design-system/icons";
-import { OrganizationSelector } from "./OrganizationSelector";
+import { Home, LogOut, User } from "@/app/design-system/icons";
+import { authClient } from "@/app/lib/authClient";
 
 interface AppSidebarProps {
   user?: {
-    name?: string | null;
-    email?: string | null;
-    image?: string | null;
+    id: any;
+    email: any;
+    name: string | null;
+    image: string | null;
+    role: null;
+    emailVerified: boolean;
+    createdAt: Date;
+    updatedAt: Date;
   };
   organizations?: Awaited<ReturnType<typeof getUserOrganizations>>;
   activeOrganizationId?: string | null;
@@ -65,26 +70,9 @@ export function AppSidebar({
     return path;
   };
 
-  const _isOrganizationSectionActive = () => {
+  const isOrganizationActive = () => {
     if (activeOrgSlug) {
       return isActive(`/organization/${activeOrgSlug}`);
-    }
-    return false;
-  };
-
-  const isOverviewActive = () => {
-    if (activeOrgSlug) {
-      return (
-        currentPath === `/organization/${activeOrgSlug}` ||
-        currentPath === `/organization/${activeOrgSlug}/overview`
-      );
-    }
-    return false;
-  };
-
-  const isMembersActive = () => {
-    if (activeOrgSlug) {
-      return isActive(`/organization/${activeOrgSlug}/members`);
     }
     return false;
   };
@@ -97,14 +85,7 @@ export function AppSidebar({
             Nimblers
           </Heading>
 
-          {/* Organization Selector - Only show when user has multiple organizations */}
-          {organizations.length > 1 && (
-            <OrganizationSelector
-              organizations={organizations}
-              activeOrganizationId={activeOrganizationId}
-              currentPath={currentPath}
-            />
-          )}
+          {/* Organization Selector moved to Profile page */}
         </VStack>
       </SidebarHeader>
 
@@ -117,14 +98,7 @@ export function AppSidebar({
             icon={Home}
             label="Overview"
             href={getOrgPath("")}
-            active={isOverviewActive()}
-          />
-
-          <SidebarItem
-            icon={Users}
-            label="Members"
-            href={getOrgPath("/members")}
-            active={isMembersActive()}
+            active={isOrganizationActive()}
             badge={pendingInvitations > 0 ? pendingInvitations : undefined}
           />
         </SidebarGroup>
@@ -145,9 +119,19 @@ export function AppSidebar({
         <SidebarItem
           icon={LogOut}
           label="Sign Out"
-          onClick={() => {
-            // Handle sign out logic
-            window.location.href = "/api/auth/logout";
+          onClick={async () => {
+            try {
+              await authClient.signOut({
+                fetchOptions: {
+                  onSuccess: () => {
+                    window.location.href = "/login";
+                  },
+                },
+              });
+            } catch (_error) {
+              // Fallback redirect if signOut fails
+              window.location.href = "/login";
+            }
           }}
         />
       </SidebarFooter>
@@ -169,6 +153,8 @@ function MainContent({ children }: { children: React.ReactNode }) {
         bottom: 0,
         overflow: "auto",
         transition: "none", // Remove transition to prevent animation
+        backgroundColor: "var(--colors-page-background)",
+        color: "var(--colors-page-foreground)",
       }}
     >
       {children}

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { Context } from "effect";
 import { Effect, Exit, Option } from "effect";
+import { renderVerificationEmailHTML } from "@/app/email-templates";
 import { sendEmail as sendEmailEffect } from "@/application/global/email/sendEmail";
 import type { EmailService as EmailServiceTag } from "@/domain/global/email/service";
 import { EmailService } from "@/domain/global/email/service";
@@ -14,7 +15,7 @@ type EmailServiceInterface = Context.Tag.Service<typeof EmailServiceTag>;
 
 const makeAuth = (
   db: DrizzleD1Database<typeof schema>,
-  emailServiceImpl: EmailServiceInterface
+  emailServiceImpl: EmailServiceInterface,
 ) =>
   betterAuth({
     databaseHooks: {
@@ -60,22 +61,28 @@ const makeAuth = (
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url, token }) => {
+        const emailBody = await renderVerificationEmailHTML({
+          userEmail: user.email,
+          userName: user.name || undefined,
+          verificationLink: url,
+        });
+
         const verificationEmailEffect = sendEmailEffect({
           from: "welcome@email.nimblers.co",
           to: user.email,
-          subject: "Verify your email",
-          body: `<p>Verify your email by clicking <a href='${url}'>here</a></p>`,
+          subject: "Verify your email address - Nimblers",
+          body: emailBody,
         });
 
         const runnableEffect = verificationEmailEffect.pipe(
-          Effect.provideService(EmailService, emailServiceImpl)
+          Effect.provideService(EmailService, emailServiceImpl),
         );
 
         const result = await Effect.runPromiseExit(runnableEffect);
 
         if (Exit.isFailure(result)) {
           const errorToThrow = Exit.causeOption(result).pipe(
-            Option.getOrElse(() => new Error("Unknown error sending email"))
+            Option.getOrElse(() => new Error("Unknown error sending email")),
           );
           throw errorToThrow;
         }

@@ -24,20 +24,20 @@ const pillStyles = cva({
         color: "brand.solid",
       },
       success: {
-        bg: "status.success.subtleBg",
+        bg: "status.success.background",
         color: "status.success.text",
       },
       warning: {
-        bg: "status.warning.subtleBg",
+        bg: "status.warning.background",
         color: "status.warning.text",
       },
       danger: {
-        bg: "status.danger.subtleBg",
+        bg: "status.danger.background",
         color: "status.danger.text",
       },
       info: {
-        bg: "status.info.subtleBg",
-        color: "status.info.solid",
+        bg: "status.info.background",
+        color: "status.info.text",
       },
       discount: {
         bg: "status.success.solid",

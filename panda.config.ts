@@ -21,22 +21,34 @@ export default defineConfig({
       tokens: {
         colors: {
           brand: {
-            50: { value: "#eef7ff" },
-            100: { value: "#cfe7ff" },
-            200: { value: "#a0d0ff" },
-            300: { value: "#70b8ff" },
-            400: { value: "#3d9eff" },
-            500: { value: "#0077ff" },
-            600: { value: "#0069e0" },
-            700: { value: "#005ac0" },
-            800: { value: "#00419a" },
-            900: { value: "#002a66" },
+            50: { value: "#f8fafc" },
+            100: { value: "#f1f5f9" },
+            200: { value: "#e2e8f0" },
+            300: { value: "#cbd5e1" },
+            400: { value: "#94a3b8" },
+            500: { value: "#64748b" },
+            600: { value: "#475569" },
+            700: { value: "#334155" },
+            800: { value: "#1e293b" },
+            900: { value: "#0f172a" },
           },
 
           /* Alias single‑value tokens so they can be scaled later if needed */
           success: { value: "#059669" },
           warning: { value: "#d97706" },
           danger: { value: "#dc2626" },
+          accent: {
+            50: { value: "#f0f4ff" },
+            100: { value: "#e0e7ff" },
+            200: { value: "#c7d2fe" },
+            300: { value: "#a5b4fc" },
+            400: { value: "#818cf8" },
+            500: { value: "#6366f1" },
+            600: { value: "#4f46e5" },
+            700: { value: "#4338ca" },
+            800: { value: "#3730a3" },
+            900: { value: "#312e81" },
+          },
         },
 
         fonts: {
@@ -53,13 +65,20 @@ export default defineConfig({
         colors: {
           /* ---------- Layout ------------------------------------------------*/
           page: {
-            background: { value: "{colors.gray.100}" },
-            foreground: { value: "{colors.gray.800}" },
+            background: { value: "{colors.gray.50}" },
+            foreground: { value: "{colors.gray.900}" },
+          },
+
+          /* ---------- Surface -----------------------------------------------*/
+          surface: {
+            base: { value: "{colors.white}" },
+            raised: { value: "{colors.white}" },
+            overlay: { value: "{colors.white}" },
           },
 
           /* ---------- Content ----------------------------------------------*/
           content: {
-            primary: { value: "{colors.gray.800}" },
+            primary: { value: "{colors.gray.900}" },
             secondary: { value: "{colors.gray.600}" },
             subtle: { value: "{colors.gray.500}" },
             inverse: { value: "{colors.white}" },
@@ -67,24 +86,27 @@ export default defineConfig({
 
           /* ---------- Brand -------------------------------------------------*/
           brand: {
-            solid: { value: "{colors.brand.600}" },
-            solidHover: { value: "{colors.brand.700}" },
+            solid: { value: "{colors.accent.600}" },
+            solidHover: { value: "{colors.accent.700}" },
             onSolid: { value: "{colors.white}" },
-            foreground: { value: "{colors.white}" },
+            foreground: { value: "{colors.brand.600}" },
             background: { value: "{colors.brand.50}" },
+            subtle: { value: "{colors.brand.100}" },
+            border: { value: "{colors.brand.200}" },
           },
 
           /* ---------- Borders ----------------------------------------------*/
           border: {
             subtle: { value: "{colors.gray.100}" },
             default: { value: "{colors.gray.200}" },
-            strong: { value: "{colors.gray.400}" },
-            focus: { value: "{colors.brand.600}" },
+            strong: { value: "{colors.gray.300}" },
+            focus: { value: "{colors.accent.600}" },
           },
 
           /* ---------- Focus -------------------------------------------------*/
           focusRing: {
-            default: { value: "{colors.brand.600}" },
+            default: { value: "{colors.accent.600}" },
+            offset: { value: "{colors.accent.100}" },
           },
 
           /* ---------- Disabled ----------------------------------------------*/
@@ -100,7 +122,7 @@ export default defineConfig({
               solid: { value: "{colors.success}" },
               solidHover: { value: "{colors.green.700}" },
               onSolid: { value: "{colors.white}" },
-              subtleBg: { value: "{colors.green.50}" },
+              background: { value: "{colors.green.50}" },
               border: { value: "{colors.green.200}" },
               icon: { value: "{colors.green.600}" },
               text: { value: "{colors.green.700}" },
@@ -109,7 +131,7 @@ export default defineConfig({
               solid: { value: "{colors.warning}" },
               solidHover: { value: "{colors.yellow.700}" },
               onSolid: { value: "{colors.black}" },
-              subtleBg: { value: "{colors.yellow.50}" },
+              background: { value: "{colors.yellow.50}" },
               border: { value: "{colors.yellow.200}" },
               icon: { value: "{colors.yellow.600}" },
               text: { value: "{colors.yellow.800}" },
@@ -118,25 +140,28 @@ export default defineConfig({
               solid: { value: "{colors.danger}" },
               solidHover: { value: "{colors.red.700}" },
               onSolid: { value: "{colors.white}" },
-              subtleBg: { value: "{colors.red.50}" },
+              background: { value: "{colors.red.50}" },
               border: { value: "{colors.red.200}" },
               icon: { value: "{colors.red.600}" },
               text: { value: "{colors.red.700}" },
             },
             info: {
-              solid: { value: "{colors.blue.600}" },
-              solidHover: { value: "{colors.blue.700}" },
+              solid: { value: "{colors.accent.600}" },
+              solidHover: { value: "{colors.accent.700}" },
               onSolid: { value: "{colors.white}" },
-              subtleBg: { value: "{colors.blue.50}" },
-              border: { value: "{colors.blue.200}" },
+              background: { value: "{colors.accent.50}" },
+              border: { value: "{colors.accent.200}" },
+              icon: { value: "{colors.accent.600}" },
+              text: { value: "{colors.accent.700}" },
             },
           },
 
           /* ---------- Links -------------------------------------------------*/
           link: {
-            default: { value: "{colors.brand.600}" },
-            hover: { value: "{colors.brand.700}" },
-            visited: { value: "{colors.brand.800}" },
+            default: { value: "{colors.accent.600}" },
+            hover: { value: "{colors.accent.700}" },
+            visited: { value: "{colors.accent.800}" },
+            subtle: { value: "{colors.accent.500}" },
           },
         },
       },
@@ -147,6 +172,113 @@ export default defineConfig({
    * 3. THEME VARIANTS  – override only what changes
    * ------------------------------------------------------------------------*/
   themes: {
+    dark: {
+      semanticTokens: {
+        colors: {
+          /* ---------- Layout ------------------------------------------------*/
+          page: {
+            background: { value: "{colors.gray.900}" },
+            foreground: { value: "{colors.gray.100}" },
+          },
+
+          /* ---------- Surface -----------------------------------------------*/
+          surface: {
+            base: { value: "{colors.gray.800}" },
+            raised: { value: "{colors.gray.800}" },
+            overlay: { value: "{colors.gray.700}" },
+          },
+
+          /* ---------- Content ----------------------------------------------*/
+          content: {
+            primary: { value: "{colors.gray.100}" },
+            secondary: { value: "{colors.gray.300}" },
+            subtle: { value: "{colors.gray.400}" },
+            inverse: { value: "{colors.gray.900}" },
+          },
+
+          /* ---------- Brand -------------------------------------------------*/
+          brand: {
+            solid: { value: "{colors.accent.500}" }, // Slightly lighter accent for dark mode
+            solidHover: { value: "{colors.accent.600}" },
+            onSolid: { value: "{colors.white}" },
+            foreground: { value: "{colors.brand.300}" }, // Lighter brand text
+            background: { value: "{colors.brand.900}" }, // Dark brand background
+            subtle: { value: "{colors.brand.800}" },
+            border: { value: "{colors.brand.700}" },
+          },
+
+          /* ---------- Borders ----------------------------------------------*/
+          border: {
+            subtle: { value: "{colors.gray.800}" },
+            default: { value: "{colors.gray.700}" },
+            strong: { value: "{colors.gray.600}" },
+            focus: { value: "{colors.accent.500}" },
+          },
+
+          /* ---------- Focus -------------------------------------------------*/
+          focusRing: {
+            default: { value: "{colors.accent.500}" },
+            offset: { value: "{colors.accent.900}" },
+          },
+
+          /* ---------- Disabled ----------------------------------------------*/
+          disabled: {
+            foreground: { value: "{colors.gray.500}" },
+            background: { value: "{colors.gray.800}" },
+            border: { value: "{colors.gray.700}" },
+          },
+
+          /* ---------- Status / Intent --------------------------------------*/
+          status: {
+            success: {
+              solid: { value: "{colors.green.500}" },
+              solidHover: { value: "{colors.green.600}" },
+              onSolid: { value: "{colors.white}" },
+              background: { value: "{colors.green.900}" },
+              border: { value: "{colors.green.700}" },
+              icon: { value: "{colors.green.400}" },
+              text: { value: "{colors.green.300}" },
+            },
+            warning: {
+              solid: { value: "{colors.yellow.500}" },
+              solidHover: { value: "{colors.yellow.600}" },
+              onSolid: { value: "{colors.black}" },
+              background: { value: "{colors.yellow.900}" },
+              border: { value: "{colors.yellow.700}" },
+              icon: { value: "{colors.yellow.400}" },
+              text: { value: "{colors.yellow.300}" },
+            },
+            danger: {
+              solid: { value: "{colors.red.500}" },
+              solidHover: { value: "{colors.red.600}" },
+              onSolid: { value: "{colors.white}" },
+              background: { value: "{colors.red.900}" },
+              border: { value: "{colors.red.700}" },
+              icon: { value: "{colors.red.400}" },
+              text: { value: "{colors.red.300}" },
+            },
+            info: {
+              solid: { value: "{colors.accent.500}" },
+              solidHover: { value: "{colors.accent.600}" },
+              onSolid: { value: "{colors.white}" },
+              background: { value: "{colors.accent.900}" },
+              border: { value: "{colors.accent.700}" },
+              icon: { value: "{colors.accent.400}" },
+              text: { value: "{colors.accent.300}" },
+            },
+          },
+
+          /* ---------- Links -------------------------------------------------*/
+          link: {
+            default: { value: "{colors.accent.400}" },
+            hover: { value: "{colors.accent.300}" },
+            visited: { value: "{colors.accent.500}" },
+            subtle: { value: "{colors.accent.500}" },
+          },
+        },
+      },
+    },
+
     artisanEarth: {
       tokens: {
         colors: {
@@ -186,7 +318,7 @@ export default defineConfig({
             danger: {
               solid: { value: "#b91c1c" },
               solidHover: { value: "#991b1b" },
-              subtleBg: { value: "#fef2f2" },
+              background: { value: "#fef2f2" },
               border: { value: "#fecaca" },
               icon: { value: "#b91c1c" },
               text: { value: "#7f1d1d" },
@@ -205,7 +337,7 @@ export default defineConfig({
    * 4. BUILD OUTPUT
    * ------------------------------------------------------------------------*/
   staticCss: {
-    themes: ["artisanEarth"],
+    themes: ["dark", "artisanEarth"],
   },
 
   outdir: "styled-system",

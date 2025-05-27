@@ -36,6 +36,8 @@
   "dependencies": {
     "@effect/experimental": "^0.44.21",
     "@effect/platform": "^0.80.21",
+    "@react-email/components": "^0.0.41",
+    "@react-email/render": "^1.1.2",
     "better-auth": "^1.2.8",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",

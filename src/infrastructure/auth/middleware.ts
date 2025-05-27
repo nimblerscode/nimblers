@@ -21,7 +21,7 @@ export const sessionHandler = async ({
   request: Request;
 }) => {
   const getSessionEffect = getSession().pipe(
-    Effect.provide(AuthServiceLive(request))
+    Effect.provide(AuthServiceLive(request)),
   );
 
   return Effect.runPromise(
@@ -43,8 +43,8 @@ export const sessionHandler = async ({
           ctx.session = session;
           ctx.user = user;
         },
-      })
-    )
+      }),
+    ),
   );
 };
 
@@ -58,7 +58,7 @@ export const optionalSessionHandler = async ({
   request: Request;
 }) => {
   const getSessionEffect = getSession().pipe(
-    Effect.provide(AuthServiceLive(request))
+    Effect.provide(AuthServiceLive(request)),
   );
 
   try {
@@ -81,8 +81,8 @@ export const optionalSessionHandler = async ({
             ctx.user = user;
             return undefined;
           },
-        })
-      )
+        }),
+      ),
     );
   } catch (_error) {
     // If anything goes wrong, just continue without session
@@ -99,7 +99,7 @@ export const redirectAuthenticatedUsers = async ({
   request: Request;
 }) => {
   const getSessionEffect = getSession().pipe(
-    Effect.provide(AuthServiceLive(request))
+    Effect.provide(AuthServiceLive(request)),
   );
 
   try {
@@ -123,8 +123,8 @@ export const redirectAuthenticatedUsers = async ({
             ctx.user = user;
             return undefined;
           },
-        })
-      )
+        }),
+      ),
     );
 
     // If we have a valid session, redirect to appropriate page

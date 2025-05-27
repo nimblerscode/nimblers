@@ -32,11 +32,11 @@ const linkStyles = cva({
   variants: {
     variant: {
       breadcrumb: {
-        color: "gray.500",
+        color: "content.secondary",
         fontWeight: "500",
         fontSize: "sm",
         _hover: {
-          color: "gray.700",
+          color: "content.primary",
           textDecoration: "none",
         },
       },

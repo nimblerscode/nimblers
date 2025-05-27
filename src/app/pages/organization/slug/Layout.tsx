@@ -51,7 +51,6 @@ export async function Layout({ params, ctx, request }: RequestInfo) {
     <Wrapper
       organization={org}
       members={members}
-      activeTab={params.tab || "overview"}
       user={user}
       organizations={organizations}
       activeOrganizationId={activeOrganizationId}

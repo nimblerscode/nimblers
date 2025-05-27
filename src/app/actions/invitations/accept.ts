@@ -24,14 +24,14 @@ export class ValidationError extends Data.TaggedError("ValidationError")<{
 }> {}
 
 export class AuthenticationError extends Data.TaggedError(
-  "AuthenticationError"
+  "AuthenticationError",
 )<{
   readonly message: string;
   readonly details?: Record<string, unknown>;
 }> {}
 
 export class InvitationProcessingError extends Data.TaggedError(
-  "InvitationProcessingError"
+  "InvitationProcessingError",
 )<{
   readonly message: string;
   readonly cause?: unknown;
@@ -40,7 +40,7 @@ export class InvitationProcessingError extends Data.TaggedError(
 
 export async function acceptInvitationAction(
   request: Request,
-  { ctx }: RequestInfo
+  { ctx }: RequestInfo,
 ) {
   const startTime = Date.now();
 
@@ -75,7 +75,7 @@ export async function acceptInvitationAction(
       return yield* Effect.fail(
         new ValidationError({
           message: "Token is required",
-        })
+        }),
       );
     }
 
@@ -85,7 +85,7 @@ export async function acceptInvitationAction(
       return yield* Effect.fail(
         new AuthenticationError({
           message: "User must be authenticated to accept invitations",
-        })
+        }),
       );
     }
 
@@ -103,7 +103,7 @@ export async function acceptInvitationAction(
     const invitationDOLayer = InvitationDOLive({ ORG_DO: env.ORG_DO });
     const tokenLayer = InviteTokenLive;
     const globalLayer = UserRepoLive.pipe(
-      Layer.provide(DatabaseLive({ DB: env.DB }))
+      Layer.provide(DatabaseLive({ DB: env.DB })),
     );
 
     // 5. Verify token and extract organization info
@@ -116,8 +116,8 @@ export async function acceptInvitationAction(
           new ValidationError({
             message: "Invalid or expired invitation token",
             details: { originalError: String(error) },
-          })
-      )
+          }),
+      ),
     );
 
     const organizationSlug = tokenPayload.doId;
@@ -133,8 +133,8 @@ export async function acceptInvitationAction(
             message: "Failed to retrieve invitation",
             cause: error,
             context: { organizationSlug },
-          })
-      )
+          }),
+      ),
     );
 
     if (!invitation) {
@@ -142,7 +142,7 @@ export async function acceptInvitationAction(
         new ValidationError({
           message: "Invitation not found",
           details: { organizationSlug },
-        })
+        }),
       );
     }
 
@@ -158,7 +158,7 @@ export async function acceptInvitationAction(
             userEmail: currentUser.email,
             invitationId,
           },
-        })
+        }),
       );
     }
 
@@ -171,7 +171,7 @@ export async function acceptInvitationAction(
             invitationId,
             status: invitation.status,
           },
-        })
+        }),
       );
     }
 
@@ -188,8 +188,8 @@ export async function acceptInvitationAction(
               message: "Failed to accept invitation in tenant database",
               cause: error,
               context: { organizationSlug, invitationId },
-            })
-        )
+            }),
+        ),
       );
 
       // Then, create the global membership
@@ -198,9 +198,8 @@ export async function acceptInvitationAction(
         Effect.flatMap((userRepo) =>
           Effect.gen(function* () {
             // Look up organization by slug
-            const orgOption = yield* userRepo.findOrganizationBySlug(
-              organizationSlug
-            );
+            const orgOption =
+              yield* userRepo.findOrganizationBySlug(organizationSlug);
 
             const organization = yield* Option.match(orgOption, {
               onNone: () =>
@@ -208,7 +207,7 @@ export async function acceptInvitationAction(
                   new InvitationProcessingError({
                     message: "Organization not found in global database",
                     context: { organizationSlug },
-                  })
+                  }),
                 ),
               onSome: (org) => Effect.succeed(org),
             });
@@ -229,7 +228,7 @@ export async function acceptInvitationAction(
             });
 
             return yield* userRepo.createMemberOrg(membershipData);
-          })
+          }),
         ),
         Effect.provide(globalLayer),
         Effect.mapError(
@@ -238,8 +237,8 @@ export async function acceptInvitationAction(
               message: "Failed to create global membership",
               cause: error,
               context: { organizationSlug, invitationId, userId },
-            })
-        )
+            }),
+        ),
       );
 
       return { tenantResult, globalResult };
@@ -297,9 +296,9 @@ export async function acceptInvitationAction(
           message: "An unexpected error occurred",
           details: { error: String(error) },
           processingTime: Date.now() - startTime,
-        })
-      )
-    )
+        }),
+      ),
+    ),
   );
 
   return result;

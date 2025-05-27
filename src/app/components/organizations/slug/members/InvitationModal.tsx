@@ -1,41 +1,28 @@
 "use client";
 
+import { UserPlus } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
 import {
-  inviteUserAction,
   type InviteUserState,
+  inviteUserAction,
   type SerializableInvitation,
 } from "@/app/actions/invitations/create";
 import { Banner } from "@/app/design-system/Banner";
 import { Button } from "@/app/design-system/Button";
-import { Card, CardContent } from "@/app/design-system/Card";
 import { Dialog, DialogFooter } from "@/app/design-system/Dialog";
 import { Heading } from "@/app/design-system/Heading";
 import { Icon } from "@/app/design-system/Icon";
 import { TextFieldRoot as TextField } from "@/app/design-system/Input";
-import { Flex, HStack, VStack } from "@/app/design-system/Layout";
+import { Box, Flex, HStack, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
 import type { User } from "@/domain/global/user/model";
-import { UserPlus } from "lucide-react";
-import { useActionState, useState } from "react";
-import { cva } from "../../../../../../styled-system/css";
-
-// Styling for the note section
-const noteStyles = cva({
-  base: {
-    bg: "page.background",
-    borderRadius: "sm",
-    p: "4",
-    borderWidth: "thin",
-    borderColor: "border.subtle",
-  },
-});
 
 // Role options for the select
 const roleOptions = [
-  { id: "admin", label: "Admin" },
-  { id: "editor", label: "Editor" },
-  { id: "viewer", label: "Viewer" },
-  { id: "member", label: "Member" },
+  { id: "admin", label: "Admin", description: "Full access to all features" },
+  { id: "editor", label: "Editor", description: "Can edit and manage content" },
+  { id: "viewer", label: "Viewer", description: "Read-only access" },
+  { id: "member", label: "Member", description: "Standard team member access" },
 ];
 
 export interface InvitationModalProps {
@@ -51,20 +38,27 @@ export interface InvitationModalProps {
   onClose?: () => void;
 }
 
-export function InvitationModal({
+// Internal component that manages the form state
+function InvitationModalContent({
   slug,
   user,
-  trigger,
   onSuccess,
   onClose,
-}: InvitationModalProps) {
-  const [resetKey, setResetKey] = useState(0);
-
+  onSendAnother,
+  close,
+}: {
+  slug: string;
+  user: User;
+  onSuccess?: (invitation: SerializableInvitation) => void;
+  onClose?: () => void;
+  onSendAnother: () => void;
+  close: () => void;
+}) {
   const initialState: InviteUserState = {
     success: false,
     message: "",
     errors: null,
-    user: user || ({ id: "unknown", email: "", name: "" } as User), // Fallback user
+    user: user,
   };
 
   const [state, formAction, pending] = useActionState(
@@ -72,32 +66,293 @@ export function InvitationModal({
     initialState,
   );
 
-  const handleReset = () => {
-    setResetKey((prev) => prev + 1);
+  // Handle successful invitation
+  useEffect(() => {
+    if (state.success && onSuccess && "invitation" in state) {
+      onSuccess(state.invitation);
+    }
+  }, [state.success, onSuccess, state]);
+
+  const handleClose = () => {
+    onClose?.();
+    close();
   };
 
-  // Defensive check for user - after hooks are called
+  const handleSendAnother = () => {
+    onSendAnother();
+  };
+
+  // Success Screen
+  if (state.success) {
+    return (
+      <VStack gap="8" alignItems="stretch" p="8">
+        {/* Success Header */}
+        <VStack gap="4" alignItems="center">
+          <Box
+            w="16"
+            h="16"
+            bg="status.success.background"
+            borderRadius="full"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            borderWidth="2px"
+            borderColor="status.success.border"
+          >
+            <Icon
+              icon={UserPlus}
+              css={{ color: "status.success.icon" }}
+              w="8"
+              h="8"
+            />
+          </Box>
+
+          <VStack gap="2" alignItems="center">
+            <Heading as="h2" levelStyle="h3" textAlign="center">
+              Invitation Sent!
+            </Heading>
+            <Text textAlign="center" color="content.secondary">
+              {state.invitation?.email} will receive an email with instructions to join your team
+            </Text>
+          </VStack>
+        </VStack>
+
+
+
+        {/* Clean Success Summary */}
+        <VStack gap="6" alignItems="stretch">
+          {/* Invitation Summary - Simplified */}
+          {state.success && (
+            <Box
+              bg="status.success.background"
+              borderRadius="lg"
+              p="4"
+              borderWidth="1px"
+              borderColor="status.success.border"
+            >
+              <HStack gap="4" alignItems="center" justifyContent="space-between">
+                <VStack gap="1" alignItems="flex-start">
+                  <Text fontSize="sm" color="content.secondary">
+                    Invitation sent to
+                  </Text>
+                  <Text
+                    fontSize="md"
+                    fontWeight="semibold"
+                    color="content.primary"
+                    fontFamily="mono"
+                  >
+                    {state.invitation?.email}
+                  </Text>
+                </VStack>
+                <Box
+                  fontSize="sm"
+                  fontWeight="medium"
+                  textTransform="capitalize"
+                  bg="brand.solid"
+                  color="brand.onSolid"
+                  px="3"
+                  py="1.5"
+                  borderRadius="md"
+                >
+                  {state.invitation?.role}
+                </Box>
+              </HStack>
+            </Box>
+          )}
+
+          {/* Next Steps - Simplified */}
+          <VStack gap="3" alignItems="stretch">
+            <Text fontSize="sm" color="content.secondary" textAlign="center">
+              They'll receive an email with instructions to join your team
+            </Text>
+          </VStack>
+        </VStack>
+
+        {/* Action Buttons */}
+        <Flex gap="3" justifyContent="flex-end">
+          <Button
+            variant="outline"
+            onPress={handleSendAnother}
+            type="button"
+          >
+            Send Another Invitation
+          </Button>
+          <Button
+            variant="primary"
+            onPress={handleClose}
+            type="button"
+          >
+            Done
+          </Button>
+        </Flex>
+      </VStack>
+    );
+  }
+
+  // Form Screen
+  return (
+    <form action={formAction}>
+      <VStack gap="8" alignItems="stretch" p="8">
+        {/* Form Header */}
+        <VStack gap="3" alignItems="center">
+          <Box
+            w="12"
+            h="12"
+            bg="brand.background"
+            borderRadius="full"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            borderWidth="2px"
+            borderColor="brand.border"
+          >
+            <Icon
+              icon={UserPlus}
+              css={{ color: "brand.solid" }}
+              w="6"
+              h="6"
+            />
+          </Box>
+
+          <VStack gap="1" alignItems="center">
+            <Heading as="h2" levelStyle="h4" textAlign="center">
+              Invite Team Member
+            </Heading>
+            <Text textAlign="center" color="content.secondary">
+              Send an invitation to join {slug}
+            </Text>
+          </VStack>
+        </VStack>
+
+        {/* Form Fields */}
+        <VStack gap="6" alignItems="stretch">
+          {/* Email Field */}
+          <TextField
+            label="Email Address"
+            isRequired
+            name="email"
+            type="email"
+            isDisabled={pending}
+            autoFocus
+            inputProps={{
+              placeholder: "colleague@example.com",
+            }}
+            isInvalid={!!state.errors && !state.success}
+            errorMessage={
+              state.errors && !state.success ? state.message : undefined
+            }
+          />
+
+          {/* Role Selection */}
+          <VStack gap="3" alignItems="stretch">
+            <Text fontSize="sm" fontWeight="medium" color="content.primary">
+              Role <span style={{ color: "token(colors.status.danger.solid)" }}>*</span>
+            </Text>
+            <Box>
+              <select
+                name="role"
+                defaultValue="member"
+                disabled={pending}
+                style={{
+                  display: "flex",
+                  height: "2.5rem",
+                  width: "100%",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  borderRadius: "0.25rem",
+                  borderWidth: "1px",
+                  borderColor: "token(colors.border.default)",
+                  backgroundColor: "token(colors.surface.base)",
+                  paddingLeft: "0.75rem",
+                  paddingRight: "0.75rem",
+                  paddingTop: "0.5rem",
+                  paddingBottom: "0.5rem",
+                  fontSize: "0.875rem",
+                  color: "token(colors.content.primary)",
+                }}
+              >
+                {roleOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label} - {option.description}
+                  </option>
+                ))}
+              </select>
+            </Box>
+          </VStack>
+
+          {/* Organization Slug Hidden Field */}
+          <input type="hidden" name="organizationSlug" value={slug} />
+
+          {/* Info Banner */}
+          <Banner variant="info" icon={true}>
+            The invited user will receive an email with instructions to join your organization.
+            They can accept or decline the invitation.
+          </Banner>
+
+          {/* Error Message */}
+          {state.errors && !state.success && (
+            <Banner variant="error" icon={true} title="Invitation Failed">
+              {state.message || "Failed to send invitation. Please try again."}
+            </Banner>
+          )}
+        </VStack>
+
+        {/* Footer */}
+        <DialogFooter>
+          <Button
+            variant="secondary"
+            onPress={handleClose}
+            isDisabled={pending}
+            type="button"
+          >
+            Cancel
+          </Button>
+          <Button variant="primary" isDisabled={pending} type="submit">
+            {pending ? "Sending Invitation..." : "Send Invitation"}
+          </Button>
+        </DialogFooter>
+      </VStack>
+    </form>
+  );
+}
+
+export function InvitationModal({
+  slug,
+  user,
+  trigger,
+  onSuccess,
+  onClose,
+}: InvitationModalProps) {
+  const [contentKey, setContentKey] = useState(0);
+
+  const handleSendAnother = () => {
+    // Reset the content component to clear all state
+    setContentKey(prev => prev + 1);
+  };
+
+  // Defensive check for user
   if (!user || !user.id) {
     return (
       <Dialog
         trigger={
           trigger || (
             <Button>
-              <Icon icon={UserPlus} />
-              <Text>Invite Member</Text>
+              <HStack gap="2" alignItems="center">
+                <Icon icon={UserPlus} />
+                Invite Member
+              </HStack>
             </Button>
           )
         }
-        title={`Invite to ${slug}`}
+        title="Authentication Required"
         size="md"
         showCloseButton={true}
       >
         {(close: () => void) => (
-          <VStack gap="4" alignItems="stretch">
-            <div className="text-sm text-status-danger-text font-medium">
-              Error: User authentication required. Please refresh the page and
-              try again.
-            </div>
+          <VStack gap="6" alignItems="stretch" p="6">
+            <Banner variant="error" icon={true} title="Authentication Error">
+              User authentication required. Please refresh the page and try again.
+            </Banner>
             <DialogFooter>
               <Button variant="primary" onPress={close} type="button">
                 Close
@@ -109,20 +364,8 @@ export function InvitationModal({
     );
   }
 
-  // Call onSuccess callback when invitation is sent successfully
-  if (state.success && onSuccess && "invitation" in state) {
-    onSuccess(state.invitation);
-  }
-
-  const handleClose = () => {
-    if (onClose) {
-      onClose();
-    }
-  };
-
   return (
     <Dialog
-      key={resetKey}
       trigger={
         trigger || (
           <Button>
@@ -134,292 +377,27 @@ export function InvitationModal({
         )
       }
       title={`Invite to ${slug}`}
-      size="md"
+      size="lg"
       showCloseButton={true}
     >
       {(close: () => void) => {
-        // Success Screen
-        if (state.success) {
-          return (
-            <VStack gap="6" alignItems="stretch" p="6">
-              {/* Success Banner */}
-              <Banner
-                variant="success"
-                icon={true}
-                title="Invitation Sent Successfully!"
-              >
-                The invitation has been sent to{" "}
-                <strong>{state.invitation?.email || "the recipient"}</strong>{" "}
-                and they'll receive an email with instructions to join your
-                organization.
-              </Banner>
-
-              {/* Success Details Card */}
-              <Card
-                css={{
-                  borderColor: "status.success.border",
-                  backgroundColor: "status.success.background",
-                }}
-              >
-                <CardContent>
-                  <VStack gap="4" alignItems="stretch">
-                    {/* What happens next section */}
-                    <VStack gap="3" alignItems="stretch">
-                      <Heading as="h4" levelStyle="h5">
-                        What happens next?
-                      </Heading>
-                      <VStack gap="2" alignItems="stretch">
-                        <Flex alignItems="flex-start" gap="3">
-                          <Text
-                            css={{
-                              fontSize: "sm",
-                              color: "status.success.text",
-                              minWidth: "6",
-                            }}
-                          >
-                            1.
-                          </Text>
-                          <Text
-                            css={{
-                              fontSize: "sm",
-                              color: "status.success.text",
-                            }}
-                          >
-                            The recipient will receive an email invitation
-                          </Text>
-                        </Flex>
-                        <Flex alignItems="flex-start" gap="3">
-                          <Text
-                            css={{
-                              fontSize: "sm",
-                              color: "status.success.text",
-                              minWidth: "6",
-                            }}
-                          >
-                            2.
-                          </Text>
-                          <Text
-                            css={{
-                              fontSize: "sm",
-                              color: "status.success.text",
-                            }}
-                          >
-                            They'll click the link to accept and join your
-                            organization
-                          </Text>
-                        </Flex>
-                        <Flex alignItems="flex-start" gap="3">
-                          <Text
-                            css={{
-                              fontSize: "sm",
-                              color: "status.success.text",
-                              minWidth: "6",
-                            }}
-                          >
-                            3.
-                          </Text>
-                          <Text
-                            css={{
-                              fontSize: "sm",
-                              color: "status.success.text",
-                            }}
-                          >
-                            You'll be notified when they join and can manage
-                            their permissions
-                          </Text>
-                        </Flex>
-                      </VStack>
-                    </VStack>
-
-                    {/* Invitation details */}
-                    {state.invitation && (
-                      <VStack gap="2" alignItems="stretch">
-                        <Heading as="h4" levelStyle="h6">
-                          Invitation Details
-                        </Heading>
-                        <VStack gap="1" alignItems="stretch">
-                          <Flex justifyContent="space-between">
-                            <Text
-                              css={{
-                                fontSize: "sm",
-                                color: "status.success.text",
-                              }}
-                            >
-                              Email:
-                            </Text>
-                            <Text
-                              css={{
-                                fontSize: "sm",
-                                color: "status.success.text",
-                                fontWeight: "medium",
-                              }}
-                            >
-                              {state.invitation.email}
-                            </Text>
-                          </Flex>
-                          <Flex justifyContent="space-between">
-                            <Text
-                              css={{
-                                fontSize: "sm",
-                                color: "status.success.text",
-                              }}
-                            >
-                              Role:
-                            </Text>
-                            <Text
-                              css={{
-                                fontSize: "sm",
-                                color: "status.success.text",
-                                fontWeight: "medium",
-                                textTransform: "capitalize",
-                              }}
-                            >
-                              {state.invitation.role}
-                            </Text>
-                          </Flex>
-                        </VStack>
-                      </VStack>
-                    )}
-                  </VStack>
-                </CardContent>
-              </Card>
-
-              {/* Action Buttons */}
-              <Flex gap="3" justifyContent="flex-end">
-                <Button
-                  variant="secondary"
-                  onPress={() => {
-                    handleReset();
-                  }}
-                  type="button"
-                >
-                  Send Another
-                </Button>
-                <Button
-                  variant="primary"
-                  onPress={() => {
-                    handleClose();
-                    close();
-                  }}
-                  type="button"
-                >
-                  Done
-                </Button>
-              </Flex>
-            </VStack>
-          );
+        // Track modal open state
+        if (contentKey === 0) {
+          setContentKey(1);
         }
 
-        // Form Screen
         return (
-          <form action={formAction}>
-            <VStack gap="6" alignItems="stretch">
-              <VStack gap="4" alignItems="stretch">
-                {/* Email Address Field */}
-                <TextField
-                  label="Email Address"
-                  isRequired
-                  name="email"
-                  type="email"
-                  isDisabled={pending}
-                  autoFocus
-                  inputProps={{
-                    placeholder: "colleague@example.com",
-                  }}
-                  isInvalid={!!state.errors && !state.success}
-                  errorMessage={
-                    state.errors && !state.success ? state.message : undefined
-                  }
-                />
-
-                {/* Role Selection */}
-                <div>
-                  <label
-                    htmlFor="role"
-                    className="block text-sm font-medium text-content-primary mb-2"
-                  >
-                    Role
-                  </label>
-                  <select
-                    name="role"
-                    id="role"
-                    defaultValue="admin"
-                    disabled={pending}
-                    className="flex h-10 w-full items-center justify-between rounded-sm border border-border-default bg-white px-3 py-2 text-sm ring-offset-background placeholder:text-content-secondary focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {roleOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Organization Slug Hidden Field */}
-                <input type="hidden" name="organizationSlug" value={slug} />
-
-                {/* Note Section */}
-                <div className={noteStyles()}>
-                  <Text>
-                    <strong>Note:</strong> The invited user will receive an
-                    email with instructions to join your organization.
-                  </Text>
-                </div>
-
-                {/* Error Message */}
-                {state.errors && !state.success && (
-                  <div className="text-sm text-status-danger-text font-medium">
-                    {state.message ||
-                      "Failed to send invitation. Please try again."}
-                  </div>
-                )}
-              </VStack>
-
-              {/* Footer with action buttons */}
-              <DialogFooter>
-                <Button
-                  variant="secondary"
-                  onPress={() => {
-                    handleClose();
-                    close();
-                  }}
-                  isDisabled={pending}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-                <Button variant="primary" isDisabled={pending} type="submit">
-                  {pending ? "Sending..." : "Send Invitation"}
-                </Button>
-              </DialogFooter>
-            </VStack>
-          </form>
+          <InvitationModalContent
+            key={contentKey}
+            slug={slug}
+            user={user}
+            onSuccess={onSuccess}
+            onClose={onClose}
+            onSendAnother={handleSendAnother}
+            close={close}
+          />
         );
       }}
     </Dialog>
-  );
-}
-
-// Simplified version for basic usage
-export interface SimpleInvitationModalProps {
-  slug: string;
-  user: User;
-  trigger?: React.ReactElement;
-  onSuccess?: (invitation: SerializableInvitation) => void;
-}
-
-export function SimpleInvitationModal({
-  slug,
-  user,
-  trigger,
-  onSuccess,
-}: SimpleInvitationModalProps) {
-  return (
-    <InvitationModal
-      slug={slug}
-      user={user}
-      trigger={trigger}
-      onSuccess={onSuccess}
-    />
   );
 }

@@ -26,7 +26,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   try {
     const result = await acceptInvitationAction(
       requestInfo.request,
-      requestInfo
+      requestInfo,
     );
     return Response.json(result, { status: 200 });
   } catch (error) {
@@ -38,7 +38,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
             ? error.message
             : "Failed to accept invitation",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 };
@@ -46,7 +46,6 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
 export const organizationRoutes = [
   route("/create", [sessionHandler, OrganizationCreateLayout]), // Use the wrapper page
   route("/:orgSlug", [sessionHandler, OrganizationSlugLayout]),
-  route("/:orgSlug/:tab", [sessionHandler, OrganizationSlugLayout]),
 ];
 
 // Combine all routes into a single array

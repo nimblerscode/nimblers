@@ -153,15 +153,15 @@ const indicatorContainerStyles = css({
 
   /* selected */
   "[data-selected] &": {
-    borderColor: "brand.onSolid",
-    bg: "brand.onSolid",
+    borderColor: "brand.solid",
+    bg: "brand.solid",
   },
 });
 
 const indicatorIconStyles = css({
   opacity: 0,
   transition: "opacity 0.2s ease-in-out",
-  color: "brand.solid",
+  color: "brand.onSolid",
   width: "3",
   height: "3",
 
@@ -207,8 +207,8 @@ const headerTextStyles = css({
   padding: "4",
 
   "[data-selected] &": {
-    bg: "brand.background",
-    color: "brand.onSolid",
+    bg: "brand.subtleBg",
+    color: "content.primary",
   },
 });
 

@@ -23,7 +23,7 @@ export interface CardProps extends HTMLStyledProps<"div"> {
 export const Card = ({ children, css: cssProp, ...props }: CardProps) => {
   return (
     <Box
-      backgroundColor="brand.foreground" // Uses semantic token: surface.raised (default) or theme-specific
+      backgroundColor="surface.raised" // Uses semantic token for card backgrounds
       borderWidth="1px"
       borderColor="border.default" // Uses semantic token: border.default (default) or theme-specific
       borderRadius="sm"

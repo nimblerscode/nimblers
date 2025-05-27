@@ -20,7 +20,7 @@ const breadCrumpStyle = css({
 });
 
 const breadcrumbStyle = css({
-  color: "gray.500",
+  color: "content.secondary",
   display: "flex",
   alignItems: "center",
   gap: "1",

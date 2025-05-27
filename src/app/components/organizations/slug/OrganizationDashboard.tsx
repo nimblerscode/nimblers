@@ -1,7 +1,8 @@
 import type { SerializableInvitation } from "@/app/actions/invitations/list";
-import { Flex, Grid, VStack } from "@/app/design-system";
+import { Grid, Heading, VStack } from "@/app/design-system";
 import type { User } from "@/domain/global/user/model";
 import type { Organization } from "@/domain/tenant/organization/model";
+import { css } from "../../../../../styled-system/css";
 import { InvitationModal } from "./members/InvitationModal";
 import { MembersList } from "./members/MembersList";
 import { PendingInvitationsList } from "./members/PendingInvitationsList";
@@ -20,20 +21,35 @@ export function OrganizationDashboard({
   pendingInvitations?: SerializableInvitation[];
 }) {
   return (
-    <VStack gap="6" alignItems="stretch">
-      {/* Top section with organization details and subscription */}
-      <Grid gridTemplateColumns={{ base: "1fr", md: "2fr 1fr" }} gap="6">
-        <Overview organization={organization} />
-        <Subscription />
-      </Grid>
+    <VStack gap="8" alignItems="stretch">
+      {/* Organization Details Section */}
+      <VStack gap="4" alignItems="stretch">
+        <Heading as="h2">Details</Heading>
+        <Grid gridTemplateColumns={{ base: "1fr", md: "2fr 1fr" }} gap="6">
+          <Overview organization={organization} />
+          <Subscription />
+        </Grid>
+      </VStack>
 
-      {/* Members section */}
-      <VStack gap="6" alignItems="stretch">
-        {/* Header with invite button */}
-        <Flex justifyContent="space-between" alignItems="center">
-          <div /> {/* Empty div for spacing */}
+      {/* Visual Separator */}
+      <div
+        className={css({
+          borderTop: "1px solid",
+          borderColor: "border.strong",
+          mx: "0",
+        })}
+      />
+
+      {/* Team Members Section */}
+      <VStack gap="4" alignItems="stretch">
+        <Grid
+          gridTemplateColumns={{ base: "1fr", md: "1fr auto" }}
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Heading as="h2">Team Members</Heading>
           <InvitationModal slug={organization.slug} user={user} />
-        </Flex>
+        </Grid>
 
         {/* Members lists */}
         <VStack gap="6" alignItems="stretch">

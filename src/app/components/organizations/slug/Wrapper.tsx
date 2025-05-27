@@ -7,12 +7,11 @@ import type { User } from "@/domain/global/user/model";
 import type { Organization } from "@/domain/tenant/organization/model";
 import { MainLayout } from "../../layout/MainLayout";
 import { Header } from "./Header";
-import { Tabs } from "./Tabs";
+import { OrganizationDashboard } from "./OrganizationDashboard";
 
 export function Wrapper({
   organization,
   members,
-  activeTab,
   user,
   organizations = [],
   activeOrganizationId,
@@ -21,7 +20,6 @@ export function Wrapper({
 }: {
   organization: Organization;
   members: User[];
-  activeTab: string;
   user: {
     id: any;
     email: any;
@@ -45,14 +43,13 @@ export function Wrapper({
       pendingInvitations={pendingInvitations.length}
       currentPath={currentPath}
     >
-      <Container maxW="6xl" mx="auto" py="6">
+      <Container maxW="8xl" mx="auto" py="6">
         <VStack gap="6" alignItems="stretch">
           <Header organizationName={organization.name} />
-          <Tabs
+          <OrganizationDashboard
             user={user}
             organization={organization}
             members={members}
-            activeTab={activeTab}
             pendingInvitations={pendingInvitations}
           />
         </VStack>

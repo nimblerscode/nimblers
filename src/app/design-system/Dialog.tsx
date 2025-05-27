@@ -44,7 +44,7 @@ const overlayStyles = cva({
 const modalStyles = cva({
   base: {
     position: "relative",
-    bg: "white",
+    bg: "surface.base",
     borderRadius: "lg",
     boxShadow: "xl",
     outline: "none",

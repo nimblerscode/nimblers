@@ -17,19 +17,13 @@ const buttonStyles = cva({
     borderWidth: "thin", // Uses theme.borderWidths.thin
     borderColor: "transparent", // Default to transparent, variants will override
     transition:
-      "background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out",
+      "background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.1s ease-in-out",
     width: "full",
     _focusVisible: {
-      outlineWidth: "medium",
+      outlineWidth: "2px",
       outlineStyle: "solid",
       outlineColor: "border.focus",
-      outlineOffset: "0.5",
-    },
-    _disabled: {
-      backgroundColor: "border.subtle",
-      color: "content.subtle",
-      borderColor: "border.subtle",
-      cursor: "not-allowed",
+      outlineOffset: "2px",
     },
     // NO MARGINS HERE
   },
@@ -41,20 +35,45 @@ const buttonStyles = cva({
         borderColor: "brand.solid",
         _hover: {
           backgroundColor: "brand.solidHover",
+          borderColor: "brand.solidHover",
         },
         _active: {
+          backgroundColor: "brand.solidHover",
           transform: "scale(0.98)",
+        },
+        _focusVisible: {
+          outlineColor: "brand.solid",
+          outlineOffset: "2px",
+        },
+        _disabled: {
+          backgroundColor: "disabled.background",
+          color: "disabled.foreground",
+          borderColor: "disabled.border",
+          cursor: "not-allowed",
         },
       },
       secondary: {
-        backgroundColor: "page.background",
+        backgroundColor: "surface.base",
         color: "content.primary",
         borderColor: "border.default",
         _hover: {
           backgroundColor: "border.subtle",
+          borderColor: "border.strong",
         },
         _active: {
+          backgroundColor: "border.default",
           transform: "scale(0.98)",
+        },
+        _focusVisible: {
+          outlineColor: "border.focus",
+          borderColor: "border.focus",
+          outlineOffset: "2px",
+        },
+        _disabled: {
+          backgroundColor: "disabled.background",
+          color: "disabled.foreground",
+          borderColor: "disabled.border",
+          cursor: "not-allowed",
         },
       },
       outline: {
@@ -62,12 +81,25 @@ const buttonStyles = cva({
         color: "brand.solid",
         borderColor: "brand.solid",
         _hover: {
-          backgroundColor: "brand.solid/10",
+          backgroundColor: "brand.background",
           color: "brand.solidHover",
+          borderColor: "brand.solidHover",
         },
         _active: {
-          backgroundColor: "brand.solid/20",
+          backgroundColor: "brand.subtle",
+          color: "brand.solidHover",
+          borderColor: "brand.solidHover",
           transform: "scale(0.98)",
+        },
+        _focusVisible: {
+          outlineColor: "brand.solid",
+          outlineOffset: "2px",
+        },
+        _disabled: {
+          backgroundColor: "transparent",
+          color: "disabled.foreground",
+          borderColor: "disabled.border",
+          cursor: "not-allowed",
         },
       },
       danger: {
@@ -76,12 +108,21 @@ const buttonStyles = cva({
         borderColor: "status.danger.solid",
         _hover: {
           backgroundColor: "status.danger.solidHover",
+          borderColor: "status.danger.solidHover",
         },
         _active: {
+          backgroundColor: "status.danger.solidHover",
           transform: "scale(0.98)",
         },
         _focusVisible: {
-          outlineColor: "status.danger.border",
+          outlineColor: "status.danger.solid",
+          outlineOffset: "2px",
+        },
+        _disabled: {
+          backgroundColor: "disabled.background",
+          color: "disabled.foreground",
+          borderColor: "disabled.border",
+          cursor: "not-allowed",
         },
       },
       ghost: {
@@ -90,9 +131,21 @@ const buttonStyles = cva({
         borderColor: "transparent",
         _hover: {
           backgroundColor: "border.subtle",
+          color: "content.primary",
         },
         _active: {
+          backgroundColor: "border.default",
           transform: "scale(0.98)",
+        },
+        _focusVisible: {
+          outlineColor: "border.focus",
+          outlineOffset: "2px",
+        },
+        _disabled: {
+          backgroundColor: "transparent",
+          color: "disabled.foreground",
+          borderColor: "transparent",
+          cursor: "not-allowed",
         },
       },
     },

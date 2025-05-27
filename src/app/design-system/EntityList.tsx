@@ -22,13 +22,9 @@ const EntityListRoot = ({
   ...props
 }: EntityListProps) => {
   return (
-    <VStack
-      className={className}
-      alignItems="stretch"
-      {...props}
-    >
+    <VStack className={className} alignItems="stretch" {...props}>
       <Box
-        backgroundColor="brand.foreground" // Uses semantic token: surface.raised (default) or theme-specific
+        backgroundColor="surface.raised" // Uses semantic token for card backgrounds
         borderWidth="1px"
         borderColor="border.default" // Uses semantic token: border.default (default) or theme-specific
         borderRadius="sm"
@@ -86,7 +82,7 @@ const EntityListItem: React.FC<EntityListItemProps> = ({
       borderBottom: "none",
     },
     _hover: {
-      bg: "gray.50",
+      bg: "border.subtle",
     },
     display: "flex",
     flexDirection: { base: "column", md: "row" },

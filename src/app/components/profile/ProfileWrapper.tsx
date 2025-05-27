@@ -33,7 +33,12 @@ export function ProfileWrapper({
       activeOrganizationId={activeOrganizationId}
       currentPath={currentPath}
     >
-      <ProfilePage user={user} organizations={organizations} />
+      <ProfilePage
+        user={user}
+        organizations={organizations}
+        activeOrganizationId={activeOrganizationId}
+        currentPath={currentPath}
+      />
     </MainLayout>
   );
 }

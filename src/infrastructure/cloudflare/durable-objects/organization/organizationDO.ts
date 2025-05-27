@@ -82,7 +82,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
             "Content-Type": "application/json",
             "X-Request-ID": this.doId,
           },
-        }
+        },
       );
     }
   }
@@ -100,7 +100,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       return new Response(
@@ -113,7 +113,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 503,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }
@@ -133,7 +133,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    } catch (error) {
+    } catch (_error) {
       return new Response(
         JSON.stringify({
           error: "Failed to retrieve metrics",
@@ -142,7 +142,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }

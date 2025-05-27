@@ -66,7 +66,7 @@ export function AcceptInvitationForm({
         };
       }
     },
-    {}
+    {},
   );
 
   const formattedExpiresAt = invitation.expiresAt.toLocaleDateString("en-US", {

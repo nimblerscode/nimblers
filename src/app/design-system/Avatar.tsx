@@ -24,24 +24,24 @@ const avatarStyles = cva({
     },
     colorScheme: {
       brand: {
-        bg: "brand.solid", // e.g., brand.600
-        color: "brand.onSolid", // e.g., white
+        bg: "accent.600", // Use vibrant accent color
+        color: "white", // White text on accent background
       },
       gray: {
-        bg: "gray.200",
+        bg: "border.default",
         color: "content.primary",
       },
       // Add more color schemes as needed from your panda.config.ts (e.g., success, warning)
       success: {
-        bg: "status.success.subtleBg",
+        bg: "status.success.background",
         color: "status.success.text",
       },
       warning: {
-        bg: "status.warning.subtleBg",
+        bg: "status.warning.background",
         color: "status.warning.text",
       },
       danger: {
-        bg: "status.danger.subtleBg",
+        bg: "status.danger.background",
         color: "status.danger.text",
       },
     },

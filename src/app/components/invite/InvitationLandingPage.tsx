@@ -1,15 +1,15 @@
 "use client";
 
+import { Building2 } from "lucide-react";
 import { Banner } from "@/app/design-system/Banner";
 import { Button } from "@/app/design-system/Button";
 import { Card, CardContent } from "@/app/design-system/Card";
 import { Heading } from "@/app/design-system/Heading";
+import { Icon } from "@/app/design-system/Icon";
 import { Box, Container, Flex, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
 import { css } from "../../../../styled-system/css";
 import { AcceptInvitationForm } from "./AcceptInvitationForm";
-import { Icon } from "@/app/design-system/Icon";
-import { Building2 } from "lucide-react";
 
 interface InvitationLandingPageProps {
   token: string;
@@ -20,10 +20,10 @@ interface InvitationLandingPageProps {
     expiresAt: Date;
   };
   userState:
-  | "user_not_exists"
-  | "user_exists_not_logged_in"
-  | "user_logged_in_email_mismatch"
-  | "user_logged_in_email_match";
+    | "user_not_exists"
+    | "user_exists_not_logged_in"
+    | "user_logged_in_email_mismatch"
+    | "user_logged_in_email_match";
   currentUser?: any;
 }
 
@@ -68,11 +68,7 @@ export function InvitationLandingPage({
               <Icon icon={Building2} size="lg" />
 
               <VStack gap="1" alignItems="center">
-                <Heading
-                  as="h1"
-                  levelStyle="h3"
-                  css={{ textAlign: "center" }}
-                >
+                <Heading as="h1" levelStyle="h3" css={{ textAlign: "center" }}>
                   Join {invitation.organizationName}
                 </Heading>
                 <Text css={{ textAlign: "center", color: "content.subtle" }}>

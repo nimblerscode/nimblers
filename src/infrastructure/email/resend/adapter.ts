@@ -20,17 +20,21 @@ export const ResendEmailAdapterLive = Layer.effect(
         body: string;
       }) =>
         Effect.tryPromise({
-          try: () =>
-            emailInstance.emails.send({
+          try: async () => {
+            const result = await emailInstance.emails.send({
               from,
               to,
               subject,
               html: body,
-            }),
-          catch: (error) =>
-            new EmailError({
+            });
+
+            return result;
+          },
+          catch: (error) => {
+            return new EmailError({
               message: `Adapter: Failed to send email. Original error: ${error}`,
-            }),
+            });
+          },
         }),
     };
 

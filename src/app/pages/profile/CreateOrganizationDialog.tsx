@@ -19,7 +19,6 @@ export function CreateOrganizationDialog({
       <HStack gap="2" alignItems="center">
         <Icon icon={Plus} size={16} />
         Create Organization
-
       </HStack>
     </Button>
   );

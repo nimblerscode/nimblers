@@ -28,7 +28,7 @@ const selectStyles = cva({
     width: "full",
     minWidth: 0,
     appearance: "none",
-    bg: "white",
+    bg: "surface.base",
     color: "content.primary",
     borderWidth: "thin",
     borderColor: "border.default",
@@ -108,7 +108,7 @@ const popoverStyles = cva({
   base: {
     zIndex: "50",
     minW: "var(--trigger-width)",
-    bg: "white",
+    bg: "surface.base",
     borderWidth: "thin",
     borderColor: "border.default",
     borderRadius: "sm",

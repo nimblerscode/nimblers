@@ -16,6 +16,7 @@ export function LoginWrapper({
   return (
     <Container
       display="flex"
+      maxW="xl"
       mx="auto"
       alignItems="center"
       minH="100vh"
