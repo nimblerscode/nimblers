@@ -18,14 +18,17 @@ export default defineWorkersConfig({
 
         // Define any additional Miniflare specific options here,
         // such as cache persistence, log levels, etc.
-        // miniflare: {
-        //   kvPersist: true,
-        //   logLevel: "debug",
-        // },
+        miniflare: {
+          // kvPersist: true,
+          // logLevel: "debug",
+          bindings: {
+            SHOPIFY_WEBHOOK_SECRET: "test-webhook-secret",
+          },
+        },
 
         // Define environment variables for the worker tests.
         // variables: {
-        //   TEST_VAR: "test_value",
+        //   SHOPIFY_WEBHOOK_SECRET: "test-webhook-secret-key",
         // },
 
         // Define bindings needed for tests, overriding or supplementing wrangler.jsonc

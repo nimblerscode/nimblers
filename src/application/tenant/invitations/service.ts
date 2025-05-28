@@ -29,23 +29,23 @@ import { OrgDbError } from "@/domain/tenant/organization/model";
 const INVITATION_EXPIRY_DAYS = 7;
 
 export class InvitationDOService extends Context.Tag(
-  "@infrastructure/organization/invitations/InvitationDOService",
+  "@infrastructure/organization/invitations/InvitationDOService"
 )<
   InvitationDOService,
   {
     readonly get: (
-      token: string,
+      token: string
     ) => Effect.Effect<Invitation, GetInvitationError | InvalidToken>;
     readonly accept: (
       token: string,
-      userId: UserId,
+      userId: UserId
     ) => Effect.Effect<void, GetInvitationError | InvalidToken>;
     readonly create: (
       input: NewInvitation,
-      organizationSlug: string,
+      organizationSlug: string
     ) => Effect.Effect<Invitation, InvitationError | OrgDbError>;
     readonly list: (
-      organizationSlug: string,
+      organizationSlug: string
     ) => Effect.Effect<Invitation[], InvitationError | OrgDbError>;
   }
 >() {}
@@ -65,8 +65,9 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
           return Effect.gen(function* () {
             const { inviterId, inviteeEmail, role } = input;
 
-            const existingMemberOpt =
-              yield* orgMemberRepo.findMembership(inviteeEmail);
+            const existingMemberOpt = yield* orgMemberRepo.findMembership(
+              inviteeEmail
+            );
 
             if (Option.isSome(existingMemberOpt)) {
               const member = existingMemberOpt.value;
@@ -74,7 +75,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 new UserAlreadyMember({
                   message: "Email already belongs to an organization member.",
                   userId: member.userId,
-                }),
+                })
               );
             }
 
@@ -86,14 +87,14 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                   message:
                     "A pending invitation already exists for this email.",
                   email: inviteeEmail,
-                }),
+                })
               );
             }
 
             const _expiresAt = yield* Effect.gen(function* () {
               const currentTime = yield* Clock.currentTimeMillis;
               return new Date(
-                currentTime + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+                currentTime + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000
               );
             });
 
@@ -108,9 +109,9 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               .pipe(
                 Effect.catchAll((error) => {
                   return Effect.fail(
-                    new InvitationNotFound({ message: error.message }),
+                    new InvitationNotFound({ message: error.message })
                   );
-                }),
+                })
               );
 
             const token = yield* inviteToken
@@ -119,7 +120,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 invitationId: createdInvitation.id,
               })
               .pipe(
-                Effect.mapError((error) => new OrgDbError({ cause: error })),
+                Effect.mapError((error) => new OrgDbError({ cause: error }))
               );
 
             // change for the url, could be localhost or production
@@ -154,25 +155,25 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
             });
 
             yield* emailSendingEffect.pipe(
-              Effect.provideService(EmailService, resolvedEmailService),
+              Effect.provideService(EmailService, resolvedEmailService)
             );
 
             return createdInvitation;
           }).pipe(
             Effect.catchTag("EmailError", (emailError) =>
-              Effect.fail(new OrgDbError({ cause: emailError })),
+              Effect.fail(new OrgDbError({ cause: emailError }))
             ),
             Effect.catchTag("MemberDbError", (memberDbError) =>
-              Effect.fail(new OrgDbError({ cause: memberDbError })),
+              Effect.fail(new OrgDbError({ cause: memberDbError }))
             ),
             Effect.catchTag("MemberNotFoundError", (memberNotFoundError) =>
-              Effect.fail(new OrgDbError({ cause: memberNotFoundError })),
+              Effect.fail(new OrgDbError({ cause: memberNotFoundError }))
             ),
-            Effect.withSpan("CreateInvitationUseCase.create"),
+            Effect.withSpan("CreateInvitationUseCase.create")
           );
         },
         get: (
-          token: string, // Accept token for validation
+          token: string // Accept token for validation
         ): Effect.Effect<Invitation, GetInvitationError | InvalidToken> => {
           return Effect.gen(function* () {
             const verifiedToken = yield* inviteToken.verify(token).pipe(
@@ -180,7 +181,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 return new OrgDbError({
                   cause: error,
                 });
-              }),
+              })
             );
 
             const invitationId = verifiedToken.invitationId;
@@ -189,19 +190,20 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               return yield* Effect.fail(
                 new InvalidToken({
                   message: "Invalid token.",
-                }),
+                })
               );
             }
 
             // Retrieve the invitation using the invitationId and token
-            const invitationOpt =
-              yield* invitationRepo.getInvitation(invitationId);
+            const invitationOpt = yield* invitationRepo.getInvitation(
+              invitationId
+            );
 
             if (Option.isNone(invitationOpt)) {
               return yield* Effect.fail(
                 new InvitationNotFound({
                   message: "Invitation not found.",
-                }),
+                })
               );
             }
 
@@ -212,7 +214,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 new InvitationAlreadyAccepted({
                   message: "Invitation has already been accepted.",
                   invitationId,
-                }),
+                })
               );
             }
 
@@ -221,7 +223,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 new InvitationAlreadyRevoked({
                   message: "Invitation has been revoked.",
                   invitationId,
-                }),
+                })
               );
             }
 
@@ -236,7 +238,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                   message: "Invitation has expired.",
                   invitationId,
                   expiredAt: new Date(invitation.expiresAt),
-                }),
+                })
               );
             }
 
@@ -246,7 +248,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                   message: "Invitation has expired.",
                   invitationId,
                   expiredAt: new Date(invitation.expiresAt),
-                }),
+                })
               );
             }
 
@@ -255,7 +257,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               return yield* Effect.fail(
                 new InvitationNotFound({
                   message: `Invitation is in an invalid state: ${invitation.status}`,
-                }),
+                })
               );
             }
 
@@ -276,20 +278,21 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 return new OrgDbError({
                   cause: error,
                 });
-              }),
+              })
             );
 
             const invitationId = verifiedToken.invitationId;
 
             // Get the invitation
-            const invitationOpt =
-              yield* invitationRepo.getInvitation(invitationId);
+            const invitationOpt = yield* invitationRepo.getInvitation(
+              invitationId
+            );
 
             if (Option.isNone(invitationOpt)) {
               return yield* Effect.fail(
                 new InvitationNotFound({
                   message: "Invitation not found",
-                }),
+                })
               );
             }
 
@@ -301,7 +304,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                 new InvitationAlreadyAccepted({
                   message: "Invitation has already been accepted",
                   invitationId,
-                }),
+                })
               );
             }
 
@@ -315,7 +318,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
                   message: "Invitation has expired",
                   invitationId,
                   expiredAt: new Date(invitation.expiresAt),
-                }),
+                })
               );
             }
 
@@ -333,12 +336,12 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
               .pipe(
                 Effect.mapError((error) => {
                   return new OrgDbError({ cause: error });
-                }),
+                })
               );
 
             return;
           }).pipe(Effect.withSpan("InvitationUseCase.accept"));
         },
       };
-    }),
+    })
   );

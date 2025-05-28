@@ -1,6 +1,7 @@
 import { prefix, render, route } from "rwsdk/router";
 import type { RequestInfo } from "rwsdk/worker";
 import { acceptInvitationAction } from "@/app/actions/invitations/accept";
+import { handleShopifyComplianceWebhook } from "@/app/actions/shopify/compliance";
 // import CreateOrganizationForm from "@/app/components/CreateOrganizationForm"; // No longer directly used here
 import { Document } from "@/app/Document";
 import InvitationsPage from "@/app/pages/InvitationsPage";
@@ -17,6 +18,19 @@ import {
   sessionHandler,
 } from "@/infrastructure/auth/middleware";
 
+// Shopify compliance webhook handlers
+const handleCustomerDataRequest = async ({ request }: RequestInfo) => {
+  return handleShopifyComplianceWebhook("customers-data-request", request);
+};
+
+const handleCustomerDataErasure = async ({ request }: RequestInfo) => {
+  return handleShopifyComplianceWebhook("customers-data-erasure", request);
+};
+
+const handleShopDataErasure = async ({ request }: RequestInfo) => {
+  return handleShopifyComplianceWebhook("shop-data-erasure", request);
+};
+
 // Wrapper for the invitation accept API
 const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   if (requestInfo.request.method !== "POST") {
@@ -26,7 +40,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   try {
     const result = await acceptInvitationAction(
       requestInfo.request,
-      requestInfo,
+      requestInfo
     );
     return Response.json(result, { status: 200 });
   } catch (error) {
@@ -38,7 +52,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
             ? error.message
             : "Failed to accept invitation",
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 };
@@ -69,6 +83,11 @@ export const allRoutes = [
     optionalSessionHandler,
     acceptInvitationRoute,
   ]),
+
+  // Shopify Compliance Webhooks
+  route("/shopify/privacy/customers-data-request", handleCustomerDataRequest),
+  route("/shopify/privacy/customers-data-erasure", handleCustomerDataErasure),
+  route("/shopify/privacy/shop-data-erasure", handleShopDataErasure),
 
   // Fallback for routes defined outside of render(Document, ...)
   // If you intend this only for API-like routes, adjust the path pattern
