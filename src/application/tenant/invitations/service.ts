@@ -4,6 +4,7 @@ import { renderInvitationEmailHTML } from "@/app/email-templates";
 import { sendEmail as sendEmailEffect } from "@/application/global/email/sendEmail";
 import { EmailService } from "@/domain/global/email/service";
 import type { UserId } from "@/domain/global/user/model";
+import { EnvironmentConfigService } from "@/domain/global/environment/service";
 
 import {
   DuplicatePendingInvitation,
@@ -25,6 +26,7 @@ import {
 import { InviteToken } from "@/domain/tenant/invitations/tokenUtils";
 import { MemberRepo } from "@/domain/tenant/member/service";
 import { OrgDbError } from "@/domain/tenant/organization/model";
+import { OrganizationRepo } from "@/domain/tenant/organization/service";
 
 const INVITATION_EXPIRY_DAYS = 7;
 
@@ -56,16 +58,17 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
     InvitationUseCase,
     Effect.gen(function* () {
       const invitationRepo = yield* InvitationRepo;
-      const orgMemberRepo = yield* MemberRepo;
-      const resolvedEmailService = yield* EmailService;
       const inviteToken = yield* InviteToken;
+      const memberRepo = yield* MemberRepo;
+      const resolvedEmailService = yield* EmailService;
+      const envConfig = yield* EnvironmentConfigService;
 
       return {
         create: (input: NewInvitation) => {
           return Effect.gen(function* () {
             const { inviterId, inviteeEmail, role } = input;
 
-            const existingMemberOpt = yield* orgMemberRepo.findMembership(
+            const existingMemberOpt = yield* memberRepo.findMembership(
               inviteeEmail
             );
 
@@ -125,7 +128,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
 
             // change for the url, could be localhost or production
             // add the localhost url for development
-            const invitationLink = `http://localhost:5173/invite/${token}`;
+            const invitationLink = envConfig.getInvitationUrl(token);
             // const invitationLink = `https://app.nimblers.co/invite/${token}`;
 
             // Use a generic inviter name to avoid complexity
@@ -328,7 +331,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
 
             // Create organization membership
 
-            yield* orgMemberRepo
+            yield* memberRepo
               .createMember({
                 userId,
                 role: invitation.role,

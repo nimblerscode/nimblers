@@ -17,6 +17,22 @@ export const organization = sqliteTable("organization", {
   // Removed updatedAt to match better-auth schema
 });
 
+// Connected stores table - for Shopify, WooCommerce, etc.
+export const connectedStore = sqliteTable("connected_store", {
+  id: text("id").primaryKey(),
+  organizationId: text("organizationId")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // 'shopify', 'woocommerce', etc.
+  shopDomain: text("shopDomain").notNull(), // e.g., 'my-shop.myshopify.com'
+  scope: text("scope"), // OAuth scopes granted
+  status: text("status").notNull().default("active"), // 'active', 'disconnected', 'error'
+  connectedAt: normalizeDate("connectedAt").notNull(),
+  lastSyncAt: normalizeDate("lastSyncAt"), // Track when we last synced data
+  metadata: text("metadata"), // JSON for store-specific data
+  createdAt: normalizeDate("createdAt").notNull(),
+});
+
 // Member table (aligned with better-auth)
 export const member = sqliteTable("member", {
   id: text("id").primaryKey(),

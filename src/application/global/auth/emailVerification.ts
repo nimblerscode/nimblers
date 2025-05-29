@@ -6,11 +6,13 @@ import {
 } from "@/domain/global/auth/service";
 import type { Email } from "@/domain/global/email/model";
 import { UserRepo } from "@/domain/global/user/service";
+import { EnvironmentConfigService } from "@/domain/global/environment/service";
 
 export const EmailVerificationUseCaseLive = Layer.effect(
   EmailVerificationUseCase,
   Effect.gen(function* () {
     const userRepo = yield* UserRepo;
+    const envConfig = yield* EnvironmentConfigService;
 
     return {
       resendVerificationEmail: (userEmail: Email) => {
@@ -41,9 +43,7 @@ export const EmailVerificationUseCaseLive = Layer.effect(
             try: async () => {
               // Make a request to Better Auth's send verification endpoint
               const response = await fetch(
-                `${
-                  process.env.APP_URL || "http://localhost:5173"
-                }/api/auth/send-verification-email`,
+                `${envConfig.getBaseUrl()}/api/auth/send-verification-email`,
                 {
                   method: "POST",
                   headers: {

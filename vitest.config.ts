@@ -24,6 +24,9 @@ export default defineWorkersConfig({
           bindings: {
             SHOPIFY_WEBHOOK_SECRET: "test-webhook-secret",
           },
+          // Add worker compatibility for MSW
+          compatibilityDate: "2025-05-28",
+          compatibilityFlags: ["nodejs_compat"],
         },
 
         // Define environment variables for the worker tests.

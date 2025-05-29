@@ -66,6 +66,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250528.0
         version: 4.20250528.0
+      '@edge-runtime/vm':
+        specifier: ^5.0.0
+        version: 5.0.0
       '@effect/vitest':
         specifier: ^0.21.5
         version: 0.21.5(effect@3.16.0)(vitest@3.1.4)
@@ -128,7 +131,7 @@ importers:
         version: 5.1.4(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.23)(jiti@1.21.7)(lightningcss@1.25.1)(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1))
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
+        version: 3.1.4(@edge-runtime/vm@5.0.0)(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
       wrangler:
         specifier: ^4.17.0
         version: 4.17.0(@cloudflare/workers-types@4.20250528.0)
@@ -380,6 +383,14 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@edge-runtime/primitives@6.0.0':
+    resolution: {integrity: sha512-FqoxaBT+prPBHBwE1WXS1ocnu/VLTQyZ6NMUBAdbP7N2hsFTTxMC/jMu2D/8GAlMQfxeuppcPuCUk/HO3fpIvA==}
+    engines: {node: '>=18'}
+
+  '@edge-runtime/vm@5.0.0':
+    resolution: {integrity: sha512-NKBGBSIKUG584qrS1tyxVpX/AKJKQw5HgjYEnPLC0QsTw79JrGn+qUr8CXFb955Iy7GUdiiUv1rJ6JBGvaKb6w==}
+    engines: {node: '>=18'}
 
   '@effect/experimental@0.44.21':
     resolution: {integrity: sha512-ojoFJc5BSlnwMCKyRvth3dhGtXY6hF5ta92PSCUxtrBrEBvVShvthfnXQ65yU6VXgUuVsgmL63OR4L4dWjgSyw==}
@@ -4829,7 +4840,7 @@ snapshots:
       devalue: 4.3.3
       miniflare: 4.20250523.0
       semver: 7.7.2
-      vitest: 3.1.4(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
+      vitest: 3.1.4(@edge-runtime/vm@5.0.0)(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
       wrangler: 4.17.0(@cloudflare/workers-types@4.20250528.0)
       zod: 3.25.32
     transitivePeerDependencies:
@@ -4870,6 +4881,12 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
+  '@edge-runtime/primitives@6.0.0': {}
+
+  '@edge-runtime/vm@5.0.0':
+    dependencies:
+      '@edge-runtime/primitives': 6.0.0
+
   '@effect/experimental@0.44.21(@effect/platform@0.80.21(effect@3.16.0))(effect@3.16.0)':
     dependencies:
       '@effect/platform': 0.80.21(effect@3.16.0)
@@ -4886,7 +4903,7 @@ snapshots:
   '@effect/vitest@0.21.5(effect@3.16.0)(vitest@3.1.4)':
     dependencies:
       effect: 3.16.0
-      vitest: 3.1.4(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
+      vitest: 3.1.4(@edge-runtime/vm@5.0.0)(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
 
   '@emnapi/runtime@1.4.3':
     dependencies:
@@ -7102,7 +7119,7 @@ snapshots:
       std-env: 3.9.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.1.4(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
+      vitest: 3.1.4(@edge-runtime/vm@5.0.0)(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -7165,7 +7182,7 @@ snapshots:
       sirv: 3.0.1
       tinyglobby: 0.2.14
       tinyrainbow: 2.0.0
-      vitest: 3.1.4(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
+      vitest: 3.1.4(@edge-runtime/vm@5.0.0)(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
 
   '@vitest/utils@3.0.9':
     dependencies:
@@ -9425,7 +9442,7 @@ snapshots:
       tsx: 4.19.4
       yaml: 2.7.1
 
-  vitest@3.1.4(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1):
+  vitest@3.1.4(@edge-runtime/vm@5.0.0)(@types/node@22.15.23)(@vitest/ui@3.1.4)(jiti@1.21.7)(lightningcss@1.25.1)(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1):
     dependencies:
       '@vitest/expect': 3.1.4
       '@vitest/mocker': 3.1.4(msw@2.8.5(@types/node@22.15.23)(typescript@5.8.3))(vite@6.3.5(@types/node@22.15.23)(jiti@1.21.7)(lightningcss@1.25.1)(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1))
@@ -9449,6 +9466,7 @@ snapshots:
       vite-node: 3.1.4(@types/node@22.15.23)(jiti@1.21.7)(lightningcss@1.25.1)(terser@5.40.0)(tsx@4.19.4)(yaml@2.7.1)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@edge-runtime/vm': 5.0.0
       '@types/node': 22.15.23
       '@vitest/ui': 3.1.4(vitest@3.1.4)
     transitivePeerDependencies:

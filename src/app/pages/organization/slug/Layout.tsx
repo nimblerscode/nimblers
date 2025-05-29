@@ -7,8 +7,31 @@ import {
   getUserOrganizations,
 } from "@/app/actions/organization/get";
 import { getActiveOrganization } from "@/app/actions/organization/switch";
+import { getShopifyConfig } from "@/app/actions/shopify/config";
+import { getOrganizationStoreConnections } from "@/app/actions/organization/getStoreConnections";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { Wrapper } from "../../../components/organizations/slug/Wrapper";
+
+function parseOAuthMessage(searchParams: URLSearchParams) {
+  if (searchParams.get("shopify_connected") === "true") {
+    const connectedShop = searchParams.get("shop");
+    return {
+      type: 'success' as const,
+      message: `Successfully connected to ${connectedShop}!`
+    };
+  }
+
+  if (searchParams.get("shopify_error")) {
+    const errorType = searchParams.get("shopify_error");
+    const errorDetails = searchParams.get("error_details");
+    return {
+      type: 'error' as const,
+      message: `Failed to connect to Shopify: ${errorType}. ${errorDetails ? `Details: ${errorDetails}` : ''}`
+    };
+  }
+
+  return null;
+}
 
 export async function Layout({ params, ctx, request }: RequestInfo) {
   const org = await getOrganization(params.orgSlug);
@@ -47,6 +70,30 @@ export async function Layout({ params, ctx, request }: RequestInfo) {
   const url = new URL(request.url);
   const currentPath = url.pathname;
 
+  // Process Shopify OAuth data server-side
+  const shopifyConfig = await getShopifyConfig();
+  const oauthMessage = parseOAuthMessage(url.searchParams);
+
+  // Check for connected shops
+  let connectionStatus: { connected: boolean; shop?: string } | null = null;
+  const connectedShop = url.searchParams.get("shop");
+  if (connectedShop) {
+    // If there's a shop parameter (from OAuth callback), check its connection status
+    const storeConnections = await getOrganizationStoreConnections(
+      params.orgSlug,
+      connectedShop
+    );
+
+    // For the UI, we'll show connection status if we have one
+    connectionStatus = storeConnections.length > 0 ? {
+      connected: storeConnections[0].connected,
+      shop: storeConnections[0].shop,
+    } : null;
+  }
+
+  // For development: if no shop parameter but we want to check a known shop
+  const defaultShopToCheck = connectedShop || "nimblers-dev.myshopify.com";
+
   return (
     <Wrapper
       organization={org}
@@ -56,6 +103,11 @@ export async function Layout({ params, ctx, request }: RequestInfo) {
       activeOrganizationId={activeOrganizationId}
       pendingInvitations={pendingInvitations}
       currentPath={currentPath}
+      shopifyData={{
+        clientId: shopifyConfig.clientId,
+        oauthMessage,
+        connectedShop: defaultShopToCheck,
+      }}
     />
   );
 }

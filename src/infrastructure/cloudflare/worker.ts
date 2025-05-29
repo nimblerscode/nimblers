@@ -1,5 +1,7 @@
 import type { Session, User } from "better-auth";
 import { defineApp } from "rwsdk/worker";
+import { Effect } from "effect";
+import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
 
 import { allRoutes } from "@/config/routes";
 import { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";
@@ -12,13 +14,24 @@ export type AppContext = {
 const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
   if (request.method === "OPTIONS") {
     const origin = request.headers.get("Origin");
-    const allowedOrigins = [
-      "https://nimblers.co",
-      "https://www.nimblers.co",
-      "http://localhost:5173", // Development
-      "http://localhost:3000", // Alternative dev port
-    ];
 
+    // Get allowed origins from environment configuration
+    const getAllowedOrigins = Effect.gen(function* () {
+      const envConfig = yield* Effect.provide(
+        Effect.succeed({}),
+        EnvironmentConfigServiceLive
+      );
+
+      return [
+        "https://nimblers.co",
+        "https://www.nimblers.co",
+        "https://staging.nimblers.com",
+        "http://localhost:5173", // Development
+        "http://localhost:3000", // Alternative dev port
+      ];
+    });
+
+    const allowedOrigins = await Effect.runPromise(getAllowedOrigins);
     const isAllowedOrigin = origin && allowedOrigins.includes(origin);
 
     return new Response(null, {
@@ -66,3 +79,4 @@ export default defineApp([
 
 // Re-export the Durable Object class for wrangler.jsonc
 export { OrganizationDurableObject };
+export { ShopifyOAuthDurableObject } from "./durable-objects/shopify/oauth/shopifyOAuthDO";

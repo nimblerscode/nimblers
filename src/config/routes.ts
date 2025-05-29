@@ -11,6 +11,7 @@ import { Layout as OrganizationCreateLayout } from "@/app/pages/organization/cre
 import { Layout as OrganizationSlugLayout } from "@/app/pages/organization/slug/Layout";
 import { Layout as ProfileLayout } from "@/app/pages/profile/Layout";
 import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
+import { routes as shopifyOAuthRoutes } from "@/app/pages/shopify/routes";
 import {
   authResponse,
   optionalSessionHandler,
@@ -88,6 +89,9 @@ export const allRoutes = [
   route("/shopify/privacy/customers-data-request", handleCustomerDataRequest),
   route("/shopify/privacy/customers-data-erasure", handleCustomerDataErasure),
   route("/shopify/privacy/shop-data-erasure", handleShopDataErasure),
+
+  // Shopify OAuth Routes
+  prefix("/shopify", shopifyOAuthRoutes),
 
   // Fallback for routes defined outside of render(Document, ...)
   // If you intend this only for API-like routes, adjust the path pattern

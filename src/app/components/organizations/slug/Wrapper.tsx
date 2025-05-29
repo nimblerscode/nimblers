@@ -17,6 +17,7 @@ export function Wrapper({
   activeOrganizationId,
   pendingInvitations = [],
   currentPath,
+  shopifyData,
 }: {
   organization: Organization;
   members: User[];
@@ -34,6 +35,14 @@ export function Wrapper({
   activeOrganizationId?: string | null;
   pendingInvitations?: SerializableInvitation[];
   currentPath?: string;
+  shopifyData: {
+    clientId: string;
+    oauthMessage: {
+      type: 'success' | 'error';
+      message: string;
+    } | null;
+    connectedShop?: string | null;
+  };
 }) {
   return (
     <MainLayout
@@ -51,6 +60,7 @@ export function Wrapper({
             organization={organization}
             members={members}
             pendingInvitations={pendingInvitations}
+            shopifyData={shopifyData}
           />
         </VStack>
       </Container>

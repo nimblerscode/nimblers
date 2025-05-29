@@ -8,17 +8,27 @@ import { MembersList } from "./members/MembersList";
 import { PendingInvitationsList } from "./members/PendingInvitationsList";
 import { Overview } from "./overview/Overview";
 import { Subscription } from "./overview/Subscription";
+import { ShopifyConnectCard } from "./overview/ShopifyConnectCard";
 
 export function OrganizationDashboard({
   user,
   members,
   organization,
   pendingInvitations = [],
+  shopifyData,
 }: {
   user: User;
   members: User[];
   organization: Organization;
   pendingInvitations?: SerializableInvitation[];
+  shopifyData: {
+    clientId: string;
+    oauthMessage: {
+      type: 'success' | 'error';
+      message: string;
+    } | null;
+    connectedShop?: string | null;
+  };
 }) {
   return (
     <VStack gap="8" alignItems="stretch">
@@ -29,6 +39,12 @@ export function OrganizationDashboard({
           <Overview organization={organization} />
           <Subscription />
         </Grid>
+        {/* Shopify Connect Section */}
+        <ShopifyConnectCard
+          organizationSlug={organization.slug}
+          shopifyData={shopifyData}
+          shopDomain={shopifyData.connectedShop || undefined}
+        />
       </VStack>
 
       {/* Visual Separator */}
