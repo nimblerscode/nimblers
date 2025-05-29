@@ -7,7 +7,7 @@ describe("handleShopifyComplianceWebhook", () => {
   // Helper to create HMAC signature
   const createHmacSignature = async (
     payload: string,
-    secret: string
+    secret: string,
   ): Promise<string> => {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -15,19 +15,19 @@ describe("handleShopifyComplianceWebhook", () => {
       encoder.encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     );
     const signature = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode(payload)
+      encoder.encode(payload),
     );
     return btoa(String.fromCharCode(...new Uint8Array(signature)));
   };
 
   const createMockRequest = async (
     payload: object,
-    secret: string = testSecret
+    secret: string = testSecret,
   ): Promise<Request> => {
     const body = JSON.stringify(payload);
     const hmac = await createHmacSignature(body, secret);
@@ -74,7 +74,7 @@ describe("handleShopifyComplianceWebhook", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(200);
@@ -85,17 +85,17 @@ describe("handleShopifyComplianceWebhook", () => {
     it("should reject request with invalid HMAC", async () => {
       const request = await createMockRequest(
         validCustomerDataRequestPayload,
-        "wrong-secret"
+        "wrong-secret",
       );
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(401);
       expect(await response.text()).toBe(
-        "Unauthorized: Invalid HMAC signature"
+        "Unauthorized: Invalid HMAC signature",
       );
     });
 
@@ -110,12 +110,12 @@ describe("handleShopifyComplianceWebhook", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(401);
       expect(await response.text()).toBe(
-        "Unauthorized: Invalid HMAC signature"
+        "Unauthorized: Invalid HMAC signature",
       );
     });
 
@@ -125,7 +125,7 @@ describe("handleShopifyComplianceWebhook", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(400);
@@ -139,7 +139,7 @@ describe("handleShopifyComplianceWebhook", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-erasure",
-        request
+        request,
       );
 
       expect(response.status).toBe(200);
@@ -152,7 +152,7 @@ describe("handleShopifyComplianceWebhook", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-erasure",
-        request
+        request,
       );
 
       expect(response.status).toBe(400);
@@ -166,7 +166,7 @@ describe("handleShopifyComplianceWebhook", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "shop-data-erasure",
-        request
+        request,
       );
 
       expect(response.status).toBe(200);
@@ -179,7 +179,7 @@ describe("handleShopifyComplianceWebhook", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "shop-data-erasure",
-        request
+        request,
       );
 
       expect(response.status).toBe(400);
@@ -203,7 +203,7 @@ describe("handleShopifyComplianceWebhook", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(400);

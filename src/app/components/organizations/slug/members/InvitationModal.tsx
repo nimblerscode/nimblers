@@ -112,12 +112,11 @@ function InvitationModalContent({
               Invitation Sent!
             </Heading>
             <Text textAlign="center" color="content.secondary">
-              {state.invitation?.email} will receive an email with instructions to join your team
+              {state.invitation?.email} will receive an email with instructions
+              to join your team
             </Text>
           </VStack>
         </VStack>
-
-
 
         {/* Clean Success Summary */}
         <VStack gap="6" alignItems="stretch">
@@ -130,7 +129,11 @@ function InvitationModalContent({
               borderWidth="1px"
               borderColor="status.success.border"
             >
-              <HStack gap="4" alignItems="center" justifyContent="space-between">
+              <HStack
+                gap="4"
+                alignItems="center"
+                justifyContent="space-between"
+              >
                 <VStack gap="1" alignItems="flex-start">
                   <Text fontSize="sm" color="content.secondary">
                     Invitation sent to
@@ -170,18 +173,10 @@ function InvitationModalContent({
 
         {/* Action Buttons */}
         <Flex gap="3" justifyContent="flex-end">
-          <Button
-            variant="outline"
-            onPress={handleSendAnother}
-            type="button"
-          >
+          <Button variant="outline" onPress={handleSendAnother} type="button">
             Send Another Invitation
           </Button>
-          <Button
-            variant="primary"
-            onPress={handleClose}
-            type="button"
-          >
+          <Button variant="primary" onPress={handleClose} type="button">
             Done
           </Button>
         </Flex>
@@ -206,12 +201,7 @@ function InvitationModalContent({
             borderWidth="2px"
             borderColor="brand.border"
           >
-            <Icon
-              icon={UserPlus}
-              css={{ color: "brand.solid" }}
-              w="6"
-              h="6"
-            />
+            <Icon icon={UserPlus} css={{ color: "brand.solid" }} w="6" h="6" />
           </Box>
 
           <VStack gap="1" alignItems="center">
@@ -246,7 +236,10 @@ function InvitationModalContent({
           {/* Role Selection */}
           <VStack gap="3" alignItems="stretch">
             <Text fontSize="sm" fontWeight="medium" color="content.primary">
-              Role <span style={{ color: "token(colors.status.danger.solid)" }}>*</span>
+              Role{" "}
+              <span style={{ color: "token(colors.status.danger.solid)" }}>
+                *
+              </span>
             </Text>
             <Box>
               <select
@@ -285,8 +278,8 @@ function InvitationModalContent({
 
           {/* Info Banner */}
           <Banner variant="info" icon={true}>
-            The invited user will receive an email with instructions to join your organization.
-            They can accept or decline the invitation.
+            The invited user will receive an email with instructions to join
+            your organization. They can accept or decline the invitation.
           </Banner>
 
           {/* Error Message */}
@@ -327,7 +320,7 @@ export function InvitationModal({
 
   const handleSendAnother = () => {
     // Reset the content component to clear all state
-    setContentKey(prev => prev + 1);
+    setContentKey((prev) => prev + 1);
   };
 
   // Defensive check for user
@@ -351,7 +344,8 @@ export function InvitationModal({
         {(close: () => void) => (
           <VStack gap="6" alignItems="stretch" p="6">
             <Banner variant="error" icon={true} title="Authentication Error">
-              User authentication required. Please refresh the page and try again.
+              User authentication required. Please refresh the page and try
+              again.
             </Banner>
             <DialogFooter>
               <Button variant="primary" onPress={close} type="button">

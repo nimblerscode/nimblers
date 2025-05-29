@@ -1,13 +1,12 @@
 import type { env } from "cloudflare:workers";
-import { Headers } from "@effect/platform";
+import { FetchHttpClient } from "@effect/platform";
 import { Context, Effect, Layer } from "effect";
 import type { UserId } from "@/domain/global/user/model";
-import type {
-  NewOrganization,
-  Organization,
-} from "@/domain/tenant/organization/model";
+import type { NewOrganization } from "@/domain/tenant/organization/model";
+import { OrgDbError } from "@/domain/tenant/organization/model";
 import { OrganizationProvisionError } from "@/domain/tenant/organization/provision/service";
 import { OrganizationDOService } from "@/domain/tenant/organization/service";
+import { createOrganizationDOClient } from "./organization/api/client";
 
 // The DO namespace needed by the adapter
 export class OrganizationDONamespace extends Context.Tag(
@@ -25,97 +24,74 @@ export const OrganizationDOAdapterLive = Layer.effect(
       creatorId: UserId,
     ) => {
       return Effect.gen(function* () {
-        // Create the organization in the Durable Object
         const doId = orgDONamespace.idFromName(organization.slug);
         const stub = orgDONamespace.get(doId);
 
-        const response = yield* Effect.tryPromise({
-          try: async () => {
-            return stub.fetch("http://internal/organization", {
-              method: "POST",
-              headers: Headers.unsafeFromRecord({
-                "Content-Type": "application/json",
-              }),
-              body: JSON.stringify({
-                organization: {
-                  name: organization.name,
-                  slug: organization.slug,
-                  logo: organization.logo,
-                },
-                userId: creatorId,
-              }),
-            });
-          },
-          catch: (error) => {
-            throw new OrganizationProvisionError({
-              message: error instanceof Error ? error.message : String(error),
-              cause: error,
-            });
-          },
-        });
+        // Create type-safe client using TypeOnce.dev pattern
+        const client = yield* createOrganizationDOClient(stub);
 
-        if (!response.ok) {
-          throw new OrganizationProvisionError({
-            message: "An unexpected error occurred during DO interaction.",
-            cause: response,
-          });
-        }
-
-        const org = yield* Effect.tryPromise({
-          try: async () => {
-            return response.json() as unknown as Organization;
-          },
-          catch: (error) => {
-            throw new OrganizationProvisionError({
-              message: "An unexpected error occurred during DO interaction.",
-              cause: error,
-            });
-          },
-        });
+        // Use auto-generated method with perfect type safety!
+        // The client.organizations.createOrganization method is automatically generated
+        // from the HttpApi definition in handlers.ts
+        const org = yield* client.organizations
+          .createOrganization({
+            payload: {
+              organization: {
+                name: organization.name,
+                slug: organization.slug,
+                logo: organization.logo,
+              },
+              userId: creatorId,
+            },
+          })
+          .pipe(
+            Effect.mapError((error) => {
+              // Map HTTP API errors to domain errors
+              return new OrganizationProvisionError({
+                message: `Failed to create organization: ${
+                  error.message || String(error)
+                }`,
+                cause: error,
+              });
+            }),
+          );
 
         return org;
-      });
+      }).pipe(
+        // Provide the HttpClient layer needed by the client
+        Effect.provide(FetchHttpClient.layer),
+      );
     };
 
     const getOrganizationDO = (slug: string) => {
       return Effect.gen(function* () {
         const doId = orgDONamespace.idFromName(slug);
         const stub = orgDONamespace.get(doId);
-        const response = yield* Effect.tryPromise({
-          try: async () => {
-            return stub.fetch(`http://internal/organization/${slug}`, {
-              method: "GET",
-            });
-          },
-          catch: (error) => {
-            throw new OrganizationProvisionError({
-              message: "An unexpected error occurred during DO interaction.",
-              cause: error,
-            });
-          },
-        });
 
-        if (!response.ok) {
-          throw new OrganizationProvisionError({
-            message: "An unexpected error occurred during DO interaction.",
-            cause: response,
-          });
-        }
+        // Create type-safe client using TypeOnce.dev pattern
+        const client = yield* createOrganizationDOClient(stub);
 
-        const org = yield* Effect.tryPromise({
-          try: async () => {
-            return response.json() as unknown as Organization;
-          },
-          catch: (error) => {
-            throw new OrganizationProvisionError({
-              message: "An unexpected error occurred during DO interaction.",
-              cause: error,
-            });
-          },
-        });
+        // Use auto-generated method with perfect type safety!
+        // The client.organizations.getOrganization method is automatically generated
+        // from the HttpApi definition in handlers.ts
+        const org = yield* client.organizations
+          .getOrganization({
+            path: { organizationSlug: slug },
+          })
+          .pipe(
+            Effect.mapError((error) => {
+              // Map HTTP API errors to domain errors
+              return new OrgDbError({
+                cause: error,
+              });
+            }),
+          );
 
         return org;
-      });
+      }).pipe(
+        // Provide the HttpClient layer needed by the client
+        Effect.provide(FetchHttpClient.layer),
+      );
     };
 
     return {
@@ -124,3 +100,21 @@ export const OrganizationDOAdapterLive = Layer.effect(
     };
   }),
 );
+
+/**
+ * Benefits of the TypeOnce.dev pattern here:
+ *
+ * BEFORE (manual client):
+ * - client.createOrganization({ organization, userId })
+ * - Manual error handling and type assertions
+ * - Prone to client/server type mismatches
+ *
+ * AFTER (TypeOnce.dev pattern):
+ * - client.organizations.createOrganization({ payload: { organization, userId } })
+ * - Auto-generated methods with perfect type safety
+ * - Impossible to have client/server mismatches
+ * - Full IDE auto-complete for all parameters
+ * - Automatic request/response validation
+ *
+ * The API definition in handlers.ts is the single source of truth! 🎯
+ */

@@ -10,7 +10,7 @@ import type { Invitation } from "@/domain/tenant/invitations/models";
 
 // Define Effect-TS branded error types following project patterns
 export class AuthenticationError extends Data.TaggedError(
-  "AuthenticationError"
+  "AuthenticationError",
 )<{
   readonly message: string;
   readonly code?: string;
@@ -68,7 +68,7 @@ export type InviteUserState =
 
 // Validation functions using Effect
 const validateUser = (
-  user: User | undefined
+  user: User | undefined,
 ): Effect.Effect<User, AuthenticationError> =>
   pipe(
     Effect.succeed(user),
@@ -79,12 +79,12 @@ const validateUser = (
         new AuthenticationError({
           message: "User authentication required",
           code: "USER_NOT_AUTHENTICATED",
-        })
-    )
+        }),
+    ),
   );
 
 const validateFormData = (
-  formData: FormData
+  formData: FormData,
 ): Effect.Effect<
   {
     email: Email;
@@ -106,8 +106,8 @@ const validateFormData = (
             message: "Email address is required",
             code: "MISSING_EMAIL",
             field: "email",
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -118,8 +118,8 @@ const validateFormData = (
             message: "Role is required",
             code: "MISSING_ROLE",
             field: "role",
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -130,8 +130,8 @@ const validateFormData = (
             message: "Organization is required",
             code: "MISSING_ORGANIZATION",
             field: "organizationSlug",
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -144,8 +144,8 @@ const validateFormData = (
             message: "Please enter a valid email address",
             code: "INVALID_EMAIL",
             field: "email",
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -158,8 +158,8 @@ const validateFormData = (
             message: "Invalid role selected",
             code: "INVALID_ROLE",
             field: "role",
-          })
-        )
+          }),
+        ),
       );
     }
 
@@ -171,7 +171,7 @@ const validateFormData = (
   });
 
 const convertToSerializableError = (
-  error: InviteUserError
+  error: InviteUserError,
 ): SerializableError => {
   switch (error._tag) {
     case "AuthenticationError":
@@ -213,7 +213,7 @@ const buildSuccessState = (
   user: User,
   email: Email,
   role: string,
-  invitation: Invitation
+  invitation: Invitation,
 ): InviteUserState => ({
   success: true,
   message: `Invitation sent to ${email} successfully!`,
@@ -232,7 +232,7 @@ const buildSuccessState = (
 
 export async function inviteUserAction(
   prevState: InviteUserState,
-  formData: FormData
+  formData: FormData,
 ): Promise<InviteUserState> {
   const program = pipe(
     Effect.gen(function* (_) {
@@ -241,7 +241,7 @@ export async function inviteUserAction(
 
       // Validate and extract form data
       const { email, role, organizationSlug } = yield* _(
-        validateFormData(formData)
+        validateFormData(formData),
       );
 
       const invitationProgram = InvitationDOService.pipe(
@@ -252,9 +252,9 @@ export async function inviteUserAction(
               inviteeEmail: email as Email,
               role: role,
             },
-            organizationSlug
-          )
-        )
+            organizationSlug,
+          ),
+        ),
       );
 
       const fullLayer = InvitationDOLive({
@@ -265,7 +265,7 @@ export async function inviteUserAction(
         Effect.tryPromise({
           try: () =>
             Effect.runPromise(
-              invitationProgram.pipe(Effect.provide(fullLayer))
+              invitationProgram.pipe(Effect.provide(fullLayer)),
             ),
           catch: (error) => {
             return new InvitationError({
@@ -274,7 +274,7 @@ export async function inviteUserAction(
               cause: error,
             });
           },
-        })
+        }),
       );
 
       return buildSuccessState(user, email, role, invitation);
@@ -287,7 +287,7 @@ export async function inviteUserAction(
         errors: serializableError,
         user: prevState.user,
       } as InviteUserState);
-    })
+    }),
   );
 
   return Effect.runPromise(program);

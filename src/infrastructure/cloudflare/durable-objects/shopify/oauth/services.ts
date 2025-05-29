@@ -1,22 +1,22 @@
 import { Effect, Layer } from "effect";
 import {
-  NonceManager,
-  AccessTokenService,
-} from "@/domain/global/shopify/oauth/service";
-import {
-  type Nonce,
-  type ShopDomain,
   type AccessToken,
+  AccessTokenError,
+  type AccessTokenResponse,
   type AuthorizationCode,
   type ClientId,
   type ClientSecret,
-  type Scope,
-  type AccessTokenResponse,
-  type OnlineAccessTokenResponse,
-  OAuthError,
   InvalidNonceError,
-  AccessTokenError,
+  type Nonce,
+  OAuthError,
+  type OnlineAccessTokenResponse,
+  type Scope,
+  type ShopDomain,
 } from "@/domain/global/shopify/oauth/models";
+import {
+  AccessTokenService,
+  NonceManager,
+} from "@/domain/global/shopify/oauth/service";
 import { ShopifyOAuthDONamespace } from "./shopifyOAuthDO";
 
 // DO Service implementations that communicate with the Durable Object via HTTP API
@@ -41,7 +41,7 @@ export const NonceManagerDOLive = Layer.effect(
 
           if (!response.ok) {
             throw new Error(
-              `Nonce generation failed with status ${response.status}`
+              `Nonce generation failed with status ${response.status}`,
             );
           }
 
@@ -73,7 +73,7 @@ export const NonceManagerDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Nonce store failed with status ${response.status}`,
-              })
+              }),
             );
           }
         }),
@@ -97,7 +97,7 @@ export const NonceManagerDOLive = Layer.effect(
             return yield* Effect.fail(
               new InvalidNonceError({
                 message: `Nonce verify failed with status ${response.status}`,
-              })
+              }),
             );
           }
 
@@ -131,12 +131,12 @@ export const NonceManagerDOLive = Layer.effect(
             return yield* Effect.fail(
               new InvalidNonceError({
                 message: `Nonce consume failed with status ${response.status}`,
-              })
+              }),
             );
           }
         }),
     };
-  })
+  }),
 );
 
 export const AccessTokenServiceDOLive = Layer.effect(
@@ -151,7 +151,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
         shop: ShopDomain,
         code: AuthorizationCode,
         clientId: ClientId,
-        clientSecret: ClientSecret
+        clientSecret: ClientSecret,
       ) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
@@ -177,7 +177,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new AccessTokenError({
                 message: `Token exchange failed with status ${response.status}`,
-              })
+              }),
             );
           }
 
@@ -220,7 +220,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Token store failed with status ${response.status}`,
-              })
+              }),
             );
           }
         }),
@@ -234,7 +234,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
                 {
                   method: "GET",
                   headers: { "Content-Type": "application/json" },
-                }
+                },
               ),
             catch: (error) =>
               new OAuthError({
@@ -247,7 +247,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Token retrieve failed with status ${response.status}`,
-              })
+              }),
             );
           }
 
@@ -284,7 +284,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Token delete failed with status ${response.status}`,
-              })
+              }),
             );
           }
 
@@ -304,5 +304,5 @@ export const AccessTokenServiceDOLive = Layer.effect(
           return data.deleted;
         }),
     };
-  })
+  }),
 );

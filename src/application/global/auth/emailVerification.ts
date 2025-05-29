@@ -5,8 +5,8 @@ import {
   EmailVerificationUseCase,
 } from "@/domain/global/auth/service";
 import type { Email } from "@/domain/global/email/model";
-import { UserRepo } from "@/domain/global/user/service";
 import { EnvironmentConfigService } from "@/domain/global/environment/service";
+import { UserRepo } from "@/domain/global/user/service";
 
 export const EmailVerificationUseCaseLive = Layer.effect(
   EmailVerificationUseCase,
@@ -24,8 +24,8 @@ export const EmailVerificationUseCaseLive = Layer.effect(
                 new EmailVerificationError({
                   message: "Failed to find user",
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
 
           // 2. Check if email is already verified
@@ -33,7 +33,7 @@ export const EmailVerificationUseCaseLive = Layer.effect(
             return yield* Effect.fail(
               new EmailAlreadyVerifiedError({
                 email: userEmail,
-              })
+              }),
             );
           }
 
@@ -53,12 +53,12 @@ export const EmailVerificationUseCaseLive = Layer.effect(
                     email: userEmail,
                     callbackURL: "/profile",
                   }),
-                }
+                },
               );
 
               if (!response.ok) {
                 throw new Error(
-                  `Better Auth verification failed: ${response.status}`
+                  `Better Auth verification failed: ${response.status}`,
                 );
               }
             },
@@ -71,9 +71,9 @@ export const EmailVerificationUseCaseLive = Layer.effect(
 
           return;
         }).pipe(
-          Effect.withSpan("EmailVerificationUseCase.resendVerificationEmail")
+          Effect.withSpan("EmailVerificationUseCase.resendVerificationEmail"),
         );
       },
     };
-  })
+  }),
 );

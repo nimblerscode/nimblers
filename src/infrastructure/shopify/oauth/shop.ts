@@ -1,9 +1,9 @@
 import { Effect, Layer, Schema as S } from "effect";
-import { ShopValidator } from "@/domain/global/shopify/oauth/service";
 import {
   InvalidShopDomainError,
   ShopDomain,
 } from "@/domain/global/shopify/oauth/models";
+import { ShopValidator } from "@/domain/global/shopify/oauth/service";
 
 export const ShopValidatorLive = Layer.effect(
   ShopValidator,
@@ -17,7 +17,7 @@ export const ShopValidatorLive = Layer.effect(
               new InvalidShopDomainError({
                 message: "Shop domain must end with .myshopify.com",
                 shop,
-              })
+              }),
             );
           }
 
@@ -28,12 +28,12 @@ export const ShopValidatorLive = Layer.effect(
                 new InvalidShopDomainError({
                   message: "Invalid shop domain format",
                   shop,
-                })
-            )
+                }),
+            ),
           );
 
           return validatedShop;
         }).pipe(Effect.withSpan("ShopValidator.validateShopDomain")),
     };
-  })
+  }),
 );

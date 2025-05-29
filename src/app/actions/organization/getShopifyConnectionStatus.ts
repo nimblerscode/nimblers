@@ -9,7 +9,7 @@ export interface ShopifyConnectionStatus {
 
 export async function getShopifyConnectionStatus(
   organizationSlug: string,
-  shopDomain?: string
+  shopDomain?: string,
 ): Promise<ShopifyConnectionStatus> {
   // Simplified approach - just return basic status without DO calls
   // This prevents the excessive requests issue while we implement database-based tracking

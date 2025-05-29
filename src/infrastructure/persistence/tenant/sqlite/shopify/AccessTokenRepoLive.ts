@@ -1,17 +1,17 @@
 import { Effect, Layer } from "effect";
-import { AccessTokenService } from "@/domain/global/shopify/oauth/service";
 import {
-  AccessTokenError,
-  OAuthError,
-  type ShopDomain,
   type AccessToken,
+  AccessTokenError,
+  type AccessTokenResponse,
   type AuthorizationCode,
   type ClientId,
   type ClientSecret,
-  type Scope,
-  type AccessTokenResponse,
+  OAuthError,
   type OnlineAccessTokenResponse,
+  type Scope,
+  type ShopDomain,
 } from "@/domain/global/shopify/oauth/models";
+import { AccessTokenService } from "@/domain/global/shopify/oauth/service";
 import { DrizzleShopifyOAuthClient } from "./drizzle";
 import { makeShopifyOAuthDrizzleAdapter } from "./ShopifyOAuthDrizzleAdapter";
 
@@ -26,7 +26,7 @@ export const AccessTokenRepoLive = Layer.effect(
         shop: ShopDomain,
         code: AuthorizationCode,
         clientId: ClientId,
-        clientSecret: ClientSecret
+        clientSecret: ClientSecret,
       ) =>
         Effect.gen(function* () {
           const tokenUrl = `https://${shop}/admin/oauth/access_token`;
@@ -55,7 +55,7 @@ export const AccessTokenRepoLive = Layer.effect(
             return yield* Effect.fail(
               new AccessTokenError({
                 message: `Token exchange failed with status ${response.status}`,
-              })
+              }),
             );
           }
 
@@ -111,5 +111,5 @@ export const AccessTokenRepoLive = Layer.effect(
           return Boolean(deleted);
         }),
     };
-  })
+  }),
 );

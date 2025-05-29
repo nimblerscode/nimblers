@@ -124,11 +124,7 @@ export const Banner: React.FC<BannerProps> = ({
   };
 
   const currentIcon =
-    icon === true
-      ? defaultIcons[variant as BannerVariant]
-      : icon
-        ? icon
-        : null;
+    icon === true ? defaultIcons[variant as BannerVariant] : icon ? icon : null;
 
   return (
     <styled.div

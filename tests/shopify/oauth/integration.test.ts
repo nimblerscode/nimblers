@@ -1,4 +1,4 @@
-import { describe, it, expect } from "@effect/vitest";
+import { describe, expect, it } from "@effect/vitest";
 
 describe("Shopify OAuth Integration Tests", () => {
   const testEnv = {
@@ -14,13 +14,13 @@ describe("Shopify OAuth Integration Tests", () => {
       encoder.encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     );
 
     const signature = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode(data)
+      encoder.encode(data),
     );
     return Array.from(new Uint8Array(signature))
       .map((b) => b.toString(16).padStart(2, "0"))
@@ -51,7 +51,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const installQueryString = buildQueryString(installParams);
       const installHmac = await createHmac(
         installQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       const installUrl = new URL("https://example.com/oauth/install");
@@ -79,7 +79,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const callbackQueryString = buildQueryString(callbackParams);
       const callbackHmac = await createHmac(
         callbackQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       const callbackUrl = new URL("https://example.com/oauth/callback");
@@ -98,7 +98,7 @@ describe("Shopify OAuth Integration Tests", () => {
       // Step 3: Verify HMAC validation would work
       const recreatedHmac = await createHmac(
         callbackQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
       expect(recreatedHmac).toBe(callbackHmac);
     });
@@ -116,7 +116,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const installQueryString = buildQueryString(installParams);
       const installHmac = await createHmac(
         installQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       const installUrl = new URL("https://example.com/oauth/install");
@@ -173,7 +173,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const originalQueryString = buildQueryString(originalParams);
       const validHmac = await createHmac(
         originalQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       // Tamper with the shop parameter after HMAC generation
@@ -185,7 +185,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const tamperedQueryString = buildQueryString(tamperedParams);
       const tamperedHmac = await createHmac(
         tamperedQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       // The HMACs should be different
@@ -194,7 +194,7 @@ describe("Shopify OAuth Integration Tests", () => {
       // Using the original HMAC with tampered data should fail validation
       const recreatedHmac = await createHmac(
         tamperedQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
       expect(recreatedHmac).not.toBe(validHmac);
     });
@@ -213,7 +213,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const originalQueryString = buildQueryString(originalParams);
       const validHmac = await createHmac(
         originalQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       // Tamper with the code parameter
@@ -227,7 +227,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const tamperedQueryString = buildQueryString(tamperedParams);
       const tamperedHmac = await createHmac(
         tamperedQueryString,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       expect(tamperedHmac).not.toBe(validHmac);
@@ -245,7 +245,7 @@ describe("Shopify OAuth Integration Tests", () => {
         undefined,
       ];
 
-      const shopDomainRegex = /^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$/;
+      const shopDomainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 
       invalidShops.forEach((shop) => {
         if (shop === null || shop === undefined) {
@@ -273,7 +273,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const queryString1 = buildQueryString(callbackParams1);
       const hmac1 = await createHmac(
         queryString1,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       // Second callback attempting to reuse the same nonce
@@ -287,7 +287,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const queryString2 = buildQueryString(callbackParams2);
       const hmac2 = await createHmac(
         queryString2,
-        testEnv.SHOPIFY_CLIENT_SECRET
+        testEnv.SHOPIFY_CLIENT_SECRET,
       );
 
       // Both requests have valid HMACs but use the same nonce
@@ -316,12 +316,12 @@ describe("Shopify OAuth Integration Tests", () => {
         try {
           const hmac = await createHmac(
             queryString,
-            testEnv.SHOPIFY_CLIENT_SECRET
+            testEnv.SHOPIFY_CLIENT_SECRET,
           );
           expect(hmac).toBeTruthy(); // HMAC generation succeeds
 
           // But shop validation should fail
-          const shopRegex = /^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$/;
+          const shopRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
           expect(shopRegex.test(shop)).toBe(false);
         } catch (error) {
           // Some shops might cause HMAC generation to fail
@@ -343,7 +343,7 @@ describe("Shopify OAuth Integration Tests", () => {
           const queryString = buildQueryString(params);
           const hmac = await createHmac(
             queryString,
-            testEnv.SHOPIFY_CLIENT_SECRET
+            testEnv.SHOPIFY_CLIENT_SECRET,
           );
 
           // HMAC generation might succeed, but validation should fail
@@ -384,7 +384,7 @@ describe("Shopify OAuth Integration Tests", () => {
       const numberOfFlows = 5;
       const shops = Array.from(
         { length: numberOfFlows },
-        (_, i) => `concurrent-test-${i}.myshopify.com`
+        (_, i) => `concurrent-test-${i}.myshopify.com`,
       );
 
       const promises = shops.map(async (shop) => {
@@ -398,7 +398,7 @@ describe("Shopify OAuth Integration Tests", () => {
         const queryString = buildQueryString(params);
         const hmac = await createHmac(
           queryString,
-          testEnv.SHOPIFY_CLIENT_SECRET
+          testEnv.SHOPIFY_CLIENT_SECRET,
         );
 
         return {
@@ -441,7 +441,7 @@ describe("Shopify OAuth Integration Tests", () => {
 
           const queryString = buildQueryString(params);
           return await createHmac(queryString, testEnv.SHOPIFY_CLIENT_SECRET);
-        }
+        },
       );
 
       const results = await Promise.all(promises);
@@ -505,13 +505,13 @@ describe("Shopify OAuth Integration Tests", () => {
         const queryString = buildQueryString(params);
         const hmac = await createHmac(
           queryString,
-          testEnv.SHOPIFY_CLIENT_SECRET
+          testEnv.SHOPIFY_CLIENT_SECRET,
         );
 
         expect(hmac).toBeTruthy();
 
         // Verify shop format
-        const shopRegex = /^[a-zA-Z0-9][a-zA-Z0-9\-]*\.myshopify\.com$/;
+        const shopRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
         expect(shopRegex.test(shop)).toBe(true);
       }
     });

@@ -1,19 +1,19 @@
 import {
-  drizzle,
   type DrizzleSqliteDODatabase,
+  drizzle,
 } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import { Context, Effect, Layer } from "effect";
 import { DurableObjectState } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
-import * as schema from "./schema";
 // @ts-ignore
 import migrations from "../../../../../../drizzle/shopify/migrations.js";
+import * as schema from "./schema";
 
 export { schema };
 
 // Drizzle client for Shopify OAuth Durable Object
 export class DrizzleShopifyOAuthClient extends Context.Tag(
-  "@infrastructure/persistence/shopify/DrizzleClient"
+  "@infrastructure/persistence/shopify/DrizzleClient",
 )<
   DrizzleShopifyOAuthClient,
   {
@@ -50,5 +50,5 @@ export const DrizzleShopifyOAuthClientLive = Layer.scoped(
           });
         }),
     };
-  })
+  }),
 );

@@ -16,20 +16,20 @@ export class MemberRepo extends Context.Tag("core/member/MemberRepo")<
     createMember: (data: NewMember) => Effect.Effect<Member, MemberDbError>;
 
     // // Find membership by userId and organizationId
-    findMembership: (
+    readonly findMembership: (
       email: Email,
     ) => Effect.Effect<
       Option.Option<Member>,
       MemberNotFoundError | MemberDbError
     >;
 
-    getMembers: Effect.Effect<Member[], MemberDbError>;
+    readonly getMembers: Effect.Effect<Member[], MemberDbError>;
   }
 >() {}
 
 export class MemberDOService extends Context.Tag("core/member/MemberDOService")<
   MemberDOService,
   {
-    get: (slug: string) => Effect.Effect<Member[], MemberDOError>;
+    readonly get: (slug: string) => Effect.Effect<Member[], MemberDOError>;
   }
 >() {}

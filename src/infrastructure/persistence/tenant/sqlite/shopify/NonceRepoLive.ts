@@ -1,10 +1,10 @@
 import { Effect, Layer } from "effect";
-import { NonceManager } from "@/domain/global/shopify/oauth/service";
 import {
   InvalidNonceError,
-  OAuthError,
   type Nonce,
+  OAuthError,
 } from "@/domain/global/shopify/oauth/models";
+import { NonceManager } from "@/domain/global/shopify/oauth/service";
 import { DrizzleShopifyOAuthClient } from "./drizzle";
 import { makeShopifyOAuthDrizzleAdapter } from "./ShopifyOAuthDrizzleAdapter";
 
@@ -57,5 +57,5 @@ export const NonceRepoLive = Layer.effect(
           });
         }),
     };
-  })
+  }),
 );

@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { VStack, HStack } from "@/app/design-system/Layout";
-import { Button } from "@/app/design-system/Button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/app/design-system/Card";
-import { Text } from "@/app/design-system/Text";
-import { Banner } from "@/app/design-system/Banner";
-import { Icon } from "@/app/design-system/Icon";
-import { ShoppingCart, Check, ExternalLink } from "@/app/design-system/icons";
+import { useEffect, useState } from "react";
 import { TextField } from "@/app/design-system";
+import { Banner } from "@/app/design-system/Banner";
+import { Button } from "@/app/design-system/Button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/app/design-system/Card";
+import { Icon } from "@/app/design-system/Icon";
+import { Check, ExternalLink, ShoppingCart } from "@/app/design-system/icons";
+import { HStack, VStack } from "@/app/design-system/Layout";
+import { Text } from "@/app/design-system/Text";
 
 interface ShopifyConnectCardClientProps {
   organizationSlug: string;
@@ -19,7 +24,7 @@ interface ShopifyConnectCardClientProps {
     error?: string;
   } | null;
   oauthMessage?: {
-    type: 'success' | 'error';
+    type: "success" | "error";
     message: string;
   } | null;
   knownShopDomain?: string;
@@ -36,18 +41,19 @@ export function ShopifyConnectCardClient({
   shopifyClientId,
   initialConnectionStatus,
   oauthMessage: initialOauthMessage,
-  knownShopDomain
+  knownShopDomain,
 }: ShopifyConnectCardClientProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [shop, setShop] = useState("");
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(initialConnectionStatus || null);
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus | null>(initialConnectionStatus || null);
   const [oauthMessage, setOauthMessage] = useState(initialOauthMessage);
 
   // Check for URL parameters on mount (after OAuth redirect)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const connectedShop = urlParams.get('shop');
-    const wasConnected = urlParams.get('shopify_connected') === 'true';
+    const connectedShop = urlParams.get("shop");
+    const wasConnected = urlParams.get("shopify_connected") === "true";
 
     if (connectedShop) {
       setShop(connectedShop);
@@ -69,7 +75,7 @@ export function ShopifyConnectCardClient({
       statusUrl.searchParams.set("shop", shopDomain);
 
       const response = await fetch(statusUrl.toString());
-      const status = await response.json() as ConnectionStatus;
+      const status = (await response.json()) as ConnectionStatus;
       setConnectionStatus(status);
     } catch (error) {
       setConnectionStatus({
@@ -94,7 +100,9 @@ export function ShopifyConnectCardClient({
 
     try {
       // Normalize shop domain
-      const shopDomain = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
+      const shopDomain = shop.includes(".myshopify.com")
+        ? shop
+        : `${shop}.myshopify.com`;
 
       // Build Shopify authorization URL
       const clientId = shopifyClientId;
@@ -118,7 +126,9 @@ export function ShopifyConnectCardClient({
 
   const checkConnectionStatus = async () => {
     if (!shop.trim()) return;
-    const shopDomain = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
+    const shopDomain = shop.includes(".myshopify.com")
+      ? shop
+      : `${shop}.myshopify.com`;
     await checkConnectionStatusForShop(shopDomain);
   };
 
@@ -127,7 +137,10 @@ export function ShopifyConnectCardClient({
 
     if (confirm("Are you sure you want to disconnect from Shopify?")) {
       try {
-        const disconnectUrl = new URL("/shopify/disconnect", window.location.origin);
+        const disconnectUrl = new URL(
+          "/shopify/disconnect",
+          window.location.origin,
+        );
         disconnectUrl.searchParams.set("shop", connectionStatus.shop);
 
         await fetch(disconnectUrl.toString(), { method: "POST" });
@@ -151,8 +164,14 @@ export function ShopifyConnectCardClient({
         <VStack gap="4" alignItems="stretch">
           {/* OAuth Success/Error Messages */}
           {oauthMessage && (
-            <Banner variant={oauthMessage.type === 'success' ? 'success' : 'error'}>
-              <HStack gap="2" alignItems="center" justifyContent="space-between">
+            <Banner
+              variant={oauthMessage.type === "success" ? "success" : "error"}
+            >
+              <HStack
+                gap="2"
+                alignItems="center"
+                justifyContent="space-between"
+              >
                 <Text>{oauthMessage.message}</Text>
                 <Button
                   variant="ghost"
@@ -190,11 +209,7 @@ export function ShopifyConnectCardClient({
                   </HStack>
                 </Button>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onPress={handleDisconnect}
-                >
+                <Button variant="outline" size="sm" onPress={handleDisconnect}>
                   Disconnect
                 </Button>
               </HStack>
@@ -203,7 +218,10 @@ export function ShopifyConnectCardClient({
             // Not connected state
             <VStack gap="4" alignItems="stretch">
               <Banner variant="info">
-                <Text>Connect your Shopify store to sync products and manage inventory</Text>
+                <Text>
+                  Connect your Shopify store to sync products and manage
+                  inventory
+                </Text>
               </Banner>
 
               <VStack gap="3" alignItems="stretch">
@@ -212,7 +230,8 @@ export function ShopifyConnectCardClient({
                   value={shop}
                   onChange={(e) => setShop(e)}
                   inputProps={{
-                    placeholder: "Enter your Shopify store URL without the .myshopify.com",
+                    placeholder:
+                      "Enter your Shopify store URL without the .myshopify.com",
                   }}
                   description="Enter just the shop name, e.g., 'my-shop' for my-shop.myshopify.com"
                 />
@@ -220,7 +239,9 @@ export function ShopifyConnectCardClient({
                 <HStack gap="3" justifyContent="flex-end">
                   <Button
                     onPress={handleConnect}
-                    isDisabled={isConnecting || !shop.trim() || !shopifyClientId}
+                    isDisabled={
+                      isConnecting || !shop.trim() || !shopifyClientId
+                    }
                     size="sm"
                     variant="primary"
                   >
@@ -249,4 +270,4 @@ export function ShopifyConnectCardClient({
       </CardContent>
     </Card>
   );
-} 
+}

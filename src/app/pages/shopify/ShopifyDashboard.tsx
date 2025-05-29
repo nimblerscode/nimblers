@@ -19,7 +19,7 @@ export function ShopifyDashboard({ request }: RequestInfo) {
   const error = url.searchParams.get("error");
   const errorDetails = url.searchParams.get("details");
 
-  let connection: ShopifyConnection | undefined = undefined;
+  let connection: ShopifyConnection | undefined;
 
   if (error) {
     // Handle OAuth errors
@@ -41,4 +41,4 @@ export function ShopifyDashboard({ request }: RequestInfo) {
   }
 
   return <ShopifyWrapper connection={connection} />;
-} 
+}

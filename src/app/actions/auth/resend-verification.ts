@@ -6,7 +6,6 @@ import { requestInfo } from "rwsdk/worker";
 import { EmailVerificationLayerLive } from "@/config/layers";
 import {
   EmailAlreadyVerifiedError,
-  EmailVerificationError,
   EmailVerificationUseCase,
   UserNotAuthenticatedError,
 } from "@/domain/global/auth/service";
@@ -36,7 +35,7 @@ export async function resendVerificationEmail(): Promise<ResendVerificationState
         return yield* Effect.fail(
           new EmailAlreadyVerifiedError({
             email: appCtx.user.email,
-          })
+          }),
         );
       }
 
@@ -44,7 +43,7 @@ export async function resendVerificationEmail(): Promise<ResendVerificationState
       const emailVerificationService = yield* EmailVerificationUseCase;
 
       yield* emailVerificationService.resendVerificationEmail(
-        appCtx.user.email as Email
+        appCtx.user.email as Email,
       );
 
       return {
@@ -82,7 +81,7 @@ export async function resendVerificationEmail(): Promise<ResendVerificationState
         message: null,
         error: "Failed to send verification email. Please try again later.",
       });
-    })
+    }),
   );
 
   // Provide the email verification layer with database access

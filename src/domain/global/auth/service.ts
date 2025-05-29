@@ -8,12 +8,12 @@ import type { Account } from "./model";
 
 export class InvalidCredentialsError extends S.TaggedError<InvalidCredentialsError>()(
   "InvalidCredentialsError",
-  {}
+  {},
 ) {}
 
 export class AccountNotFoundError extends S.TaggedError<AccountNotFoundError>()(
   "AccountNotFoundError",
-  { userId: S.String, providerId: S.String }
+  { userId: S.String, providerId: S.String },
 ) {}
 
 // Placeholder for generic DB errors
@@ -27,23 +27,23 @@ export type AuthRepoError = UserNotFoundError | AccountNotFoundError | DbError;
 // Placeholder Error for high-level auth failures
 export class AuthServiceError extends S.TaggedError<AuthServiceError>()(
   "AuthServiceError",
-  { message: S.String, cause: S.optional(S.Unknown) }
+  { message: S.String, cause: S.optional(S.Unknown) },
 ) {}
 
 // Email verification specific errors
 export class EmailVerificationError extends S.TaggedError<EmailVerificationError>()(
   "EmailVerificationError",
-  { message: S.String, cause: S.optional(S.Unknown) }
+  { message: S.String, cause: S.optional(S.Unknown) },
 ) {}
 
 export class EmailAlreadyVerifiedError extends S.TaggedError<EmailAlreadyVerifiedError>()(
   "EmailAlreadyVerifiedError",
-  { email: S.String }
+  { email: S.String },
 ) {}
 
 export class UserNotAuthenticatedError extends S.TaggedError<UserNotAuthenticatedError>()(
   "UserNotAuthenticatedError",
-  {}
+  {},
 ) {}
 
 export type AuthSessionError =
@@ -73,12 +73,12 @@ export class AuthService extends Context.Tag("core/auth/AuthService")<
 
 // --- Email Verification Use Case ---
 export class EmailVerificationUseCase extends Context.Tag(
-  "@core/auth/EmailVerificationUseCase"
+  "@core/auth/EmailVerificationUseCase",
 )<
   EmailVerificationUseCase,
   {
     readonly resendVerificationEmail: (
-      userEmail: Email
+      userEmail: Email,
     ) => Effect.Effect<
       void,
       EmailVerificationError | EmailAlreadyVerifiedError

@@ -1,10 +1,10 @@
-import { route } from "rwsdk/router";
-import { Effect } from "effect";
 import { env } from "cloudflare:workers";
-import { ShopifyOAuthUseCase } from "@/domain/global/shopify/oauth/service";
+import { Effect } from "effect";
+import { route } from "rwsdk/router";
 import { ShopifyOAuthLayerLive } from "@/config/layers";
+import type { ShopDomain } from "@/domain/global/shopify/oauth/models";
+import { ShopifyOAuthUseCase } from "@/domain/global/shopify/oauth/service";
 import { ShopifyDashboard } from "./ShopifyDashboard";
-import { ShopDomain } from "@/domain/global/shopify/oauth/models";
 
 export const routes = [
   // Dashboard page
@@ -35,16 +35,16 @@ export const routes = [
               SHOPIFY_OAUTH_DO: env.SHOPIFY_OAUTH_DO as any,
               SHOPIFY_CLIENT_ID: env.SHOPIFY_CLIENT_ID,
               SHOPIFY_CLIENT_SECRET: env.SHOPIFY_CLIENT_SECRET,
-            })
+            }),
           ),
           Effect.catchAll((error) =>
             Effect.succeed({
               connected: false,
               error: "Failed to check status",
               details: String(error),
-            })
-          )
-        )
+            }),
+          ),
+        ),
       );
 
       return Response.json(result);
@@ -55,7 +55,7 @@ export const routes = [
           error: "Failed to check status",
           details: String(error),
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }),
@@ -72,7 +72,7 @@ export const routes = [
     if (!shop) {
       return Response.json(
         { error: "Shop parameter required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -89,23 +89,23 @@ export const routes = [
               SHOPIFY_OAUTH_DO: env.SHOPIFY_OAUTH_DO as any,
               SHOPIFY_CLIENT_ID: env.SHOPIFY_CLIENT_ID,
               SHOPIFY_CLIENT_SECRET: env.SHOPIFY_CLIENT_SECRET,
-            })
+            }),
           ),
           Effect.catchAll((error) =>
             Effect.succeed({
               success: false,
               error: "Failed to disconnect",
               details: String(error),
-            })
-          )
-        )
+            }),
+          ),
+        ),
       );
 
       return Response.json(result);
     } catch (error) {
       return Response.json(
         { error: "Failed to disconnect", details: String(error) },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }),
@@ -123,7 +123,7 @@ export const routes = [
       if (!shopDomain) {
         return Response.json(
           { error: "Missing shop domain in webhook headers" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -140,16 +140,16 @@ export const routes = [
               SHOPIFY_OAUTH_DO: env.SHOPIFY_OAUTH_DO as any,
               SHOPIFY_CLIENT_ID: env.SHOPIFY_CLIENT_ID,
               SHOPIFY_CLIENT_SECRET: env.SHOPIFY_CLIENT_SECRET,
-            })
+            }),
           ),
           Effect.catchAll((error) =>
             Effect.succeed({
               success: false,
               error: "Failed to process app uninstall webhook",
               details: String(error),
-            })
-          )
-        )
+            }),
+          ),
+        ),
       );
 
       return Response.json({
@@ -160,7 +160,7 @@ export const routes = [
     } catch (error) {
       return Response.json(
         { error: "Failed to process webhook", details: String(error) },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }),
@@ -180,7 +180,7 @@ export const routes = [
               SHOPIFY_OAUTH_DO: env.SHOPIFY_OAUTH_DO as any,
               SHOPIFY_CLIENT_ID: env.SHOPIFY_CLIENT_ID,
               SHOPIFY_CLIENT_SECRET: env.SHOPIFY_CLIENT_SECRET,
-            })
+            }),
           ),
           Effect.catchAll((error) => {
             return Effect.succeed(
@@ -189,16 +189,16 @@ export const routes = [
                   error: "Failed to process install request",
                   details: String(error),
                 },
-                { status: 500 }
-              )
+                { status: 500 },
+              ),
             );
-          })
-        )
+          }),
+        ),
       );
     } catch (error) {
       return Response.json(
         { error: "Failed to process install request", details: String(error) },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }),
@@ -236,7 +236,7 @@ export const routes = [
         // Redirect back to the organization dashboard
         const dashboardUrl = new URL(
           `/organization/${organizationSlug}`,
-          url.origin
+          url.origin,
         );
         dashboardUrl.searchParams.set("shopify_connected", "true");
         dashboardUrl.searchParams.set("shop", shop);
@@ -261,7 +261,7 @@ export const routes = [
               SHOPIFY_OAUTH_DO: env.SHOPIFY_OAUTH_DO as any,
               SHOPIFY_CLIENT_ID: env.SHOPIFY_CLIENT_ID,
               SHOPIFY_CLIENT_SECRET: env.SHOPIFY_CLIENT_SECRET,
-            })
+            }),
           ),
           Effect.catchAll((error) => {
             return Effect.succeed(
@@ -270,16 +270,16 @@ export const routes = [
                   error: "Failed to process callback",
                   details: String(error),
                 },
-                { status: 500 }
-              )
+                { status: 500 },
+              ),
             );
-          })
-        )
+          }),
+        ),
       );
     } catch (error) {
       return Response.json(
         { error: "Failed to process callback", details: String(error) },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }),

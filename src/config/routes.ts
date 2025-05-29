@@ -10,8 +10,8 @@ import { Layout as LoginLayout } from "@/app/pages/login/Layout";
 import { Layout as OrganizationCreateLayout } from "@/app/pages/organization/create/Layout"; // Import the new wrapper page
 import { Layout as OrganizationSlugLayout } from "@/app/pages/organization/slug/Layout";
 import { Layout as ProfileLayout } from "@/app/pages/profile/Layout";
-import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
 import { routes as shopifyOAuthRoutes } from "@/app/pages/shopify/routes";
+import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
 import {
   authResponse,
   optionalSessionHandler,
@@ -41,7 +41,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   try {
     const result = await acceptInvitationAction(
       requestInfo.request,
-      requestInfo
+      requestInfo,
     );
     return Response.json(result, { status: 200 });
   } catch (error) {
@@ -53,7 +53,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
             ? error.message
             : "Failed to accept invitation",
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 };

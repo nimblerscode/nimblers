@@ -1,26 +1,26 @@
-import { describe, it, expect } from "@effect/vitest";
+import { describe, expect, it } from "@effect/vitest";
 import { Schema as S } from "effect";
 import {
-  ShopDomain,
+  AccessToken,
+  AccessTokenError,
+  type AccessTokenResponse,
+  AccessTokenResponseSchema,
+  AuthorizationCode,
   ClientId,
   ClientSecret,
-  AuthorizationCode,
-  AccessToken,
-  Nonce,
-  Scope,
-  OAuthInstallRequestSchema,
-  OAuthCallbackRequestSchema,
-  AccessTokenResponseSchema,
-  OnlineAccessTokenResponseSchema,
-  InvalidShopDomainError,
   InvalidHmacError,
   InvalidNonceError,
-  OAuthError,
-  AccessTokenError,
-  type OAuthInstallRequest,
+  InvalidShopDomainError,
+  Nonce,
   type OAuthCallbackRequest,
-  type AccessTokenResponse,
+  OAuthCallbackRequestSchema,
+  OAuthError,
+  type OAuthInstallRequest,
+  OAuthInstallRequestSchema,
   type OnlineAccessTokenResponse,
+  OnlineAccessTokenResponseSchema,
+  Scope,
+  ShopDomain,
 } from "../../../src/domain/global/shopify/oauth/models";
 
 describe("Shopify OAuth Domain Models", () => {
@@ -140,7 +140,7 @@ describe("Shopify OAuth Domain Models", () => {
         };
 
         const result: OAuthInstallRequest = S.decodeSync(
-          OAuthInstallRequestSchema
+          OAuthInstallRequestSchema,
         )(validRequest);
         expect(result.shop).toBe(validRequest.shop);
         expect(result.timestamp).toBe(validRequest.timestamp);
@@ -156,7 +156,7 @@ describe("Shopify OAuth Domain Models", () => {
         };
 
         const result: OAuthInstallRequest = S.decodeSync(
-          OAuthInstallRequestSchema
+          OAuthInstallRequestSchema,
         )(validRequest);
         expect(result.embedded).toBeUndefined();
       });
@@ -169,7 +169,7 @@ describe("Shopify OAuth Domain Models", () => {
         };
 
         expect(() =>
-          S.decodeSync(OAuthInstallRequestSchema)(invalidRequest)
+          S.decodeSync(OAuthInstallRequestSchema)(invalidRequest),
         ).toThrow();
       });
 
@@ -182,7 +182,7 @@ describe("Shopify OAuth Domain Models", () => {
 
         incompleteRequests.forEach((request) => {
           expect(() =>
-            S.decodeSync(OAuthInstallRequestSchema)(request as any)
+            S.decodeSync(OAuthInstallRequestSchema)(request as any),
           ).toThrow();
         });
       });
@@ -199,7 +199,7 @@ describe("Shopify OAuth Domain Models", () => {
         };
 
         const result: OAuthCallbackRequest = S.decodeSync(
-          OAuthCallbackRequestSchema
+          OAuthCallbackRequestSchema,
         )(validRequest);
         expect(result.code).toBe(validRequest.code);
         expect(result.hmac).toBe(validRequest.hmac);
@@ -244,7 +244,7 @@ describe("Shopify OAuth Domain Models", () => {
 
         incompleteRequests.forEach((request) => {
           expect(() =>
-            S.decodeSync(OAuthCallbackRequestSchema)(request as any)
+            S.decodeSync(OAuthCallbackRequestSchema)(request as any),
           ).toThrow();
         });
       });
@@ -259,7 +259,7 @@ describe("Shopify OAuth Domain Models", () => {
         };
 
         expect(() =>
-          S.decodeSync(OAuthCallbackRequestSchema)(invalidRequest)
+          S.decodeSync(OAuthCallbackRequestSchema)(invalidRequest),
         ).toThrow();
       });
     });
@@ -274,7 +274,7 @@ describe("Shopify OAuth Domain Models", () => {
         };
 
         const result: AccessTokenResponse = S.decodeSync(
-          AccessTokenResponseSchema
+          AccessTokenResponseSchema,
         )(validResponse);
         expect(result.access_token).toBe(validResponse.access_token);
         expect(result.scope).toBe(validResponse.scope);
@@ -289,7 +289,7 @@ describe("Shopify OAuth Domain Models", () => {
 
         incompleteResponses.forEach((response) => {
           expect(() =>
-            S.decodeSync(AccessTokenResponseSchema)(response as any)
+            S.decodeSync(AccessTokenResponseSchema)(response as any),
           ).toThrow();
         });
       });
@@ -315,16 +315,16 @@ describe("Shopify OAuth Domain Models", () => {
         };
 
         const result: OnlineAccessTokenResponse = S.decodeSync(
-          OnlineAccessTokenResponseSchema
+          OnlineAccessTokenResponseSchema,
         )(validResponse);
         expect(result.access_token).toBe(validResponse.access_token);
         expect(result.scope).toBe(validResponse.scope);
         expect(result.expires_in).toBe(validResponse.expires_in);
         expect(result.associated_user.id).toBe(
-          validResponse.associated_user.id
+          validResponse.associated_user.id,
         );
         expect(result.associated_user.email).toBe(
-          validResponse.associated_user.email
+          validResponse.associated_user.email,
         );
       });
 
@@ -342,7 +342,7 @@ describe("Shopify OAuth Domain Models", () => {
         };
 
         expect(() =>
-          S.decodeSync(OnlineAccessTokenResponseSchema)(incompleteUser as any)
+          S.decodeSync(OnlineAccessTokenResponseSchema)(incompleteUser as any),
         ).toThrow();
       });
     });

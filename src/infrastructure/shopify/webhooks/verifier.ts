@@ -1,9 +1,9 @@
 import { Effect, Layer } from "effect";
-import { ShopifyWebhookVerifier } from "@/domain/global/shopify/webhooks/service";
 import {
   type ShopifyWebhookHeaders,
   WebhookVerificationError,
 } from "@/domain/global/shopify/webhooks/models";
+import { ShopifyWebhookVerifier } from "@/domain/global/shopify/webhooks/service";
 
 export const ShopifyWebhookVerifierLive = Layer.succeed(
   ShopifyWebhookVerifier,
@@ -11,7 +11,7 @@ export const ShopifyWebhookVerifierLive = Layer.succeed(
     verifyWebhook: (
       body: string,
       headers: ShopifyWebhookHeaders,
-      secret: string
+      secret: string,
     ) =>
       Effect.gen(function* () {
         const hmacHeader = headers["x-shopify-hmac-sha256"];
@@ -20,7 +20,7 @@ export const ShopifyWebhookVerifierLive = Layer.succeed(
           return yield* Effect.fail(
             new WebhookVerificationError({
               message: "Missing HMAC header",
-            })
+            }),
           );
         }
 
@@ -36,7 +36,7 @@ export const ShopifyWebhookVerifierLive = Layer.succeed(
               keyData,
               { name: "HMAC", hash: "SHA-256" },
               false,
-              ["sign"]
+              ["sign"],
             ),
           catch: (error) =>
             new WebhookVerificationError({
@@ -56,7 +56,7 @@ export const ShopifyWebhookVerifierLive = Layer.succeed(
 
         // Convert to base64 for comparison
         const calculatedHmac = btoa(
-          String.fromCharCode(...new Uint8Array(signature))
+          String.fromCharCode(...new Uint8Array(signature)),
         );
 
         // Compare with provided HMAC
@@ -67,11 +67,11 @@ export const ShopifyWebhookVerifierLive = Layer.succeed(
           return yield* Effect.fail(
             new WebhookVerificationError({
               message: "HMAC verification failed",
-            })
+            }),
           );
         }
 
         return true;
       }),
-  }
+  },
 );

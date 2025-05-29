@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { VStack } from "@/app/design-system/Layout";
+import { Banner } from "@/app/design-system/Banner";
 import { Button } from "@/app/design-system/Button";
 import { Card } from "@/app/design-system/Card";
+import { VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
-import { Banner } from "@/app/design-system/Banner";
 
 export function ShopifyConnectForm() {
   const [isConnecting, setIsConnecting] = useState(false);
@@ -21,8 +21,14 @@ export function ShopifyConnectForm() {
 
     try {
       // Create the install URL
-      const installUrl = new URL("/shopify/oauth/install", window.location.origin);
-      installUrl.searchParams.set("shop", shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`);
+      const installUrl = new URL(
+        "/shopify/oauth/install",
+        window.location.origin,
+      );
+      installUrl.searchParams.set(
+        "shop",
+        shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`,
+      );
 
       // Redirect to the install endpoint
       window.location.href = installUrl.toString();
@@ -56,7 +62,8 @@ export function ShopifyConnectForm() {
               }}
             />
             <Text>
-              Enter just the shop name, e.g., "my-shop" for my-shop.myshopify.com
+              Enter just the shop name, e.g., "my-shop" for
+              my-shop.myshopify.com
             </Text>
           </div>
 
@@ -71,4 +78,4 @@ export function ShopifyConnectForm() {
       </VStack>
     </Card>
   );
-} 
+}

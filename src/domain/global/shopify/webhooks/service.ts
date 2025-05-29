@@ -1,38 +1,38 @@
-import { Context, Effect } from "effect";
+import { Context, type Effect } from "effect";
 import type {
-  ShopifyWebhookHeaders,
   AppUninstalledWebhook,
+  ShopifyWebhookHeaders,
+  WebhookProcessingError,
   WebhookProcessingResult,
   WebhookVerificationError,
-  WebhookProcessingError,
 } from "./models";
 
 // Webhook verification service
 export abstract class ShopifyWebhookVerifier extends Context.Tag(
-  "@core/shopify/webhooks/Verifier"
+  "@core/shopify/webhooks/Verifier",
 )<
   ShopifyWebhookVerifier,
   {
     readonly verifyWebhook: (
       body: string,
       headers: ShopifyWebhookHeaders,
-      secret: string
+      secret: string,
     ) => Effect.Effect<boolean, WebhookVerificationError>;
   }
 >() {}
 
 // Webhook processing use case
 export abstract class ShopifyWebhookUseCase extends Context.Tag(
-  "@core/shopify/webhooks/UseCase"
+  "@core/shopify/webhooks/UseCase",
 )<
   ShopifyWebhookUseCase,
   {
     readonly handleAppUninstalled: (
-      request: Request
+      request: Request,
     ) => Effect.Effect<WebhookProcessingResult, WebhookProcessingError>;
     readonly processAppUninstall: (
       shopDomain: string,
-      webhookData: AppUninstalledWebhook
+      webhookData: AppUninstalledWebhook,
     ) => Effect.Effect<WebhookProcessingResult, WebhookProcessingError>;
   }
 >() {}

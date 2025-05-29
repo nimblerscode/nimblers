@@ -1,26 +1,26 @@
-import { describe, it, expect } from "@effect/vitest";
+import { describe, expect, it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import {
-  ShopifyOAuthUseCase,
-  ShopifyOAuthHmacVerifier,
-  NonceManager,
-  AccessTokenService,
-  ShopValidator,
-  WebhookService,
-} from "../../../src/domain/global/shopify/oauth/service";
-import { EnvironmentConfigService } from "../../../src/domain/global/environment/service";
-import {
-  ShopifyOAuthUseCaseLive,
   ShopifyOAuthEnv,
+  ShopifyOAuthUseCaseLive,
 } from "../../../src/application/global/shopify/oauth/service";
+import { EnvironmentConfigService } from "../../../src/domain/global/environment/service";
 import type {
-  ShopDomain,
+  AccessToken,
   ClientId,
   ClientSecret,
   Nonce,
-  AccessToken,
   Scope,
+  ShopDomain,
 } from "../../../src/domain/global/shopify/oauth/models";
+import {
+  AccessTokenService,
+  NonceManager,
+  ShopifyOAuthHmacVerifier,
+  ShopifyOAuthUseCase,
+  ShopValidator,
+  WebhookService,
+} from "../../../src/domain/global/shopify/oauth/service";
 
 describe("Shopify OAuth Routes", () => {
   const testEnv = {
@@ -101,8 +101,8 @@ describe("Shopify OAuth Routes", () => {
       MockAccessTokenServiceEmpty,
       MockWebhookService,
       MockEnvironmentConfigService,
-      MockEnvLayer
-    )
+      MockEnvLayer,
+    ),
   );
 
   const BaseTestLayerWithValidToken = Layer.provide(
@@ -114,8 +114,8 @@ describe("Shopify OAuth Routes", () => {
       MockAccessTokenServiceValid,
       MockWebhookService,
       MockEnvironmentConfigService,
-      MockEnvLayer
-    )
+      MockEnvLayer,
+    ),
   );
 
   const BaseTestLayerWithEmptyToken = Layer.provide(
@@ -127,8 +127,8 @@ describe("Shopify OAuth Routes", () => {
       MockAccessTokenServiceEmpty,
       MockWebhookService,
       MockEnvironmentConfigService,
-      MockEnvLayer
-    )
+      MockEnvLayer,
+    ),
   );
 
   describe("OAuth Install Endpoint", () => {
@@ -146,9 +146,9 @@ describe("Shopify OAuth Routes", () => {
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toContain(
-          `https://${testShop}/admin/oauth/authorize`
+          `https://${testShop}/admin/oauth/authorize`,
         );
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
 
     it.scoped("should handle POST /oauth/install with form data", () =>
@@ -169,9 +169,9 @@ describe("Shopify OAuth Routes", () => {
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toContain(
-          `https://${testShop}/admin/oauth/authorize`
+          `https://${testShop}/admin/oauth/authorize`,
         );
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
 
     it.scoped("should return 400 for missing shop parameter", () =>
@@ -186,11 +186,11 @@ describe("Shopify OAuth Routes", () => {
         const request = new Request(url.toString(), { method: "GET" });
 
         const result = yield* Effect.either(
-          useCase.handleInstallRequest(request)
+          useCase.handleInstallRequest(request),
         );
 
         expect(result._tag).toBe("Left");
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
 
     it.scoped("should redirect to app if already connected", () =>
@@ -207,9 +207,9 @@ describe("Shopify OAuth Routes", () => {
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`
+          `https://${testShop}/admin/apps`,
         );
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
 
     it.scoped("should handle embedded app iframe escape", () =>
@@ -235,7 +235,7 @@ describe("Shopify OAuth Routes", () => {
 
         expect(html).toContain("app-bridge");
         expect(html).toContain(testEnv.SHOPIFY_CLIENT_ID);
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
   });
 
@@ -256,9 +256,9 @@ describe("Shopify OAuth Routes", () => {
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`
+          `https://${testShop}/admin/apps`,
         );
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
 
     it.scoped("should return 400 for missing callback parameters", () =>
@@ -275,7 +275,7 @@ describe("Shopify OAuth Routes", () => {
         const result = yield* Effect.either(useCase.handleCallback(request));
 
         expect(result._tag).toBe("Left");
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
 
     it.scoped("should handle POST callback requests", () =>
@@ -298,9 +298,9 @@ describe("Shopify OAuth Routes", () => {
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`
+          `https://${testShop}/admin/apps`,
         );
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
   });
 
@@ -314,7 +314,7 @@ describe("Shopify OAuth Routes", () => {
         expect(status.connected).toBe(true);
         expect(status.shop).toBe(testShop);
         expect(status.scope).toBeTruthy();
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
 
     it.scoped("should return disconnected status", () =>
@@ -326,7 +326,7 @@ describe("Shopify OAuth Routes", () => {
         expect(status.connected).toBe(false);
         expect(status.shop).toBe(testShop);
         expect(status.scope).toBeUndefined();
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
 
     it.scoped("should handle GET /status with shop parameter", () =>
@@ -342,7 +342,7 @@ describe("Shopify OAuth Routes", () => {
 
         const status = yield* useCase.checkConnectionStatus(shop);
         expect(status.shop).toBe(testShop);
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
   });
 
@@ -354,7 +354,7 @@ describe("Shopify OAuth Routes", () => {
         const result = yield* useCase.disconnect(testShop);
 
         expect(result.success).toBe(true);
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
 
     it.scoped("should handle POST /disconnect with shop parameter", () =>
@@ -370,7 +370,7 @@ describe("Shopify OAuth Routes", () => {
 
         const result = yield* useCase.disconnect(shop);
         expect(result.success).toBe(true);
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
   });
 
@@ -393,7 +393,7 @@ describe("Shopify OAuth Routes", () => {
         const postRequest = new Request(url.toString(), { method: "POST" });
         const postResponse = yield* useCase.handleInstallRequest(postRequest);
         expect([200, 302]).toContain(postResponse.status);
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
 
     it.scoped("should accept both GET and POST for callback", () =>
@@ -416,7 +416,7 @@ describe("Shopify OAuth Routes", () => {
         const postRequest = new Request(url.toString(), { method: "POST" });
         const postResponse = yield* useCase.handleCallback(postRequest);
         expect(postResponse.status).toBe(302);
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
     );
   });
 
@@ -440,7 +440,7 @@ describe("Shopify OAuth Routes", () => {
 
         const response = yield* useCase.handleInstallRequest(request);
         expect([200, 302]).toContain(response.status);
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
 
     it.scoped("should handle multipart/form-data", () =>
@@ -459,7 +459,7 @@ describe("Shopify OAuth Routes", () => {
 
         const response = yield* useCase.handleInstallRequest(request);
         expect([200, 302]).toContain(response.status);
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
   });
 
@@ -479,7 +479,7 @@ describe("Shopify OAuth Routes", () => {
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBeTruthy();
         expect(response.headers.get("Cache-Control")).toBe("no-cache");
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
 
     it.scoped("should set correct headers for HTML responses", () =>
@@ -498,7 +498,7 @@ describe("Shopify OAuth Routes", () => {
         expect(response.status).toBe(200);
         expect(response.headers.get("Content-Type")).toBe("text/html");
         expect(response.headers.get("X-Frame-Options")).toBe("ALLOWALL");
-      }).pipe(Effect.provide(BaseTestLayer))
+      }).pipe(Effect.provide(BaseTestLayer)),
     );
   });
 });

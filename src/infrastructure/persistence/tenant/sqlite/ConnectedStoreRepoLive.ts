@@ -1,14 +1,14 @@
-import { Layer, Effect } from "effect";
 import { eq } from "drizzle-orm";
+import { Effect, Layer } from "effect";
 import { v4 as uuidv4 } from "uuid";
-import { DrizzleDOClient } from "./drizzle";
-import { ConnectedStoreRepo } from "@/domain/tenant/organization/service";
 import {
   type ConnectedStore,
   type NewConnectedStore,
   type OrganizationId,
   OrgDbError,
 } from "@/domain/tenant/organization/model";
+import { ConnectedStoreRepo } from "@/domain/tenant/organization/service";
+import { DrizzleDOClient } from "./drizzle";
 import { connectedStore } from "./schema";
 
 // Helper function to convert DB row to domain model
@@ -62,7 +62,7 @@ export const ConnectedStoreRepoLive = Layer.effect(
 
           if (!result || result.length === 0) {
             return yield* Effect.fail(
-              new OrgDbError({ cause: "Insert returned no results" })
+              new OrgDbError({ cause: "Insert returned no results" }),
             );
           }
 
@@ -124,5 +124,5 @@ export const ConnectedStoreRepoLive = Layer.effect(
           });
         }),
     };
-  })
+  }),
 );

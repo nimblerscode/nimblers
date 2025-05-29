@@ -7,8 +7,8 @@ import { InvitationModal } from "./members/InvitationModal";
 import { MembersList } from "./members/MembersList";
 import { PendingInvitationsList } from "./members/PendingInvitationsList";
 import { Overview } from "./overview/Overview";
-import { Subscription } from "./overview/Subscription";
 import { ShopifyConnectCard } from "./overview/ShopifyConnectCard";
+import { Subscription } from "./overview/Subscription";
 
 export function OrganizationDashboard({
   user,
@@ -24,7 +24,7 @@ export function OrganizationDashboard({
   shopifyData: {
     clientId: string;
     oauthMessage: {
-      type: 'success' | 'error';
+      type: "success" | "error";
       message: string;
     } | null;
     connectedShop?: string | null;

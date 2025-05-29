@@ -1,7 +1,7 @@
 import { Layer } from "effect";
 import {
-  EnvironmentConfigService,
   type Environment,
+  EnvironmentConfigService,
 } from "@/domain/global/environment/service";
 
 // Type for Cloudflare Workers global environment
@@ -54,6 +54,13 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
     },
 
     getShopifyWebhookUrl: (path: string) => {
+      const env = getEnvironment();
+
+      // In development, return a special marker URL to indicate webhook registration should be skipped
+      if (env === "development") {
+        return "SKIP_WEBHOOK_REGISTRATION";
+      }
+
       const baseUrl = getBaseUrl();
       return `${baseUrl}${path}`;
     },
@@ -72,7 +79,7 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
       const baseUrl = getBaseUrl();
       return `${baseUrl}/${slug}`;
     },
-  }
+  },
 );
 
 // Helper function to get environment (duplicated for use in implementation)

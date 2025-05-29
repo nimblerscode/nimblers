@@ -1,5 +1,5 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // Nonces table for CSRF protection in OAuth flow
 export const nonces = sqliteTable("nonces", {
@@ -7,10 +7,10 @@ export const nonces = sqliteTable("nonces", {
   expiresAt: integer("expiresAt", { mode: "timestamp_ms" }).notNull(),
   consumed: integer("consumed", { mode: "boolean" }).default(false).notNull(),
   createdAt: integer("createdAt", { mode: "timestamp_ms" }).default(
-    sql`(unixepoch() * 1000)`
+    sql`(unixepoch() * 1000)`,
   ),
   updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).default(
-    sql`(unixepoch() * 1000)`
+    sql`(unixepoch() * 1000)`,
   ),
 });
 
@@ -24,10 +24,10 @@ export const accessTokens = sqliteTable("access_tokens", {
   associatedUserScope: text("associated_user_scope"), // For online tokens
   associatedUserId: text("associated_user_id"), // For online tokens
   createdAt: integer("createdAt", { mode: "timestamp_ms" }).default(
-    sql`(unixepoch() * 1000)`
+    sql`(unixepoch() * 1000)`,
   ),
   updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).default(
-    sql`(unixepoch() * 1000)`
+    sql`(unixepoch() * 1000)`,
   ),
 });
 

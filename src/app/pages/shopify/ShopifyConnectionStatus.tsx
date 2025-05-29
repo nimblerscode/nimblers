@@ -1,10 +1,10 @@
 "use client";
 
-import { VStack, HStack } from "@/app/design-system/Layout";
+import { Banner } from "@/app/design-system/Banner";
 import { Button } from "@/app/design-system/Button";
 import { Card } from "@/app/design-system/Card";
+import { HStack, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
-import { Banner } from "@/app/design-system/Banner";
 
 interface ShopifyConnection {
   connected: boolean;
@@ -18,7 +18,9 @@ interface ShopifyConnectionStatusProps {
   connection: ShopifyConnection;
 }
 
-export function ShopifyConnectionStatus({ connection }: ShopifyConnectionStatusProps) {
+export function ShopifyConnectionStatus({
+  connection,
+}: ShopifyConnectionStatusProps) {
   const handleDisconnect = async () => {
     try {
       const response = await fetch("/shopify/disconnect", {
@@ -43,20 +45,25 @@ export function ShopifyConnectionStatus({ connection }: ShopifyConnectionStatusP
         </Banner>
 
         <VStack gap="2">
-          <Text><strong>Shop:</strong> {connection.shop}</Text>
-          <Text><strong>Scope:</strong> {connection.scope}</Text>
-          <Text><strong>Connected:</strong> {connection.lastConnected}</Text>
+          <Text>
+            <strong>Shop:</strong> {connection.shop}
+          </Text>
+          <Text>
+            <strong>Scope:</strong> {connection.scope}
+          </Text>
+          <Text>
+            <strong>Connected:</strong> {connection.lastConnected}
+          </Text>
         </VStack>
 
         <HStack gap="3">
-          <Button
-            variant="secondary"
-            onClick={handleDisconnect}
-          >
+          <Button variant="secondary" onClick={handleDisconnect}>
             Disconnect
           </Button>
           <Button
-            onClick={() => window.open(`https://${connection.shop}/admin`, '_blank')}
+            onClick={() =>
+              window.open(`https://${connection.shop}/admin`, "_blank")
+            }
           >
             Open Shopify Admin
           </Button>
@@ -64,4 +71,4 @@ export function ShopifyConnectionStatus({ connection }: ShopifyConnectionStatusP
       </VStack>
     </Card>
   );
-} 
+}

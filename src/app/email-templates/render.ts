@@ -7,26 +7,26 @@ import {
 
 // Verification Email Renderers
 export async function renderVerificationEmailHTML(
-  props: VerificationEmailProps
+  props: VerificationEmailProps,
 ): Promise<string> {
   return await render(VerificationEmail(props));
 }
 
 export async function renderVerificationEmailText(
-  props: VerificationEmailProps
+  props: VerificationEmailProps,
 ): Promise<string> {
   return await render(VerificationEmail(props), { plainText: true });
 }
 
 // Invitation Email Renderers
 export async function renderInvitationEmailHTML(
-  props: InvitationEmailProps
+  props: InvitationEmailProps,
 ): Promise<string> {
   return await render(InvitationEmail(props));
 }
 
 export async function renderInvitationEmailText(
-  props: InvitationEmailProps
+  props: InvitationEmailProps,
 ): Promise<string> {
   return await render(InvitationEmail(props), { plainText: true });
 }

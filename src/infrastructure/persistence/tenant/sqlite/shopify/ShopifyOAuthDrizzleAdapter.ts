@@ -1,15 +1,15 @@
-import { eq, and, gt, lt, sql } from "drizzle-orm";
+import { and, eq, gt, lt, sql } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import type {
-  ShopDomain,
   AccessToken,
   Scope,
+  ShopDomain,
 } from "@/domain/global/shopify/oauth/models";
 import type { schema } from "./drizzle";
-import { nonces, accessTokens } from "./schema";
+import { accessTokens, nonces } from "./schema";
 
 export const makeShopifyOAuthDrizzleAdapter = (
-  db: DrizzleSqliteDODatabase<typeof schema>
+  db: DrizzleSqliteDODatabase<typeof schema>,
 ) => ({
   // Nonce operations
   storeNonce: async (nonce: string, expiresAt: Date) => {
@@ -37,8 +37,8 @@ export const makeShopifyOAuthDrizzleAdapter = (
         and(
           eq(nonces.nonce, nonce),
           eq(nonces.consumed, false),
-          gt(nonces.expiresAt, now)
-        )
+          gt(nonces.expiresAt, now),
+        ),
       );
 
     return results.length > 0;
@@ -55,8 +55,8 @@ export const makeShopifyOAuthDrizzleAdapter = (
         and(
           eq(nonces.nonce, nonce),
           eq(nonces.consumed, false),
-          gt(nonces.expiresAt, now)
-        )
+          gt(nonces.expiresAt, now),
+        ),
       )
       .returning();
 
@@ -82,7 +82,7 @@ export const makeShopifyOAuthDrizzleAdapter = (
       expiresIn?: number;
       associatedUserScope?: string;
       associatedUserId?: string;
-    }
+    },
   ) => {
     const tokenRecord = {
       shop,

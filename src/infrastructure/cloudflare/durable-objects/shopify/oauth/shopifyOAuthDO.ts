@@ -1,14 +1,14 @@
-import { getShopifyOAuthHandler } from "./api/handlers";
 import { Context, Effect, Layer } from "effect";
+import { DurableObjectState } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import {
   DrizzleShopifyOAuthClient,
   DrizzleShopifyOAuthClientLive,
 } from "@/infrastructure/persistence/tenant/sqlite/shopify/drizzle";
-import { DurableObjectState } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
+import { getShopifyOAuthHandler } from "./api/handlers";
 
 // Durable Object namespace binding
 export abstract class ShopifyOAuthDONamespace extends Context.Tag(
-  "@infrastructure/shopify/oauth/DONamespace"
+  "@infrastructure/shopify/oauth/DONamespace",
 )<ShopifyOAuthDONamespace, DurableObjectNamespace>() {}
 
 // Simple logging utility that can be easily replaced with a proper logger
@@ -52,19 +52,19 @@ export class ShopifyOAuthDurableObject {
       try {
         const coreMigrationEffect = Effect.flatMap(
           DrizzleShopifyOAuthClient,
-          (client) => client.migrate()
+          (client) => client.migrate(),
         );
         const durableObjectStorageLayer = Layer.succeed(
           DurableObjectState,
-          this.state
+          this.state,
         );
         const migrationSpecificProviderLayer = Layer.provide(
           DrizzleShopifyOAuthClientLive,
-          durableObjectStorageLayer
+          durableObjectStorageLayer,
         );
         const layeredMigrationEffect = Effect.provide(
           coreMigrationEffect,
-          migrationSpecificProviderLayer
+          migrationSpecificProviderLayer,
         );
         const fullyScopedEffect = Effect.scoped(layeredMigrationEffect);
         const effectToRun = fullyScopedEffect.pipe(
@@ -74,7 +74,7 @@ export class ShopifyOAuthDurableObject {
               doId: this.doId,
             });
             return Effect.die(e);
-          })
+          }),
         );
         await Effect.runPromise(effectToRun);
 
@@ -87,10 +87,10 @@ export class ShopifyOAuthDurableObject {
           {
             error: e instanceof Error ? e.message : String(e),
             doId: this.doId,
-          }
+          },
         );
         throw new Error(
-          `Failed to initialize ShopifyOAuth DO during blockConcurrencyWhile: ${e}`
+          `Failed to initialize ShopifyOAuth DO during blockConcurrencyWhile: ${e}`,
         );
       }
     });
@@ -149,7 +149,7 @@ export class ShopifyOAuthDurableObject {
             "Content-Type": "application/json",
             "X-Request-ID": this.doId,
           },
-        }
+        },
       );
     }
   }
@@ -167,7 +167,7 @@ export class ShopifyOAuthDurableObject {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       return new Response(
@@ -180,7 +180,7 @@ export class ShopifyOAuthDurableObject {
         {
           status: 503,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }
@@ -209,7 +209,7 @@ export class ShopifyOAuthDurableObject {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }
@@ -227,7 +227,7 @@ export class ShopifyOAuthDurableObject {
       // We could call a cleanup endpoint here, but for now we'll use direct SQL
       await this.state.storage.sql.exec(
         "DELETE FROM nonces WHERE expires_at < ?",
-        new Date().toISOString()
+        new Date().toISOString(),
       );
 
       // Set next cleanup in 1 hour

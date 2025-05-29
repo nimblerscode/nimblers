@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "@effect/vitest";
+import { describe, expect, it, vi } from "@effect/vitest";
 import { Effect } from "effect";
 import type { ShopDomain } from "../../../src/domain/global/shopify/oauth/models";
 
@@ -9,7 +9,7 @@ const createMockOAuthUseCase = (disconnectSuccess = true) => ({
     .mockImplementation(() =>
       disconnectSuccess
         ? Effect.succeed({ success: true })
-        : Effect.fail(new Error("Disconnect failed"))
+        : Effect.fail(new Error("Disconnect failed")),
     ),
   handleInstallRequest: vi.fn(),
   handleCallback: vi.fn(),
@@ -37,14 +37,14 @@ describe("Shopify Webhook Routes", () => {
                 success: false,
                 message: "Missing shop domain header",
               }),
-              { status: 400, headers: { "Content-Type": "application/json" } }
+              { status: 400, headers: { "Content-Type": "application/json" } },
             );
           }
 
           // Simulate calling the OAuth use case disconnect method
           try {
             const result = await Effect.runPromise(
-              mockOAuthUseCase.disconnect(shopDomain as ShopDomain)
+              mockOAuthUseCase.disconnect(shopDomain as ShopDomain),
             );
 
             return new Response(
@@ -53,7 +53,7 @@ describe("Shopify Webhook Routes", () => {
                 message: `App successfully uninstalled for shop: ${shopDomain}`,
                 shopDomain,
               }),
-              { status: 200, headers: { "Content-Type": "application/json" } }
+              { status: 200, headers: { "Content-Type": "application/json" } },
             );
           } catch (error) {
             return new Response(
@@ -62,7 +62,7 @@ describe("Shopify Webhook Routes", () => {
                 message: "Failed to process uninstall",
                 error: String(error),
               }),
-              { status: 500, headers: { "Content-Type": "application/json" } }
+              { status: 500, headers: { "Content-Type": "application/json" } },
             );
           }
         });
@@ -80,7 +80,7 @@ describe("Shopify Webhook Routes", () => {
             shop_domain: testShop,
             timestamp: new Date().toISOString(),
           }),
-        }
+        },
       );
 
       const response = await mockWebhookHandler(request);
@@ -109,7 +109,7 @@ describe("Shopify Webhook Routes", () => {
                 success: false,
                 message: "Missing shop domain header",
               }),
-              { status: 400, headers: { "Content-Type": "application/json" } }
+              { status: 400, headers: { "Content-Type": "application/json" } },
             );
           }
 
@@ -128,7 +128,7 @@ describe("Shopify Webhook Routes", () => {
             shop_domain: testShop,
             timestamp: new Date().toISOString(),
           }),
-        }
+        },
       );
 
       const response = await mockWebhookHandler(request);
@@ -156,13 +156,13 @@ describe("Shopify Webhook Routes", () => {
                 success: false,
                 message: "Missing shop domain header",
               }),
-              { status: 400, headers: { "Content-Type": "application/json" } }
+              { status: 400, headers: { "Content-Type": "application/json" } },
             );
           }
 
           try {
             await Effect.runPromise(
-              mockOAuthUseCase.disconnect(shopDomain as ShopDomain)
+              mockOAuthUseCase.disconnect(shopDomain as ShopDomain),
             );
 
             return new Response(
@@ -171,7 +171,7 @@ describe("Shopify Webhook Routes", () => {
                 message: `App successfully uninstalled for shop: ${shopDomain}`,
                 shopDomain,
               }),
-              { status: 200, headers: { "Content-Type": "application/json" } }
+              { status: 200, headers: { "Content-Type": "application/json" } },
             );
           } catch (error) {
             return new Response(
@@ -180,7 +180,7 @@ describe("Shopify Webhook Routes", () => {
                 message: "Failed to process uninstall",
                 error: String(error),
               }),
-              { status: 500, headers: { "Content-Type": "application/json" } }
+              { status: 500, headers: { "Content-Type": "application/json" } },
             );
           }
         });
@@ -197,7 +197,7 @@ describe("Shopify Webhook Routes", () => {
             shop_domain: testShop,
             timestamp: new Date().toISOString(),
           }),
-        }
+        },
       );
 
       const response = await mockWebhookHandler(request);
@@ -226,13 +226,13 @@ describe("Shopify Webhook Routes", () => {
                 success: false,
                 message: "Missing shop domain header",
               }),
-              { status: 400, headers: { "Content-Type": "application/json" } }
+              { status: 400, headers: { "Content-Type": "application/json" } },
             );
           }
 
           try {
             const result = await Effect.runPromise(
-              mockOAuthUseCase.disconnect(shopDomain as ShopDomain)
+              mockOAuthUseCase.disconnect(shopDomain as ShopDomain),
             );
 
             return new Response(
@@ -241,7 +241,7 @@ describe("Shopify Webhook Routes", () => {
                 message: `App successfully uninstalled for shop: ${shopDomain}`,
                 shopDomain,
               }),
-              { status: 200, headers: { "Content-Type": "application/json" } }
+              { status: 200, headers: { "Content-Type": "application/json" } },
             );
           } catch (error) {
             return new Response(
@@ -250,7 +250,7 @@ describe("Shopify Webhook Routes", () => {
                 message: "Failed to process uninstall",
                 error: String(error),
               }),
-              { status: 500, headers: { "Content-Type": "application/json" } }
+              { status: 500, headers: { "Content-Type": "application/json" } },
             );
           }
         });
@@ -267,7 +267,7 @@ describe("Shopify Webhook Routes", () => {
             shop_domain: alternativeShop,
             timestamp: new Date().toISOString(),
           }),
-        }
+        },
       );
 
       const response = await mockWebhookHandler(request);
@@ -303,7 +303,7 @@ describe("Shopify Webhook Routes", () => {
                 success: false,
                 message: "Missing shop domain",
               }),
-              { status: 400, headers: { "Content-Type": "application/json" } }
+              { status: 400, headers: { "Content-Type": "application/json" } },
             );
           }
 
@@ -326,7 +326,7 @@ describe("Shopify Webhook Routes", () => {
             shop_domain: testShop,
             timestamp: new Date().toISOString(),
           }),
-        }
+        },
       );
 
       const response = await mockWebhookHandler(request);

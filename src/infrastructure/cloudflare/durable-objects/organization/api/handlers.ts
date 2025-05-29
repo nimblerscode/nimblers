@@ -10,18 +10,8 @@ import {
 } from "@effect/platform";
 import { Effect, Layer, Schema } from "effect";
 import { InvitationLayerLive } from "@/config/layers";
-import { UserIdSchema } from "@/domain/global/user/model";
-import {
-  InvitationSchema,
-  NewInvitationSchema,
-} from "@/domain/tenant/invitations/models";
 import { InvitationUseCase } from "@/domain/tenant/invitations/service";
-import { MemberSchema } from "@/domain/tenant/member/model";
 import { MemberRepo } from "@/domain/tenant/member/service";
-import {
-  NewOrganizationSchema,
-  OrganizationSchema,
-} from "@/domain/tenant/organization/model";
 import { OrgService } from "@/domain/tenant/organization/service";
 import {
   DrizzleDOClientLive,
@@ -29,6 +19,7 @@ import {
 } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
 import { OrgRepoLive } from "@/infrastructure/persistence/tenant/sqlite/OrgRepoLive";
+import { OrganizationApiSchemas } from "./schemas";
 
 const idParam = HttpApiSchema.param("id", Schema.NumberFromString);
 
@@ -40,26 +31,21 @@ class Unauthorized extends Schema.TaggedError<Unauthorized>()(
 const _getOrganizations = HttpApiEndpoint.get(
   "getOrganizations",
   "/organizations",
-).addSuccess(Schema.Array(OrganizationSchema));
+).addSuccess(Schema.Array(OrganizationApiSchemas.getOrganization.response));
 
 const getOrganization = HttpApiEndpoint.get(
   "getOrganization",
 )`/organization/:organizationSlug`
-  .addSuccess(OrganizationSchema)
+  .addSuccess(OrganizationApiSchemas.getOrganization.response)
   .addError(HttpApiError.NotFound)
-  .setPath(Schema.Struct({ organizationSlug: Schema.String }));
+  .setPath(OrganizationApiSchemas.getOrganization.path);
 
 const createOrganization = HttpApiEndpoint.post(
   "createOrganization",
   "/organization",
 )
-  .setPayload(
-    Schema.Struct({
-      organization: NewOrganizationSchema,
-      userId: UserIdSchema,
-    }),
-  )
-  .addSuccess(OrganizationSchema);
+  .setPayload(OrganizationApiSchemas.createOrganization.request)
+  .addSuccess(OrganizationApiSchemas.createOrganization.response);
 
 const _deleteOrganization = HttpApiEndpoint.del(
   "deleteOrganization",
@@ -73,72 +59,41 @@ const _updateOrganization = HttpApiEndpoint.patch(
       name: Schema.String,
     }),
   )
-  .addSuccess(OrganizationSchema);
+  .addSuccess(OrganizationApiSchemas.getOrganization.response);
 
 const createInvitation = HttpApiEndpoint.post("createInvitation", "/invite")
-  .setPayload(
-    Schema.Struct({
-      newInvitation: NewInvitationSchema,
-    }),
-  )
-  .addSuccess(
-    Schema.Struct({
-      invitation: InvitationSchema,
-    }),
-  )
+  .setPayload(OrganizationApiSchemas.createInvitation.request)
+  .addSuccess(OrganizationApiSchemas.createInvitation.response)
   .addError(HttpApiError.BadRequest);
-// .addError(HttpApiError.InternalServerError);
 
-// Define a GET endpoint with a path parameter ":id"
 const getInvitation = HttpApiEndpoint.get(
   "getInvitation",
   "/invitations/:organizationSlug",
 )
-  .setPath(
-    Schema.Struct({
-      organizationSlug: Schema.String,
-    }),
-  )
-  .setUrlParams(
-    Schema.Struct({
-      token: Schema.String,
-    }),
-  )
-  .addSuccess(InvitationSchema)
+  .setPath(OrganizationApiSchemas.getInvitation.path)
+  .setUrlParams(OrganizationApiSchemas.getInvitation.urlParams)
+  .addSuccess(OrganizationApiSchemas.getInvitation.response)
   .addError(HttpApiError.NotFound);
 
 const acceptInvitation = HttpApiEndpoint.post(
   "acceptInvitation",
   "/invitations/:id/accept",
 )
-  .setPath(Schema.Struct({ id: Schema.String }))
-  .setPayload(
-    Schema.Struct({
-      token: Schema.String,
-      userId: UserIdSchema,
-    }),
-  )
-  .addSuccess(
-    Schema.Struct({
-      ok: Schema.Boolean,
-    }),
-  )
+  .setPath(OrganizationApiSchemas.acceptInvitation.path)
+  .setPayload(OrganizationApiSchemas.acceptInvitation.request)
+  .addSuccess(OrganizationApiSchemas.acceptInvitation.response)
   .addError(HttpApiError.NotFound);
 
 const getMembers = HttpApiEndpoint.get(
   "getMembers",
   "/members/:organizationSlug",
 )
-  .addSuccess(Schema.Array(MemberSchema))
+  .addSuccess(OrganizationApiSchemas.getMembers.response)
   .addError(HttpApiError.NotFound)
-  .setPath(
-    Schema.Struct({
-      organizationSlug: Schema.String,
-    }),
-  );
+  .setPath(OrganizationApiSchemas.getMembers.path);
 
 const getInvitations = HttpApiEndpoint.get("getInvitations", "/invitations")
-  .addSuccess(Schema.Array(InvitationSchema))
+  .addSuccess(OrganizationApiSchemas.getInvitations.response)
   .addError(HttpApiError.NotFound);
 
 // Group all user-related endpoints
@@ -157,6 +112,9 @@ const organizationsGroup = HttpApiGroup.make("organizations")
 
 // Combine the groups into one API
 const api = HttpApi.make("organizationApi").add(organizationsGroup);
+
+// Export the API definition for client generation (TypeOnce.dev pattern)
+export { api as organizationApi };
 
 const organizationsGroupLive = HttpApiBuilder.group(
   api,

@@ -1,9 +1,8 @@
 import type { Session, User } from "better-auth";
-import { defineApp } from "rwsdk/worker";
 import { Effect } from "effect";
-import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
-
+import { defineApp } from "rwsdk/worker";
 import { allRoutes } from "@/config/routes";
+import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
 import { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";
 
 export type AppContext = {
@@ -19,7 +18,7 @@ const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
     const getAllowedOrigins = Effect.gen(function* () {
       const envConfig = yield* Effect.provide(
         Effect.succeed({}),
-        EnvironmentConfigServiceLive
+        EnvironmentConfigServiceLive,
       );
 
       return [

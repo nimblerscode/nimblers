@@ -38,7 +38,7 @@ export function Wrapper({
   shopifyData: {
     clientId: string;
     oauthMessage: {
-      type: 'success' | 'error';
+      type: "success" | "error";
       message: string;
     } | null;
     connectedShop?: string | null;

@@ -3,9 +3,9 @@ import { Schema as S } from "effect";
 // === Branded Types ===
 export const ShopDomain = S.String.pipe(
   S.pattern(
-    /^[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9]\.myshopify\.com$|^[a-zA-Z0-9]\.myshopify\.com$/
+    /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]\.myshopify\.com$|^[a-zA-Z0-9]\.myshopify\.com$/,
   ),
-  S.brand("ShopDomain")
+  S.brand("ShopDomain"),
 );
 export type ShopDomain = S.Schema.Type<typeof ShopDomain>;
 
@@ -72,21 +72,21 @@ export class InvalidShopDomainError extends S.TaggedError<InvalidShopDomainError
   {
     message: S.String,
     shop: S.String,
-  }
+  },
 ) {}
 
 export class InvalidHmacError extends S.TaggedError<InvalidHmacError>()(
   "InvalidHmacError",
   {
     message: S.String,
-  }
+  },
 ) {}
 
 export class InvalidNonceError extends S.TaggedError<InvalidNonceError>()(
   "InvalidNonceError",
   {
     message: S.String,
-  }
+  },
 ) {}
 
 export class OAuthError extends S.TaggedError<OAuthError>()("OAuthError", {
@@ -99,7 +99,7 @@ export class AccessTokenError extends S.TaggedError<AccessTokenError>()(
   {
     message: S.String,
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}
 
 // === Type Exports ===

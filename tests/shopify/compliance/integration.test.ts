@@ -7,7 +7,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
   // Helper to create HMAC signature
   const createHmacSignature = async (
     payload: string,
-    secret: string
+    secret: string,
   ): Promise<string> => {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -15,19 +15,19 @@ describe("Shopify Compliance Webhooks Integration", () => {
       encoder.encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     );
     const signature = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode(payload)
+      encoder.encode(payload),
     );
     return btoa(String.fromCharCode(...new Uint8Array(signature)));
   };
 
   const createMockRequest = async (
     payload: object,
-    secret: string = testSecret
+    secret: string = testSecret,
   ): Promise<Request> => {
     const body = JSON.stringify(payload);
     const hmac = await createHmacSignature(body, secret);
@@ -58,7 +58,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
       const request = await createMockRequest(payload);
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(200);
@@ -80,7 +80,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
       const request = await createMockRequest(payload);
       const response = await handleShopifyComplianceWebhook(
         "customers-data-erasure",
-        request
+        request,
       );
 
       expect(response.status).toBe(200);
@@ -96,7 +96,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
       const request = await createMockRequest(payload);
       const response = await handleShopifyComplianceWebhook(
         "shop-data-erasure",
-        request
+        request,
       );
 
       expect(response.status).toBe(200);
@@ -116,12 +116,12 @@ describe("Shopify Compliance Webhooks Integration", () => {
       const request = await createMockRequest(payload, "wrong-secret");
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(401);
       expect(await response.text()).toBe(
-        "Unauthorized: Invalid HMAC signature"
+        "Unauthorized: Invalid HMAC signature",
       );
     });
 
@@ -140,12 +140,12 @@ describe("Shopify Compliance Webhooks Integration", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(401);
       expect(await response.text()).toBe(
-        "Unauthorized: Invalid HMAC signature"
+        "Unauthorized: Invalid HMAC signature",
       );
     });
   });
@@ -166,7 +166,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
 
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(400);
@@ -182,7 +182,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
       const request = await createMockRequest(invalidPayload);
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(400);
@@ -202,7 +202,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
       const request = await createMockRequest(invalidPayload);
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(400);
@@ -246,7 +246,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
         const request = await createMockRequest(payload);
         const response = await handleShopifyComplianceWebhook(
           webhookType,
-          request
+          request,
         );
 
         expect(response.status).toBe(200);
@@ -272,7 +272,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
       const request = await createMockRequest(largePayload);
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
       const endTime = Date.now();
 
@@ -296,8 +296,8 @@ describe("Shopify Compliance Webhooks Integration", () => {
 
       const responses = await Promise.all(
         requests.map((request) =>
-          handleShopifyComplianceWebhook("customers-data-request", request)
-        )
+          handleShopifyComplianceWebhook("customers-data-request", request),
+        ),
       );
 
       responses.forEach((response) => {
@@ -320,7 +320,7 @@ describe("Shopify Compliance Webhooks Integration", () => {
       const request = await createMockRequest(payload);
       const response = await handleShopifyComplianceWebhook(
         "customers-data-request",
-        request
+        request,
       );
 
       expect(response.status).toBe(200);

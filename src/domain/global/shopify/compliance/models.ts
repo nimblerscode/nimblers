@@ -31,8 +31,8 @@ export const CustomerDataRequestPayloadSchema = BaseWebhookPayloadSchema.pipe(
         email: S.String,
         phone: S.optional(S.String),
       }),
-    })
-  )
+    }),
+  ),
 );
 
 export interface CustomerDataRequestPayload
@@ -48,8 +48,8 @@ export const CustomerRedactPayloadSchema = BaseWebhookPayloadSchema.pipe(
         phone: S.optional(S.String),
       }),
       orders_to_redact: S.Array(S.Number),
-    })
-  )
+    }),
+  ),
 );
 
 export interface CustomerRedactPayload
@@ -67,14 +67,14 @@ export class ShopifyWebhookError extends S.TaggedError<ShopifyWebhookError>()(
   {
     message: S.String,
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}
 
 export class InvalidHmacError extends S.TaggedError<InvalidHmacError>()(
   "InvalidHmacError",
   {
     message: S.String,
-  }
+  },
 ) {}
 
 export class WebhookProcessingError extends S.TaggedError<WebhookProcessingError>()(
@@ -83,14 +83,14 @@ export class WebhookProcessingError extends S.TaggedError<WebhookProcessingError
     message: S.String,
     webhookType: S.String,
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}
 
 // === Webhook Types ===
 export const WebhookType = S.Literal(
   "customers-data-request",
   "customers-data-erasure",
-  "shop-data-erasure"
+  "shop-data-erasure",
 );
 
 export type WebhookType = S.Schema.Type<typeof WebhookType>;

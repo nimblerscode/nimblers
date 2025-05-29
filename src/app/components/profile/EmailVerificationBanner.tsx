@@ -40,11 +40,7 @@ export function EmailVerificationBanner({
   // Show success message if verification email was sent
   if (state?.success) {
     return (
-      <Banner
-        variant="success"
-        icon={true}
-        title="Verification Email Sent!"
-      >
+      <Banner variant="success" icon={true} title="Verification Email Sent!">
         {state.message}
       </Banner>
     );
@@ -92,7 +88,8 @@ export function EmailVerificationBanner({
         </HStack>
       }
     >
-      Please verify your email address ({userEmail}) to secure your account and receive important notifications.
+      Please verify your email address ({userEmail}) to secure your account and
+      receive important notifications.
     </Banner>
   );
 }

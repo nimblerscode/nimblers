@@ -5,7 +5,7 @@ interface ShopifyConnectCardProps {
   shopifyData: {
     clientId: string;
     oauthMessage: {
-      type: 'success' | 'error';
+      type: "success" | "error";
       message: string;
     } | null;
   };
@@ -16,7 +16,7 @@ interface ShopifyConnectCardProps {
 export function ShopifyConnectCard({
   organizationSlug,
   shopifyData,
-  shopDomain
+  shopDomain,
 }: ShopifyConnectCardProps) {
   // For now, we'll let the client component handle connection status checking
   // This prevents the async server component issues and excessive DO requests
@@ -30,4 +30,4 @@ export function ShopifyConnectCard({
       knownShopDomain={shopDomain}
     />
   );
-} 
+}

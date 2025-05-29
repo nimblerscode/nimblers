@@ -1,8 +1,9 @@
-import { Headers } from "@effect/platform";
+import { FetchHttpClient } from "@effect/platform";
 import { Effect, Layer } from "effect";
-import { type Member, MemberDOError } from "@/domain/tenant/member/model";
+import { MemberDOError } from "@/domain/tenant/member/model";
 import { MemberDOService } from "@/domain/tenant/member/service";
 import { OrganizationDONamespace } from "./OrganizationDONameSpace";
+import { createOrganizationDOClient } from "./organization/api/client";
 
 export const MembersDOServiceLive = Layer.effect(
   MemberDOService,
@@ -14,35 +15,31 @@ export const MembersDOServiceLive = Layer.effect(
         const doId = orgDONamespace.idFromName(slug);
         const stub = orgDONamespace.get(doId);
 
-        const response = yield* Effect.tryPromise({
-          try: async () => {
-            return stub.fetch(`http://internal/members/${slug}`, {
-              method: "GET",
-              headers: Headers.unsafeFromRecord({
-                "Content-Type": "application/json",
-              }),
-            });
-          },
-          catch: (error) => {
-            throw new MemberDOError({ cause: error });
-          },
-        });
+        // Create type-safe client using TypeOnce.dev pattern
+        const client = yield* createOrganizationDOClient(stub);
 
-        if (!response.ok) {
-          throw new MemberDOError({ cause: response });
-        }
+        // Use auto-generated method with perfect type safety!
+        // The client.organizations.getMembers method is automatically generated
+        // from the HttpApi definition in handlers.ts
+        const members = yield* client.organizations
+          .getMembers({
+            path: { organizationSlug: slug },
+          })
+          .pipe(
+            Effect.mapError((error) => {
+              // Map HTTP API errors to domain errors
+              return new MemberDOError({
+                cause: error,
+              });
+            }),
+          );
 
-        const members = yield* Effect.tryPromise({
-          try: async () => {
-            return response.json() as unknown as Member[];
-          },
-          catch: (error) => {
-            throw new MemberDOError({ cause: error });
-          },
-        });
-
-        return members;
-      });
+        // Convert readonly array to mutable array to match service interface
+        return [...members];
+      }).pipe(
+        // Provide the HttpClient layer needed by the client
+        Effect.provide(FetchHttpClient.layer),
+      );
     };
 
     return {

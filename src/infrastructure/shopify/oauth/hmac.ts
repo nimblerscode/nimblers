@@ -1,10 +1,10 @@
 import { Effect, Layer } from "effect";
-import { ShopifyOAuthHmacVerifier } from "@/domain/global/shopify/oauth/service";
-import {
-  type OAuthInstallRequest,
-  type OAuthCallbackRequest,
-  type ClientSecret,
+import type {
+  ClientSecret,
+  OAuthCallbackRequest,
+  OAuthInstallRequest,
 } from "@/domain/global/shopify/oauth/models";
+import { ShopifyOAuthHmacVerifier } from "@/domain/global/shopify/oauth/service";
 
 export const ShopifyOAuthHmacVerifierLive = Layer.effect(
   ShopifyOAuthHmacVerifier,
@@ -24,13 +24,13 @@ export const ShopifyOAuthHmacVerifierLive = Layer.effect(
               encoder.encode(secret),
               { name: "HMAC", hash: "SHA-256" },
               false,
-              ["sign"]
+              ["sign"],
             );
 
             const signature = await crypto.subtle.sign(
               "HMAC",
               key,
-              encoder.encode(data)
+              encoder.encode(data),
             );
 
             const hmacResult = Array.from(new Uint8Array(signature))
@@ -59,7 +59,7 @@ export const ShopifyOAuthHmacVerifierLive = Layer.effect(
     return {
       verifyInstallRequest: (
         request: OAuthInstallRequest,
-        secret: ClientSecret
+        secret: ClientSecret,
       ) =>
         Effect.gen(function* () {
           const { hmac, ...params } = request;
@@ -73,12 +73,12 @@ export const ShopifyOAuthHmacVerifierLive = Layer.effect(
 
           return hmac === expectedHmac;
         }).pipe(
-          Effect.withSpan("ShopifyOAuthHmacVerifier.verifyInstallRequest")
+          Effect.withSpan("ShopifyOAuthHmacVerifier.verifyInstallRequest"),
         ),
 
       verifyCallbackRequest: (
         request: OAuthCallbackRequest,
-        secret: ClientSecret
+        secret: ClientSecret,
       ) =>
         Effect.gen(function* () {
           const { hmac, ...params } = request;
@@ -92,8 +92,8 @@ export const ShopifyOAuthHmacVerifierLive = Layer.effect(
 
           return hmac === expectedHmac;
         }).pipe(
-          Effect.withSpan("ShopifyOAuthHmacVerifier.verifyCallbackRequest")
+          Effect.withSpan("ShopifyOAuthHmacVerifier.verifyCallbackRequest"),
         ),
     };
-  })
+  }),
 );

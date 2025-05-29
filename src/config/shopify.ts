@@ -12,6 +12,6 @@ export const ShopifyComplianceLayerLive = Layer.provide(
   Layer.mergeAll(
     ShopifyHmacVerifierLive,
     ComplianceDataRepoLive,
-    ComplianceLoggerLive
-  )
+    ComplianceLoggerLive,
+  ),
 );

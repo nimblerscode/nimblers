@@ -5,7 +5,7 @@ export type Environment = "development" | "staging" | "production";
 
 // Environment configuration interface
 export abstract class EnvironmentConfigService extends Context.Tag(
-  "@core/environment/ConfigService"
+  "@core/environment/ConfigService",
 )<
   EnvironmentConfigService,
   {
