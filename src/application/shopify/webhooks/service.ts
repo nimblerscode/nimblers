@@ -173,7 +173,7 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
           );
 
           // Process the app uninstall
-          const shopDomain = headers["x-shopify-shop-domain"];
+          const shopDomain = headers["X-Shopify-Shop-Domain"];
           return yield* processAppUninstall(shopDomain, appUninstallData);
         }).pipe(Effect.withSpan("ShopifyWebhookUseCase.handleAppUninstalled")),
 
