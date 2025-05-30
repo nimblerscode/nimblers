@@ -1,4 +1,5 @@
 import { Layer } from "effect";
+import { env } from "cloudflare:workers";
 import {
   type Environment,
   EnvironmentConfigService,
@@ -15,17 +16,14 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
   EnvironmentConfigService,
   {
     getEnvironment: (): Environment => {
-      // Determine environment from various sources
-      if (typeof process !== "undefined" && process.env.NODE_ENV) {
-        return process.env.NODE_ENV as Environment;
+      // Check Cloudflare Workers environment first
+      if (env.ENVIRONMENT) {
+        return env.ENVIRONMENT as Environment;
       }
 
-      // Check for Cloudflare Workers environment
-      if (typeof globalThis !== "undefined" && "caches" in globalThis) {
-        // In Cloudflare Workers, check for environment indicators
-        if (globalThis.ENVIRONMENT) {
-          return globalThis.ENVIRONMENT as Environment;
-        }
+      // Fallback to Node.js process env for local development
+      if (typeof process !== "undefined" && process.env.NODE_ENV) {
+        return process.env.NODE_ENV as Environment;
       }
 
       // Default to development
@@ -33,17 +31,27 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
     },
 
     getBaseUrl: () => {
-      const env = getEnvironment();
-      switch (env) {
+      const environment = getEnvironment();
+      switch (environment) {
         case "production":
           return "https://nimblers.com";
         case "staging":
           return "https://staging.nimblers.com";
         default:
-          // Check for dev tunnel URL or default to localhost
-          if (typeof globalThis !== "undefined" && globalThis.DEV_TUNNEL_URL) {
-            return globalThis.DEV_TUNNEL_URL;
+          // Check for dev tunnel URL from Cloudflare Workers env
+          if (env.DEV_TUNNEL_URL && !env.DEV_TUNNEL_URL.includes("localhost")) {
+            return env.DEV_TUNNEL_URL;
           }
+
+          // Fallback to process.env for local development
+          if (
+            typeof process !== "undefined" &&
+            process.env.DEV_TUNNEL_URL &&
+            process.env.DEV_TUNNEL_URL !== "REPLACE_WITH_YOUR_TUNNEL_URL"
+          ) {
+            return process.env.DEV_TUNNEL_URL;
+          }
+
           return "http://localhost:5173";
       }
     },
@@ -54,14 +62,18 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
     },
 
     getShopifyWebhookUrl: (path: string) => {
-      const env = getEnvironment();
+      const environment = getEnvironment();
+      const baseUrl = getBaseUrl();
 
-      // In development, return a special marker URL to indicate webhook registration should be skipped
-      if (env === "development") {
+      // In development, only skip webhook registration if we don't have a tunnel URL
+      if (
+        environment === "development" &&
+        baseUrl.startsWith("http://localhost")
+      ) {
         return "SKIP_WEBHOOK_REGISTRATION";
       }
 
-      const baseUrl = getBaseUrl();
+      // If we have a tunnel URL or are in staging/production, register webhooks
       return `${baseUrl}${path}`;
     },
 
@@ -79,36 +91,47 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
       const baseUrl = getBaseUrl();
       return `${baseUrl}/${slug}`;
     },
-  },
+  }
 );
 
-// Helper function to get environment (duplicated for use in implementation)
+// Helper function to get environment
 function getEnvironment(): Environment {
-  if (typeof process !== "undefined" && process.env.NODE_ENV) {
-    return process.env.NODE_ENV as Environment;
+  // Check Cloudflare Workers environment first
+  if (env.ENVIRONMENT) {
+    return env.ENVIRONMENT as Environment;
   }
 
-  if (typeof globalThis !== "undefined" && "caches" in globalThis) {
-    if (globalThis.ENVIRONMENT) {
-      return globalThis.ENVIRONMENT as Environment;
-    }
+  // Fallback to Node.js process env
+  if (typeof process !== "undefined" && process.env.NODE_ENV) {
+    return process.env.NODE_ENV as Environment;
   }
 
   return "development";
 }
 
-// Helper function to get base URL (duplicated for use in implementation)
+// Helper function to get base URL
 function getBaseUrl(): string {
-  const env = getEnvironment();
-  switch (env) {
+  const environment = getEnvironment();
+  switch (environment) {
     case "production":
       return "https://nimblers.com";
     case "staging":
       return "https://staging.nimblers.com";
     default:
-      if (typeof globalThis !== "undefined" && globalThis.DEV_TUNNEL_URL) {
-        return globalThis.DEV_TUNNEL_URL;
+      // Check for dev tunnel URL from Cloudflare Workers env
+      if (env.DEV_TUNNEL_URL && !env.DEV_TUNNEL_URL.includes("localhost")) {
+        return env.DEV_TUNNEL_URL;
       }
+
+      // Fallback to process.env for local development
+      if (
+        typeof process !== "undefined" &&
+        process.env.DEV_TUNNEL_URL &&
+        process.env.DEV_TUNNEL_URL !== "REPLACE_WITH_YOUR_TUNNEL_URL"
+      ) {
+        return process.env.DEV_TUNNEL_URL;
+      }
+
       return "http://localhost:5173";
   }
 }

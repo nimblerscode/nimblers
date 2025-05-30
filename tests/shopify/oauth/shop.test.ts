@@ -3,8 +3,8 @@ import { Effect } from "effect";
 import {
   InvalidShopDomainError,
   type ShopDomain,
-} from "../../../src/domain/global/shopify/oauth/models";
-import { ShopValidator } from "../../../src/domain/global/shopify/oauth/service";
+} from "../../../src/domain/shopify/oauth/models";
+import { ShopValidator } from "../../../src/domain/shopify/oauth/service";
 import { ShopValidatorLive } from "../../../src/infrastructure/shopify/oauth/shop";
 
 describe("Shopify Shop Validation", () => {
@@ -14,10 +14,10 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* shopValidator.validateShopDomain(
-          "test-shop.myshopify.com",
+          "test-shop.myshopify.com"
         );
         expect(result).toBe("test-shop.myshopify.com");
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should validate shop domain with numbers", () =>
@@ -25,10 +25,10 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* shopValidator.validateShopDomain(
-          "shop123.myshopify.com",
+          "shop123.myshopify.com"
         );
         expect(result).toBe("shop123.myshopify.com");
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should validate shop domain with hyphens", () =>
@@ -36,20 +36,21 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* shopValidator.validateShopDomain(
-          "my-test-shop.myshopify.com",
+          "my-test-shop.myshopify.com"
         );
         expect(result).toBe("my-test-shop.myshopify.com");
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should validate single character shop name", () =>
       Effect.gen(function* () {
         const shopValidator = yield* ShopValidator;
 
-        const result =
-          yield* shopValidator.validateShopDomain("a.myshopify.com");
+        const result = yield* shopValidator.validateShopDomain(
+          "a.myshopify.com"
+        );
         expect(result).toBe("a.myshopify.com");
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should validate shop domain starting with number", () =>
@@ -57,10 +58,10 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* shopValidator.validateShopDomain(
-          "123shop.myshopify.com",
+          "123shop.myshopify.com"
         );
         expect(result).toBe("123shop.myshopify.com");
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should validate long shop domain", () =>
@@ -71,7 +72,7 @@ describe("Shopify Shop Validation", () => {
           "a-very-long-shop-name-with-many-hyphens-and-characters.myshopify.com";
         const result = yield* shopValidator.validateShopDomain(longShop);
         expect(result).toBe(longShop);
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
   });
 
@@ -81,7 +82,7 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("test-shop.com"),
+          shopValidator.validateShopDomain("test-shop.com")
         );
 
         expect(result._tag).toBe("Left");
@@ -90,7 +91,7 @@ describe("Shopify Shop Validation", () => {
           expect(result.left.message).toContain("must end with .myshopify.com");
           expect(result.left.shop).toBe("test-shop.com");
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject plain myshopify.com", () =>
@@ -98,14 +99,14 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("myshopify.com"),
+          shopValidator.validateShopDomain("myshopify.com")
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject domain starting with dot", () =>
@@ -113,14 +114,14 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain(".myshopify.com"),
+          shopValidator.validateShopDomain(".myshopify.com")
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject domain starting with hyphen", () =>
@@ -128,14 +129,14 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("-test.myshopify.com"),
+          shopValidator.validateShopDomain("-test.myshopify.com")
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject domain with spaces", () =>
@@ -143,14 +144,14 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("test shop.myshopify.com"),
+          shopValidator.validateShopDomain("test shop.myshopify.com")
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject empty string", () =>
@@ -158,7 +159,7 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain(""),
+          shopValidator.validateShopDomain("")
         );
 
         expect(result._tag).toBe("Left");
@@ -166,7 +167,7 @@ describe("Shopify Shop Validation", () => {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
           expect(result.left.message).toContain("must end with .myshopify.com");
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject wrong TLD", () =>
@@ -174,7 +175,7 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("test-shop.myshopify.co"),
+          shopValidator.validateShopDomain("test-shop.myshopify.co")
         );
 
         expect(result._tag).toBe("Left");
@@ -182,7 +183,7 @@ describe("Shopify Shop Validation", () => {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
           expect(result.left.message).toContain("must end with .myshopify.com");
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject shopify.com (not myshopify.com)", () =>
@@ -190,7 +191,7 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("test-shop.shopify.com"),
+          shopValidator.validateShopDomain("test-shop.shopify.com")
         );
 
         expect(result._tag).toBe("Left");
@@ -198,7 +199,7 @@ describe("Shopify Shop Validation", () => {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
           expect(result.left.message).toContain("must end with .myshopify.com");
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject domain with protocol", () =>
@@ -206,14 +207,14 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("https://test-shop.myshopify.com"),
+          shopValidator.validateShopDomain("https://test-shop.myshopify.com")
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject domain with path", () =>
@@ -221,14 +222,14 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("test-shop.myshopify.com/admin"),
+          shopValidator.validateShopDomain("test-shop.myshopify.com/admin")
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should reject subdomain attack", () =>
@@ -236,7 +237,7 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("test-shop.myshopify.com.evil.com"),
+          shopValidator.validateShopDomain("test-shop.myshopify.com.evil.com")
         );
 
         expect(result._tag).toBe("Left");
@@ -244,7 +245,7 @@ describe("Shopify Shop Validation", () => {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
           expect(result.left.message).toContain("must end with .myshopify.com");
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
   });
 
@@ -262,7 +263,7 @@ describe("Shopify Shop Validation", () => {
 
         for (const domain of maliciousDomains) {
           const result = yield* Effect.either(
-            shopValidator.validateShopDomain(domain),
+            shopValidator.validateShopDomain(domain)
           );
 
           expect(result._tag).toBe("Left");
@@ -270,7 +271,7 @@ describe("Shopify Shop Validation", () => {
             expect(result.left).toBeInstanceOf(InvalidShopDomainError);
           }
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should handle special characters correctly", () =>
@@ -287,7 +288,7 @@ describe("Shopify Shop Validation", () => {
 
         for (const domain of invalidDomains) {
           const result = yield* Effect.either(
-            shopValidator.validateShopDomain(domain),
+            shopValidator.validateShopDomain(domain)
           );
 
           expect(result._tag).toBe("Left");
@@ -295,7 +296,7 @@ describe("Shopify Shop Validation", () => {
             expect(result.left).toBeInstanceOf(InvalidShopDomainError);
           }
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
   });
 
@@ -305,7 +306,7 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("tëst-shöp.myshopify.com"),
+          shopValidator.validateShopDomain("tëst-shöp.myshopify.com")
         );
 
         // Unicode characters should be rejected by the pattern
@@ -313,7 +314,7 @@ describe("Shopify Shop Validation", () => {
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should handle very long shop names", () =>
@@ -325,7 +326,7 @@ describe("Shopify Shop Validation", () => {
 
         const result = yield* shopValidator.validateShopDomain(longShopName);
         expect(result).toBe(longShopName);
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should handle case sensitivity", () =>
@@ -336,7 +337,7 @@ describe("Shopify Shop Validation", () => {
         const mixedCase = "Test-Shop.myshopify.com";
         const result = yield* shopValidator.validateShopDomain(mixedCase);
         expect(result).toBe(mixedCase);
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should handle domain with consecutive hyphens", () =>
@@ -344,10 +345,10 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* shopValidator.validateShopDomain(
-          "test--shop.myshopify.com",
+          "test--shop.myshopify.com"
         );
         expect(result).toBe("test--shop.myshopify.com");
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
   });
 
@@ -357,7 +358,7 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* shopValidator.validateShopDomain(
-          "test-shop.myshopify.com",
+          "test-shop.myshopify.com"
         );
 
         // This should be a branded ShopDomain type
@@ -366,7 +367,7 @@ describe("Shopify Shop Validation", () => {
 
         expect(shopDomain).toBe("test-shop.myshopify.com");
         expect(stringValue).toBe("test-shop.myshopify.com");
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
   });
 
@@ -376,17 +377,17 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("test-shop.com"),
+          shopValidator.validateShopDomain("test-shop.com")
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left.message).toBe(
-            "Shop domain must end with .myshopify.com",
+            "Shop domain must end with .myshopify.com"
           );
           expect(result.left.shop).toBe("test-shop.com");
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should provide descriptive error for invalid format", () =>
@@ -394,7 +395,7 @@ describe("Shopify Shop Validation", () => {
         const shopValidator = yield* ShopValidator;
 
         const result = yield* Effect.either(
-          shopValidator.validateShopDomain("invalid_shop.myshopify.com"),
+          shopValidator.validateShopDomain("invalid_shop.myshopify.com")
         );
 
         expect(result._tag).toBe("Left");
@@ -402,7 +403,7 @@ describe("Shopify Shop Validation", () => {
           expect(result.left.message).toBe("Invalid shop domain format");
           expect(result.left.shop).toBe("invalid_shop.myshopify.com");
         }
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
   });
 
@@ -420,7 +421,7 @@ describe("Shopify Shop Validation", () => {
         ];
 
         const validationTasks = domains.map((domain) =>
-          shopValidator.validateShopDomain(domain),
+          shopValidator.validateShopDomain(domain)
         );
 
         const results = yield* Effect.all(validationTasks, {
@@ -428,7 +429,7 @@ describe("Shopify Shop Validation", () => {
         });
 
         expect(results).toEqual(domains);
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
 
     it.scoped("should handle mixed valid and invalid domains", () =>
@@ -443,7 +444,7 @@ describe("Shopify Shop Validation", () => {
         ];
 
         const validationTasks = domains.map((domain) =>
-          Effect.either(shopValidator.validateShopDomain(domain)),
+          Effect.either(shopValidator.validateShopDomain(domain))
         );
 
         const results = yield* Effect.all(validationTasks, {
@@ -454,7 +455,7 @@ describe("Shopify Shop Validation", () => {
         expect(results[1]._tag).toBe("Left");
         expect(results[2]._tag).toBe("Right");
         expect(results[3]._tag).toBe("Left");
-      }).pipe(Effect.provide(ShopValidatorLive)),
+      }).pipe(Effect.provide(ShopValidatorLive))
     );
   });
 });

@@ -8,7 +8,10 @@ import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
 
 import { OrgD1Service } from "@/domain/global/organization/service";
 import type { UserId } from "@/domain/global/user/model";
-import type { NewOrganization } from "@/domain/tenant/organization/model";
+import type {
+  NewOrganization,
+  OrganizationId,
+} from "@/domain/tenant/organization/model";
 import { OrganizationDOService } from "@/domain/tenant/organization/service";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
@@ -45,7 +48,7 @@ export type SwitchOrganizationActionState = {
 // === CREATE ORGANIZATION ACTION ===
 export async function createOrganizationAction(
   _prevState: CreateOrganizationActionState, // previous state from useActionState
-  formData: FormData,
+  formData: FormData
 ): Promise<CreateOrganizationActionState> {
   const ctx = requestInfo.ctx as AppContext;
 
@@ -77,12 +80,11 @@ export async function createOrganizationAction(
   // Create the Effect program using the service
   const createOrgProgram = OrganizationDOService.pipe(
     Effect.flatMap((service) =>
-      service.createOrganization(orgCreatePayload, creatorId as UserId),
-    ),
+      service.createOrganization(orgCreatePayload, creatorId as UserId)
+    )
   );
 
   const finalLayer = OrganizationDOLive({ ORG_DO: env.ORG_DO });
-
   const runnableEffect = createOrgProgram.pipe(Effect.provide(finalLayer));
 
   // Run the Effect
@@ -94,17 +96,17 @@ export async function createOrganizationAction(
 
     // Create the effect to insert into main DB
     const orgRepoLayer = OrgRepoD1LayerLive.pipe(
-      Layer.provide(DatabaseLive({ DB: env.DB })),
+      Layer.provide(DatabaseLive({ DB: env.DB }))
     );
 
     const create = OrgD1Service.pipe(
       Effect.flatMap((service) =>
         service.create({
-          id: organization.id,
+          id: organization.slug as OrganizationId, // Use slug as ID for consistency
           slug: organization.slug,
           creatorId: creatorId as UserId,
-        }),
-      ),
+        })
+      )
     ).pipe(Effect.provide(orgRepoLayer));
 
     const result = await Effect.runPromiseExit(create);

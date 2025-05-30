@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
-import { InvalidHmacError } from "@/domain/global/shopify/compliance/models";
-import { ShopifyHmacVerifier } from "@/domain/global/shopify/compliance/service";
+import { InvalidHmacError } from "@/domain/shopify/compliance/models";
+import { ShopifyHmacVerifier } from "@/domain/shopify/compliance/service";
 
 export const ShopifyHmacVerifierLive = Layer.effect(
   ShopifyHmacVerifier,
@@ -12,7 +12,7 @@ export const ShopifyHmacVerifierLive = Layer.effect(
             return yield* Effect.fail(
               new InvalidHmacError({
                 message: "Request parameter is undefined",
-              }),
+              })
             );
           }
 
@@ -20,7 +20,7 @@ export const ShopifyHmacVerifierLive = Layer.effect(
             return yield* Effect.fail(
               new InvalidHmacError({
                 message: "Request headers are undefined",
-              }),
+              })
             );
           }
 
@@ -30,7 +30,7 @@ export const ShopifyHmacVerifierLive = Layer.effect(
             return yield* Effect.fail(
               new InvalidHmacError({
                 message: "Missing X-Shopify-Hmac-Sha256 header",
-              }),
+              })
             );
           }
 
@@ -53,7 +53,7 @@ export const ShopifyHmacVerifierLive = Layer.effect(
                 encoder.encode(secret),
                 { name: "HMAC", hash: "SHA-256" },
                 false,
-                ["sign"],
+                ["sign"]
               ),
             catch: (error) =>
               new InvalidHmacError({
@@ -70,12 +70,12 @@ export const ShopifyHmacVerifierLive = Layer.effect(
           });
 
           const expectedHmac = btoa(
-            String.fromCharCode(...new Uint8Array(signature)),
+            String.fromCharCode(...new Uint8Array(signature))
           );
 
           // Constant-time comparison
           return hmacHeader === expectedHmac;
         }).pipe(Effect.withSpan("ShopifyHmacVerifier.verify")),
     };
-  }),
+  })
 );

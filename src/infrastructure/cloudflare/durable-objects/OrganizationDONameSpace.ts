@@ -10,7 +10,7 @@ import { createOrganizationDOClient } from "./organization/api/client";
 
 // The DO namespace needed by the adapter
 export class OrganizationDONamespace extends Context.Tag(
-  "cloudflare/bindings/ORG_DO_NAMESPACE",
+  "cloudflare/bindings/ORG_DO_NAMESPACE"
 )<OrganizationDONamespace, typeof env.ORG_DO>() {}
 
 // Layer that provides the adapter
@@ -21,7 +21,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
 
     const createOrganizationDO = (
       organization: NewOrganization,
-      creatorId: UserId,
+      creatorId: UserId
     ) => {
       return Effect.gen(function* () {
         const doId = orgDONamespace.idFromName(organization.slug);
@@ -53,13 +53,13 @@ export const OrganizationDOAdapterLive = Layer.effect(
                 }`,
                 cause: error,
               });
-            }),
+            })
           );
 
         return org;
       }).pipe(
         // Provide the HttpClient layer needed by the client
-        Effect.provide(FetchHttpClient.layer),
+        Effect.provide(FetchHttpClient.layer)
       );
     };
 
@@ -84,13 +84,13 @@ export const OrganizationDOAdapterLive = Layer.effect(
               return new OrgDbError({
                 cause: error,
               });
-            }),
+            })
           );
 
         return org;
       }).pipe(
         // Provide the HttpClient layer needed by the client
-        Effect.provide(FetchHttpClient.layer),
+        Effect.provide(FetchHttpClient.layer)
       );
     };
 
@@ -98,7 +98,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
       createOrganization: createOrganizationDO,
       getOrganization: getOrganizationDO,
     };
-  }),
+  })
 );
 
 /**

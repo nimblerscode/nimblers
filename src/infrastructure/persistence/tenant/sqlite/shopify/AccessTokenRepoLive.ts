@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import {
   type AccessToken,
@@ -10,23 +11,22 @@ import {
   type OnlineAccessTokenResponse,
   type Scope,
   type ShopDomain,
-} from "@/domain/global/shopify/oauth/models";
-import { AccessTokenService } from "@/domain/global/shopify/oauth/service";
-import { DrizzleShopifyOAuthClient } from "./drizzle";
-import { makeShopifyOAuthDrizzleAdapter } from "./ShopifyOAuthDrizzleAdapter";
+} from "@/domain/shopify/oauth/models";
+import { AccessTokenService } from "@/domain/shopify/oauth/service";
+import { DrizzleDOClient } from "../drizzle";
+import { accessTokens } from "./schema";
 
 export const AccessTokenRepoLive = Layer.effect(
   AccessTokenService,
   Effect.gen(function* () {
-    const drizzleClient = yield* DrizzleShopifyOAuthClient;
-    const adapter = makeShopifyOAuthDrizzleAdapter(drizzleClient.db);
+    const drizzleClient = yield* DrizzleDOClient;
 
     return {
       exchangeCodeForToken: (
         shop: ShopDomain,
         code: AuthorizationCode,
         clientId: ClientId,
-        clientSecret: ClientSecret,
+        clientSecret: ClientSecret
       ) =>
         Effect.gen(function* () {
           const tokenUrl = `https://${shop}/admin/oauth/access_token`;
@@ -55,7 +55,7 @@ export const AccessTokenRepoLive = Layer.effect(
             return yield* Effect.fail(
               new AccessTokenError({
                 message: `Token exchange failed with status ${response.status}`,
-              }),
+              })
             );
           }
 
@@ -71,10 +71,31 @@ export const AccessTokenRepoLive = Layer.effect(
           return tokenData as AccessTokenResponse | OnlineAccessTokenResponse;
         }),
 
-      store: (shop: ShopDomain, token: AccessToken, scope: Scope) =>
+      store: (
+        organizationId: string,
+        shop: ShopDomain,
+        token: AccessToken,
+        scope: Scope
+      ) =>
         Effect.gen(function* () {
           yield* Effect.tryPromise({
-            try: () => adapter.storeAccessToken(shop, token, scope),
+            try: () =>
+              drizzleClient.db
+                .insert(accessTokens)
+                .values({
+                  shop,
+                  accessToken: token,
+                  scope,
+                  tokenType: "bearer",
+                })
+                .onConflictDoUpdate({
+                  target: accessTokens.shop,
+                  set: {
+                    accessToken: token,
+                    scope,
+                    updatedAt: new Date(),
+                  },
+                }),
             catch: (error) =>
               new OAuthError({
                 message: "Failed to store access token",
@@ -83,10 +104,15 @@ export const AccessTokenRepoLive = Layer.effect(
           });
         }),
 
-      retrieve: (shop: ShopDomain) =>
+      retrieve: (organizationId: string, shop: ShopDomain) =>
         Effect.gen(function* () {
-          const tokenRecord = yield* Effect.tryPromise({
-            try: () => adapter.retrieveAccessToken(shop),
+          const result = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .select()
+                .from(accessTokens)
+                .where(eq(accessTokens.shop, shop))
+                .limit(1),
             catch: (error) =>
               new OAuthError({
                 message: "Failed to retrieve access token",
@@ -94,13 +120,18 @@ export const AccessTokenRepoLive = Layer.effect(
               }),
           });
 
-          return (tokenRecord?.accessToken as AccessToken) || null;
+          return result.length > 0
+            ? (result[0].accessToken as AccessToken)
+            : null;
         }),
 
-      delete: (shop: ShopDomain) =>
+      delete: (organizationId: string, shop: ShopDomain) =>
         Effect.gen(function* () {
-          const deleted = yield* Effect.tryPromise({
-            try: () => adapter.deleteAccessToken(shop),
+          const result = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .delete(accessTokens)
+                .where(eq(accessTokens.shop, shop)),
             catch: (error) =>
               new OAuthError({
                 message: "Failed to delete access token",
@@ -108,8 +139,8 @@ export const AccessTokenRepoLive = Layer.effect(
               }),
           });
 
-          return Boolean(deleted);
+          return true; // Assume success for now
         }),
     };
-  }),
+  })
 );

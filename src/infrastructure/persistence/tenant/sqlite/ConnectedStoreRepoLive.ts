@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -62,7 +62,89 @@ export const ConnectedStoreRepoLive = Layer.effect(
 
           if (!result || result.length === 0) {
             return yield* Effect.fail(
-              new OrgDbError({ cause: "Insert returned no results" }),
+              new OrgDbError({ cause: "Insert returned no results" })
+            );
+          }
+
+          return mapDbStoreToDomain(result[0]);
+        }),
+
+      upsert: (store: NewConnectedStore) =>
+        Effect.gen(function* () {
+          // First check if a store with this org + shop already exists
+          const existing = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .select()
+                .from(connectedStore)
+                .where(
+                  and(
+                    eq(connectedStore.organizationId, store.organizationId),
+                    eq(connectedStore.shopDomain, store.shopDomain)
+                  )
+                )
+                .limit(1),
+            catch: (error) => new OrgDbError({ cause: error }),
+          });
+
+          if (existing.length > 0) {
+            // Update existing record
+            const existingStore = existing[0];
+            const updateData = {
+              scope: store.scope,
+              status: store.status,
+              lastSyncAt: new Date(),
+              metadata: store.metadata,
+            };
+
+            const result = yield* Effect.tryPromise({
+              try: () =>
+                drizzleClient.db
+                  .update(connectedStore)
+                  .set(updateData)
+                  .where(eq(connectedStore.id, existingStore.id))
+                  .returning(),
+              catch: (error) => new OrgDbError({ cause: error }),
+            });
+
+            if (!result || result.length === 0) {
+              return yield* Effect.fail(
+                new OrgDbError({ cause: "Update returned no results" })
+              );
+            }
+
+            return mapDbStoreToDomain(result[0]);
+          }
+
+          // Create new record
+          const id = uuidv4();
+          const now = new Date();
+
+          const insertData = {
+            id,
+            organizationId: store.organizationId,
+            type: store.type,
+            shopDomain: store.shopDomain,
+            scope: store.scope,
+            status: store.status,
+            connectedAt: store.connectedAt,
+            lastSyncAt: store.lastSyncAt || undefined,
+            metadata: store.metadata,
+            createdAt: now,
+          };
+
+          const result = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .insert(connectedStore)
+                .values(insertData)
+                .returning(),
+            catch: (error) => new OrgDbError({ cause: error }),
+          });
+
+          if (!result || result.length === 0) {
+            return yield* Effect.fail(
+              new OrgDbError({ cause: "Insert returned no results" })
             );
           }
 
@@ -98,6 +180,29 @@ export const ConnectedStoreRepoLive = Layer.effect(
           return results.length > 0 ? mapDbStoreToDomain(results[0]) : null;
         }),
 
+      getByOrganizationAndShop: (
+        organizationId: OrganizationId,
+        shopDomain: string
+      ) =>
+        Effect.gen(function* () {
+          const results = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .select()
+                .from(connectedStore)
+                .where(
+                  and(
+                    eq(connectedStore.organizationId, organizationId),
+                    eq(connectedStore.shopDomain, shopDomain)
+                  )
+                )
+                .limit(1),
+            catch: (error) => new OrgDbError({ cause: error }),
+          });
+
+          return results.length > 0 ? mapDbStoreToDomain(results[0]) : null;
+        }),
+
       updateStatus: (storeId: string, status: ConnectedStore["status"]) =>
         Effect.gen(function* () {
           yield* Effect.tryPromise({
@@ -124,5 +229,5 @@ export const ConnectedStoreRepoLive = Layer.effect(
           });
         }),
     };
-  }),
+  })
 );

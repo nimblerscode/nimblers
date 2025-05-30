@@ -3,7 +3,7 @@
 client_id = "f665ecacb8ebb0109bd7994468b79d14"
 name = "nimblers"
 handle = "nimblers"
-application_url = "https://nimblers.com/"
+application_url = "https://nimblers.co/"
 embedded = true
 
 [build]
@@ -13,6 +13,10 @@ include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-04"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "https://hostels-ross-isa-improved.trycloudflare.com/shopify/webhooks/app/uninstalled"
 
   [[webhooks.subscriptions]]
   uri = "/shopify/privacy/customers-data-erasure"
@@ -32,7 +36,7 @@ scopes = "customer_read_customers,customer_read_orders,customer_read_store_credi
 
 [auth]
 redirect_urls = [
-  "https://nimblers.com/shopify/oauth/callback,http://localhost:5173/shopify/oauth/callback"
+  "https://nimblers.co/shopify/oauth/callback,http://localhost:5173/shopify/oauth/callback"
 ]
 
 [pos]

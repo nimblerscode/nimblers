@@ -10,6 +10,7 @@ import { MemberDOService } from "@/domain/tenant/member/service";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
 import { UserRepoLive } from "@/infrastructure/persistence/global/d1/UserRepoAdapter";
+import type { UserId } from "@/domain/global/user/model";
 
 function checkIfOrgExists(organizationSlug: string) {
   const ctx = requestInfo.ctx as AppContext;
@@ -18,20 +19,20 @@ function checkIfOrgExists(organizationSlug: string) {
     throw new Error("User not authenticated");
   }
 
-  const userId = ctx.session.userId;
+  const userId = ctx.session.userId as UserId;
 
   const getOrgIdBySlugProgram = OrgD1Service.pipe(
     Effect.flatMap((service) =>
-      service.getOrgIdBySlug(organizationSlug, userId),
-    ),
+      service.getOrgIdBySlug(organizationSlug, userId)
+    )
   );
 
   const finalLayer = OrgRepoD1LayerLive.pipe(
-    Layer.provide(DatabaseLive({ DB: env.DB })),
+    Layer.provide(DatabaseLive({ DB: env.DB }))
   );
 
   const slug = Effect.runPromise(
-    getOrgIdBySlugProgram.pipe(Effect.provide(finalLayer)),
+    getOrgIdBySlugProgram.pipe(Effect.provide(finalLayer))
   );
 
   return slug;
@@ -41,15 +42,15 @@ async function getUsersFromMembers(members: Member[]) {
   const memberIds = members.map((member) => member.userId);
 
   const getUsersProgram = UserRepo.pipe(
-    Effect.flatMap((service) => service.getUsers(memberIds)),
+    Effect.flatMap((service) => service.getUsers(memberIds))
   );
 
   const finalLayer = UserRepoLive.pipe(
-    Layer.provide(DatabaseLive({ DB: env.DB })),
+    Layer.provide(DatabaseLive({ DB: env.DB }))
   );
 
   const users = await Effect.runPromise(
-    getUsersProgram.pipe(Effect.provide(finalLayer)),
+    getUsersProgram.pipe(Effect.provide(finalLayer))
   );
 
   return users;
@@ -69,7 +70,7 @@ export async function getMembers(organizationSlug: string) {
     Effect.flatMap((service) => service.get(slugResult)),
     Effect.catchAll((_e) => {
       return Effect.succeed([]);
-    }),
+    })
   );
 
   const finalLayer = MemberDOLive({ ORG_DO: env.ORG_DO });

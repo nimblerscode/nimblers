@@ -3,11 +3,11 @@ import { Effect } from "effect";
 import { defineApp } from "rwsdk/worker";
 import { allRoutes } from "@/config/routes";
 import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
-import { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";
 
 export type AppContext = {
-  session?: Session;
+  session?: Session & { activeOrganizationId: string };
   user?: User;
+  organizationId?: string;
 };
 
 const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
@@ -18,7 +18,7 @@ const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
     const getAllowedOrigins = Effect.gen(function* () {
       const envConfig = yield* Effect.provide(
         Effect.succeed({}),
-        EnvironmentConfigServiceLive,
+        EnvironmentConfigServiceLive
       );
 
       return [
@@ -77,5 +77,5 @@ export default defineApp([
 ]);
 
 // Re-export the Durable Object class for wrangler.jsonc
-export { OrganizationDurableObject };
+export { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";
 export { ShopifyOAuthDurableObject } from "./durable-objects/shopify/oauth/shopifyOAuthDO";

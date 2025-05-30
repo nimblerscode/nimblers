@@ -5,8 +5,8 @@ import type {
   ClientSecret,
   OAuthCallbackRequest,
   OAuthInstallRequest,
-} from "../../../src/domain/global/shopify/oauth/models";
-import { ShopifyOAuthHmacVerifier } from "../../../src/domain/global/shopify/oauth/service";
+} from "../../../src/domain/shopify/oauth/models";
+import { ShopifyOAuthHmacVerifier } from "../../../src/domain/shopify/oauth/service";
 import { ShopifyOAuthHmacVerifierLive } from "../../../src/infrastructure/shopify/oauth/hmac";
 
 describe("Shopify OAuth HMAC Verification", () => {
@@ -15,7 +15,7 @@ describe("Shopify OAuth HMAC Verification", () => {
   // Helper function to generate HMAC signature for testing
   const generateHmac = async (
     data: string,
-    secret: string,
+    secret: string
   ): Promise<string> => {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -23,13 +23,13 @@ describe("Shopify OAuth HMAC Verification", () => {
       encoder.encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"],
+      ["sign"]
     );
 
     const signature = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode(data),
+      encoder.encode(data)
     );
     return Array.from(new Uint8Array(signature))
       .map((b) => b.toString(16).padStart(2, "0"))
@@ -72,10 +72,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
           const result = yield* hmacVerifier.verifyInstallRequest(
             request,
-            testSecret,
+            testSecret
           );
           expect(result).toBe(true);
-        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     effectIt.scoped(
@@ -93,10 +93,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
           const result = yield* hmacVerifier.verifyInstallRequest(
             request,
-            testSecret,
+            testSecret
           );
           expect(result).toBe(false);
-        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     effectIt.scoped(
@@ -123,10 +123,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
           const result = yield* hmacVerifier.verifyInstallRequest(
             request,
-            testSecret,
+            testSecret
           );
           expect(result).toBe(true);
-        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     effectIt.scoped("should handle parameter ordering correctly", () =>
@@ -155,10 +155,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
         const result = yield* hmacVerifier.verifyInstallRequest(
           request,
-          testSecret,
+          testSecret
         );
         expect(result).toBe(true);
-      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
   });
 
@@ -189,10 +189,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
           const result = yield* hmacVerifier.verifyCallbackRequest(
             request,
-            testSecret,
+            testSecret
           );
           expect(result).toBe(true);
-        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     effectIt.scoped(
@@ -211,10 +211,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
           const result = yield* hmacVerifier.verifyCallbackRequest(
             request,
-            testSecret,
+            testSecret
           );
           expect(result).toBe(false);
-        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     effectIt.scoped(
@@ -243,10 +243,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
           const result = yield* hmacVerifier.verifyCallbackRequest(
             request,
-            testSecret,
+            testSecret
           );
           expect(result).toBe(true);
-        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+        }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
   });
 
@@ -264,10 +264,10 @@ describe("Shopify OAuth HMAC Verification", () => {
         // Even if most characters match, should return false
         const result = yield* hmacVerifier.verifyInstallRequest(
           request,
-          testSecret,
+          testSecret
         );
         expect(result).toBe(false);
-      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     effectIt.scoped("should handle empty HMAC", () =>
@@ -282,10 +282,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
         const result = yield* hmacVerifier.verifyInstallRequest(
           request,
-          testSecret,
+          testSecret
         );
         expect(result).toBe(false);
-      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     effectIt.scoped("should handle different case in HMAC", () =>
@@ -311,10 +311,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
         const result = yield* hmacVerifier.verifyInstallRequest(
           request,
-          testSecret,
+          testSecret
         );
         expect(result).toBe(false); // Should fail due to case difference
-      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
   });
 
@@ -333,10 +333,10 @@ describe("Shopify OAuth HMAC Verification", () => {
         // This should not throw, but return false
         const result = yield* hmacVerifier.verifyInstallRequest(
           request,
-          testSecret,
+          testSecret
         );
         expect(result).toBe(false);
-      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     it("should handle invalid secret format", async () => {
@@ -392,10 +392,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
         const result = yield* hmacVerifier.verifyCallbackRequest(
           request,
-          realSecret,
+          realSecret
         );
         expect(result).toBe(true);
-      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
 
     effectIt.scoped("should handle Unicode characters in shop names", () =>
@@ -420,10 +420,10 @@ describe("Shopify OAuth HMAC Verification", () => {
 
         const result = yield* hmacVerifier.verifyInstallRequest(
           request,
-          testSecret,
+          testSecret
         );
         expect(result).toBe(true);
-      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
   });
 
@@ -453,7 +453,7 @@ describe("Shopify OAuth HMAC Verification", () => {
 
             return yield* hmacVerifier.verifyInstallRequest(
               request,
-              testSecret,
+              testSecret
             );
           });
         });
@@ -467,7 +467,7 @@ describe("Shopify OAuth HMAC Verification", () => {
         results.forEach((result) => {
           expect(result).toBe(true);
         });
-      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive)),
+      }).pipe(Effect.provide(ShopifyOAuthHmacVerifierLive))
     );
   });
 });

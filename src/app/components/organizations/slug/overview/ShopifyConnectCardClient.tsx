@@ -36,6 +36,19 @@ interface ConnectionStatus {
   error?: string;
 }
 
+interface ConnectedStore {
+  id: string;
+  organizationId: string;
+  type: string;
+  shopDomain: string;
+  scope: string | null;
+  status: "active" | "disconnected" | "error";
+  connectedAt: string;
+  lastSyncAt: string | null;
+  metadata: string | null;
+  createdAt: string;
+}
+
 export function ShopifyConnectCardClient({
   organizationSlug,
   shopifyClientId,
@@ -48,26 +61,84 @@ export function ShopifyConnectCardClient({
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus | null>(initialConnectionStatus || null);
   const [oauthMessage, setOauthMessage] = useState(initialOauthMessage);
+  const [connectedStores, setConnectedStores] = useState<ConnectedStore[]>([]);
+  const [isLoadingStores, setIsLoadingStores] = useState(false);
 
   // Check for URL parameters on mount (after OAuth redirect)
   useEffect(() => {
+    // Fetch connected stores from the organization
+    const fetchConnectedStores = async () => {
+      setIsLoadingStores(true);
+      try {
+        const response = await fetch(
+          `/api/organization/${organizationSlug}/stores`,
+        );
+        if (response.ok) {
+          const stores = (await response.json()) as ConnectedStore[];
+          setConnectedStores(stores);
+
+          // If we have connected stores, update the connection status
+          if (stores.length > 0) {
+            const activeStore = stores.find(
+              (store) => store.status === "active",
+            );
+            if (activeStore) {
+              setConnectionStatus({
+                connected: true,
+                shop: activeStore.shopDomain,
+              });
+              setShop(activeStore.shopDomain);
+            }
+          }
+        }
+      } catch (error) {
+        // Silently handle errors - no console logging in production
+      } finally {
+        setIsLoadingStores(false);
+      }
+    };
+
+    // Always fetch connected stores on mount
+    fetchConnectedStores();
+
     const urlParams = new URLSearchParams(window.location.search);
     const connectedShop = urlParams.get("shop");
-    const wasConnected = urlParams.get("shopify_connected") === "true";
+    const wasConnected = urlParams.get("connected") === "true";
+    const errorMessage = urlParams.get("error");
 
     if (connectedShop) {
       setShop(connectedShop);
 
       if (wasConnected) {
-        // Automatically check connection status for the connected shop
-        checkConnectionStatusForShop(connectedShop);
+        // Set success message
+        setOauthMessage({
+          type: "success",
+          message: `Successfully connected to ${connectedShop}`,
+        });
+        // Refresh connected stores after successful connection
+        setTimeout(() => fetchConnectedStores(), 1000);
       }
+    } else if (errorMessage) {
+      // Set error message from OAuth callback
+      setOauthMessage({
+        type: "error",
+        message: errorMessage,
+      });
     } else if (knownShopDomain) {
       // If we have a known shop domain from server, check its status
       setShop(knownShopDomain);
       checkConnectionStatusForShop(knownShopDomain);
     }
-  }, [knownShopDomain]);
+
+    // Clear URL parameters to clean up the URL
+    if (connectedShop || errorMessage) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("shop");
+      cleanUrl.searchParams.delete("connected");
+      cleanUrl.searchParams.delete("error");
+      window.history.replaceState({}, "", cleanUrl.toString());
+    }
+  }, [organizationSlug, knownShopDomain]);
 
   const checkConnectionStatusForShop = async (shopDomain: string) => {
     try {
@@ -99,18 +170,31 @@ export function ShopifyConnectCardClient({
     setIsConnecting(true);
 
     try {
-      // Normalize shop domain
-      const shopDomain = shop.includes(".myshopify.com")
+      // Normalize shop domain first
+      const normalizedShop = shop.includes(".myshopify.com")
         ? shop
         : `${shop}.myshopify.com`;
+
+      // Check if the shop is already connected using the new server action
+      const { checkShopConnection } = await import("@/app/actions/shopify/checkConnection");
+      const connectionCheck = await checkShopConnection(normalizedShop, organizationSlug);
+
+      if (!connectionCheck.canConnect) {
+        setIsConnecting(false);
+        setOauthMessage({
+          type: "error",
+          message: connectionCheck.message || `${normalizedShop} cannot be connected.`
+        });
+        return;
+      }
 
       // Build Shopify authorization URL
       const clientId = shopifyClientId;
       const scopes = "read_products,write_products";
       const redirectUri = `${window.location.origin}/shopify/oauth/callback`;
-      const state = `${organizationSlug}_${Date.now()}`; // Include organization context in state
+      const state = `${organizationSlug}_org_${crypto.randomUUID()}`; // Include organization context in state
 
-      const authUrl = new URL(`https://${shopDomain}/admin/oauth/authorize`);
+      const authUrl = new URL(`https://${normalizedShop}/admin/oauth/authorize`);
       authUrl.searchParams.set("client_id", clientId);
       authUrl.searchParams.set("scope", scopes);
       authUrl.searchParams.set("redirect_uri", redirectUri);
@@ -120,7 +204,10 @@ export function ShopifyConnectCardClient({
       window.location.href = authUrl.toString();
     } catch (error) {
       setIsConnecting(false);
-      alert("Failed to connect to Shopify. Please try again.");
+      setOauthMessage({
+        type: "error",
+        message: "Failed to connect to Shopify. Please try again."
+      });
     }
   };
 

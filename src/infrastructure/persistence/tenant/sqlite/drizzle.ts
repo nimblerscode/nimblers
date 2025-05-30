@@ -9,14 +9,15 @@ import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import { Context, Effect, Layer } from "effect";
 import * as tenantSchema from "@/infrastructure/persistence/tenant/sqlite/schema";
 // @ts-ignore
-import migrations from "../../../../../drizzle/tenant/migrations.js"; // Placeholder - PLEASE ADJUST
+import migrations from "../../../../../drizzle/tenant/migrations.js";
+
 // === Context Tags ===
 
 /**
  * Tag for the Durable Object's state, providing access to its storage.
  */
 export const DurableObjectState = Context.GenericTag<DurableObjectState>(
-  "infra/do/DurableObjectStorage",
+  "infra/do/DurableObjectStorage"
 );
 
 /**
@@ -62,17 +63,25 @@ export const DrizzleDOClientLive = Layer.scoped(
               doState.blockConcurrencyWhile(async () => {
                 try {
                   await migrate(db, migrations);
-                } catch (_error) {
-                  throw new Error("Drizzle migration failed");
+                } catch (error) {
+                  throw new Error(
+                    `Drizzle migration failed: ${
+                      error instanceof Error ? error.message : String(error)
+                    }`
+                  );
                 }
               }),
-            catch: (_error) => {
-              return new Error("Drizzle migration failed");
+            catch: (error) => {
+              return new Error(
+                `Migration wrapper failed: ${
+                  error instanceof Error ? error.message : String(error)
+                }`
+              );
             },
           });
         }),
     };
-  }),
+  })
 );
 
 const schema = tenantSchema;

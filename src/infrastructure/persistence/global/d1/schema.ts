@@ -80,3 +80,17 @@ export const organizationMembership = sqliteTable("organization_membership", {
   role: text("role").notNull(), // 'owner', 'admin', 'member', …
   createdAt: normalizeDate("createdAt").notNull(),
 });
+
+// === Global Shop Connection Tracking ===
+// This table tracks which organization each shop is connected to globally
+// Prevents shops from being connected to multiple organizations
+export const shopConnection = sqliteTable("shop_connection", {
+  shopDomain: text("shopDomain").primaryKey().notNull(), // e.g., "example.myshopify.com"
+  organizationId: text("organizationId")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  type: text("type").notNull().default("shopify"), // 'shopify', 'woocommerce', etc.
+  status: text("status").notNull().default("active"), // 'active', 'disconnected'
+  connectedAt: normalizeDate("connectedAt").notNull(),
+  ...timestamp,
+});

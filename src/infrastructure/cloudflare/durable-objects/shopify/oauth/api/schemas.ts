@@ -7,7 +7,7 @@ import {
   Nonce,
   Scope,
   ShopDomain,
-} from "@/domain/global/shopify/oauth/models";
+} from "@/domain/shopify/oauth/models";
 
 // Nonce schemas
 const NonceGenerateResponseSchema = Schema.Struct({

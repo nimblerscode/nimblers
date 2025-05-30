@@ -57,9 +57,11 @@
 
   "vars": {
     "SESSION_SECRET": "your-secret-key",
+    "ENVIRONMENT": "development",
     "SHOPIFY_WEBHOOK_SECRET": "7d6c7135aff1ed2b8962541c0462b8ca",
     "SHOPIFY_CLIENT_ID": "f665ecacb8ebb0109bd7994468b79d14",
-    "SHOPIFY_CLIENT_SECRET": "7d6c7135aff1ed2b8962541c0462b8ca"
+    "SHOPIFY_CLIENT_SECRET": "7d6c7135aff1ed2b8962541c0462b8ca",
+    "DEV_TUNNEL_URL": "https://hostels-ross-isa-improved.trycloudflare.com"
   },
 
   "routes": [

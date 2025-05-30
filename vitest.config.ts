@@ -25,7 +25,7 @@ export default defineWorkersConfig({
             SHOPIFY_WEBHOOK_SECRET: "test-webhook-secret",
           },
           // Add worker compatibility for MSW
-          compatibilityDate: "2025-05-28",
+          compatibilityDate: "2025-05-23",
           compatibilityFlags: ["nodejs_compat"],
         },
 
@@ -40,6 +40,8 @@ export default defineWorkersConfig({
         // durableObjects: [{ name: "TEST_DO", className: "TestDurableObject" }],
       },
     },
+    // Add setupFiles to mock the migrations
+    setupFiles: ["./tests/setup.ts"],
     // Add coverage configuration
     coverage: {
       provider: "v8", // or 'istanbul'

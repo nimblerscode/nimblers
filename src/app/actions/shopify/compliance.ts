@@ -3,12 +3,12 @@
 import { env } from "cloudflare:workers";
 import { Effect, pipe } from "effect";
 import { ShopifyComplianceLayerLive } from "@/config/shopify";
-import type { WebhookType } from "@/domain/global/shopify/compliance/models";
-import { ShopifyComplianceUseCase } from "@/domain/global/shopify/compliance/service";
+import type { WebhookType } from "@/domain/shopify/compliance/models";
+import { ShopifyComplianceUseCase } from "@/domain/shopify/compliance/service";
 
 export async function handleShopifyComplianceWebhook(
   webhookType: WebhookType,
-  request: Request,
+  request: Request
 ): Promise<Response> {
   const program = pipe(
     Effect.gen(function* () {
@@ -17,7 +17,7 @@ export async function handleShopifyComplianceWebhook(
 
       if (!secret) {
         yield* Effect.log(
-          "Missing SHOPIFY_WEBHOOK_SECRET environment variable",
+          "Missing SHOPIFY_WEBHOOK_SECRET environment variable"
         );
         return new Response("Server configuration error", { status: 500 });
       }
@@ -27,7 +27,7 @@ export async function handleShopifyComplianceWebhook(
 
       // Log successful webhook processing
       yield* Effect.log(
-        `Shopify compliance webhook processed successfully: ${webhookType}`,
+        `Shopify compliance webhook processed successfully: ${webhookType}`
       );
 
       return new Response("OK", {
@@ -41,7 +41,7 @@ export async function handleShopifyComplianceWebhook(
         yield* Effect.log(
           `Shopify compliance webhook error (${webhookType}): ${
             error._tag || String(error)
-          }`,
+          }`
         );
 
         // Handle different error types using Effect-TS tagged errors
@@ -73,9 +73,9 @@ export async function handleShopifyComplianceWebhook(
           status: 500,
           headers: { "Content-Type": "text/plain" },
         });
-      }),
+      })
     ),
-    Effect.provide(ShopifyComplianceLayerLive),
+    Effect.provide(ShopifyComplianceLayerLive)
   );
 
   return Effect.runPromise(program);

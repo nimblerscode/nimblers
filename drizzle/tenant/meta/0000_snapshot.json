@@ -1,9 +1,116 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5f54724c-cb2b-41fd-bc21-b5c263a3e417",
+  "id": "b244fbb7-e289-47b7-b9c2-c701008be12d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "connected_store": {
+      "name": "connected_store",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organizationId": {
+          "name": "organizationId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "shopDomain": {
+          "name": "shopDomain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'active'"
+        },
+        "connectedAt": {
+          "name": "connectedAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "lastSyncAt": {
+          "name": "lastSyncAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(unixepoch() * 1000)"
+        }
+      },
+      "indexes": {
+        "connected_store_organizationId_shopDomain_unique": {
+          "name": "connected_store_organizationId_shopDomain_unique",
+          "columns": [
+            "organizationId",
+            "shopDomain"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "connected_store_organizationId_organization_id_fk": {
+          "name": "connected_store_organizationId_organization_id_fk",
+          "tableFrom": "connected_store",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organizationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "invitation": {
       "name": "invitation",
       "columns": {

@@ -1,9 +1,9 @@
 "use server";
 
 import { env } from "cloudflare:workers";
+import { FetchHttpClient } from "@effect/platform";
 import { Effect } from "effect";
-import { OrganizationDOLive } from "@/config/layers";
-import { OrganizationDOService } from "@/domain/tenant/organization/service";
+import { createOrganizationDOClient } from "@/infrastructure/cloudflare/durable-objects/organization/api/client";
 
 interface StoreConnection {
   connected: boolean;
@@ -13,31 +13,47 @@ interface StoreConnection {
   lastSync?: Date;
 }
 
+interface ConnectedStore {
+  id: string;
+  organizationId: string;
+  type: string;
+  shopDomain: string;
+  scope: string | null;
+  status: "active" | "disconnected" | "error";
+  connectedAt: string;
+  lastSyncAt: string | null;
+  metadata: string | null;
+  createdAt: string;
+}
+
 export async function getOrganizationStoreConnections(
   organizationSlug: string,
   shopDomain?: string,
 ): Promise<StoreConnection[]> {
   const program = Effect.gen(function* () {
-    const organizationDOService = yield* OrganizationDOService;
+    const doId = env.ORG_DO.idFromName(organizationSlug);
+    const stub = env.ORG_DO.get(doId);
 
-    // For now, just get the organization and return empty stores
-    // TODO: Implement proper store connection querying via HTTP API endpoints in the DO
-    const _organization =
-      yield* organizationDOService.getOrganization(organizationSlug);
+    // Create the DO client
+    const client = yield* createOrganizationDOClient(stub);
 
-    // Temporary: return empty array until we implement the proper DO endpoints
-    // This ensures no data leakage between organizations
-    return [];
-  });
+    // Call the new getConnectedStores endpoint
+    const stores = yield* client.organizations.getConnectedStores();
 
-  const organizationLayerLive = OrganizationDOLive({
-    ORG_DO: env.ORG_DO,
+    // Convert to the interface format
+    return stores.map((store) => ({
+      connected: store.status === "active",
+      shop: store.shopDomain,
+      scope: store.scope || undefined,
+      connectedAt: store.connectedAt,
+      lastSync: store.lastSyncAt || undefined,
+    }));
   });
 
   try {
     const result = await Effect.runPromise(
       program.pipe(
-        Effect.provide(organizationLayerLive),
+        Effect.provide(FetchHttpClient.layer),
         Effect.catchAll((_error) => {
           // Silently return empty array on errors to prevent data leakage
           return Effect.succeed([]);
@@ -66,4 +82,49 @@ export async function isShopConnected(
     connected: connection?.connected || false,
     shop: connection?.shop,
   };
+}
+
+export async function getOrganizationConnectedStores(
+  organizationSlug: string,
+): Promise<ConnectedStore[]> {
+  const program = Effect.gen(function* () {
+    const doId = env.ORG_DO.idFromName(organizationSlug);
+    const stub = env.ORG_DO.get(doId);
+
+    // Create the DO client
+    const client = yield* createOrganizationDOClient(stub);
+
+    // Call the getConnectedStores endpoint
+    const stores = yield* client.organizations.getConnectedStores();
+
+    // Return the full store data with proper format
+    return stores.map((store) => ({
+      id: store.id,
+      organizationId: store.organizationId,
+      type: store.type,
+      shopDomain: store.shopDomain,
+      scope: store.scope,
+      status: store.status,
+      connectedAt: store.connectedAt.toISOString(),
+      lastSyncAt: store.lastSyncAt?.toISOString() || null,
+      metadata: store.metadata,
+      createdAt: store.createdAt.toISOString(),
+    }));
+  });
+
+  try {
+    const result = await Effect.runPromise(
+      program.pipe(
+        Effect.provide(FetchHttpClient.layer),
+        Effect.catchAll((_error) => {
+          // Silently return empty array on errors to prevent data leakage
+          return Effect.succeed([]);
+        }),
+      ),
+    );
+    return result;
+  } catch (_error) {
+    // Fallback to empty array to prevent data leakage
+    return [];
+  }
 }

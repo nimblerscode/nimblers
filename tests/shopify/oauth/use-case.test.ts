@@ -3,7 +3,7 @@ import { Effect, Layer } from "effect";
 import {
   ShopifyOAuthEnv,
   ShopifyOAuthUseCaseLive,
-} from "../../../src/application/global/shopify/oauth/service";
+} from "../../../src/application/shopify/oauth/service";
 import { EnvironmentConfigService } from "../../../src/domain/global/environment/service";
 import {
   type AccessToken,
@@ -18,7 +18,7 @@ import {
   OAuthError,
   type Scope,
   type ShopDomain,
-} from "../../../src/domain/global/shopify/oauth/models";
+} from "../../../src/domain/shopify/oauth/models";
 import {
   AccessTokenService,
   NonceManager,
@@ -26,7 +26,7 @@ import {
   ShopifyOAuthUseCase,
   ShopValidator,
   WebhookService,
-} from "../../../src/domain/global/shopify/oauth/service";
+} from "../../../src/domain/shopify/oauth/service";
 
 type TestServices =
   | ShopifyOAuthUseCase
@@ -38,6 +38,7 @@ type TestServices =
   | WebhookService;
 
 describe("Shopify OAuth Use Case", () => {
+  const testOrganizationId = "test-org-123";
   const testEnv = {
     SHOPIFY_CLIENT_ID: "test_client_id" as ClientId,
     SHOPIFY_CLIENT_SECRET: "test_client_secret" as ClientSecret,
@@ -62,16 +63,16 @@ describe("Shopify OAuth Use Case", () => {
 
   const MockNonceManagerValid = Layer.succeed(NonceManager, {
     generate: () => Effect.succeed(testNonce),
-    store: () => Effect.succeed(void 0),
-    verify: () => Effect.succeed(true),
-    consume: () => Effect.succeed(void 0),
+    store: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
+    verify: (organizationId: string, nonce: Nonce) => Effect.succeed(true),
+    consume: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
   });
 
   const MockNonceManagerInvalid = Layer.succeed(NonceManager, {
     generate: () => Effect.succeed(testNonce),
-    store: () => Effect.succeed(void 0),
-    verify: () => Effect.succeed(false),
-    consume: () => Effect.succeed(void 0),
+    store: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
+    verify: (organizationId: string, nonce: Nonce) => Effect.succeed(false),
+    consume: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
   });
 
   const MockAccessTokenServiceValid = Layer.succeed(AccessTokenService, {
@@ -80,9 +81,15 @@ describe("Shopify OAuth Use Case", () => {
         access_token: testToken,
         scope: testScope,
       }),
-    store: () => Effect.succeed(void 0),
-    retrieve: () => Effect.succeed(testToken),
-    delete: () => Effect.succeed(true),
+    store: (
+      organizationId: string,
+      shop: ShopDomain,
+      token: AccessToken,
+      scope: Scope
+    ) => Effect.succeed(void 0),
+    retrieve: (organizationId: string, shop: ShopDomain) =>
+      Effect.succeed(testToken),
+    delete: (organizationId: string, shop: ShopDomain) => Effect.succeed(true),
   });
 
   const MockAccessTokenServiceEmpty = Layer.succeed(AccessTokenService, {
@@ -91,9 +98,15 @@ describe("Shopify OAuth Use Case", () => {
         access_token: testToken,
         scope: testScope,
       }),
-    store: () => Effect.succeed(void 0),
-    retrieve: () => Effect.succeed(null),
-    delete: () => Effect.succeed(true),
+    store: (
+      organizationId: string,
+      shop: ShopDomain,
+      token: AccessToken,
+      scope: Scope
+    ) => Effect.succeed(void 0),
+    retrieve: (organizationId: string, shop: ShopDomain) =>
+      Effect.succeed(null),
+    delete: (organizationId: string, shop: ShopDomain) => Effect.succeed(true),
   });
 
   const MockShopValidatorValid = Layer.succeed(ShopValidator, {
@@ -106,7 +119,7 @@ describe("Shopify OAuth Use Case", () => {
         new InvalidShopDomainError({
           message: "Invalid shop domain",
           shop,
-        }),
+        })
       ),
   });
 
@@ -121,7 +134,7 @@ describe("Shopify OAuth Use Case", () => {
       Effect.fail(
         new OAuthError({
           message: "Webhook registration failed",
-        }),
+        })
       ),
   });
 
@@ -148,8 +161,8 @@ describe("Shopify OAuth Use Case", () => {
       MockShopValidatorValid,
       MockWebhookServiceValid,
       MockEnvLayer,
-      MockEnvironmentConfigService,
-    ),
+      MockEnvironmentConfigService
+    )
   );
 
   const BaseTestLayerWithValidToken = Layer.provide(
@@ -161,8 +174,8 @@ describe("Shopify OAuth Use Case", () => {
       MockShopValidatorValid,
       MockWebhookServiceValid,
       MockEnvLayer,
-      MockEnvironmentConfigService,
-    ),
+      MockEnvironmentConfigService
+    )
   );
 
   const BaseTestLayerWithInvalidHmac = Layer.provide(
@@ -174,8 +187,8 @@ describe("Shopify OAuth Use Case", () => {
       MockShopValidatorValid,
       MockWebhookServiceValid,
       MockEnvLayer,
-      MockEnvironmentConfigService,
-    ),
+      MockEnvironmentConfigService
+    )
   );
 
   const BaseTestLayerWithInvalidShop = Layer.provide(
@@ -187,8 +200,8 @@ describe("Shopify OAuth Use Case", () => {
       MockShopValidatorInvalid,
       MockWebhookServiceValid,
       MockEnvLayer,
-      MockEnvironmentConfigService,
-    ),
+      MockEnvironmentConfigService
+    )
   );
 
   const BaseTestLayerWithInvalidNonce = Layer.provide(
@@ -200,8 +213,8 @@ describe("Shopify OAuth Use Case", () => {
       MockShopValidatorValid,
       MockWebhookServiceValid,
       MockEnvLayer,
-      MockEnvironmentConfigService,
-    ),
+      MockEnvironmentConfigService
+    )
   );
 
   const BaseTestLayerWithEmptySecret = Layer.provide(
@@ -216,8 +229,8 @@ describe("Shopify OAuth Use Case", () => {
         SHOPIFY_CLIENT_ID: testEnv.SHOPIFY_CLIENT_ID,
         SHOPIFY_CLIENT_SECRET: "", // Empty secret
       }),
-      MockEnvironmentConfigService,
-    ),
+      MockEnvironmentConfigService
+    )
   );
 
   const BaseTestLayerWithFailingTokenService = Layer.provide(
@@ -230,17 +243,24 @@ describe("Shopify OAuth Use Case", () => {
           Effect.fail(
             new AccessTokenError({
               message: "Token exchange failed",
-            }),
+            })
           ),
-        store: () => Effect.succeed(void 0),
-        retrieve: () => Effect.succeed(null),
-        delete: () => Effect.succeed(true),
+        store: (
+          organizationId: string,
+          shop: ShopDomain,
+          token: AccessToken,
+          scope: Scope
+        ) => Effect.succeed(void 0),
+        retrieve: (organizationId: string, shop: ShopDomain) =>
+          Effect.succeed(null),
+        delete: (organizationId: string, shop: ShopDomain) =>
+          Effect.succeed(true),
       }),
       MockShopValidatorValid,
       MockWebhookServiceValid,
       MockEnvLayer,
-      MockEnvironmentConfigService,
-    ),
+      MockEnvironmentConfigService
+    )
   );
 
   const BaseTestLayerWithFailingAccessTokenService = Layer.provide(
@@ -254,20 +274,26 @@ describe("Shopify OAuth Use Case", () => {
             access_token: testToken,
             scope: testScope,
           }),
-        store: () => Effect.succeed(void 0),
-        retrieve: () =>
+        store: (
+          organizationId: string,
+          shop: ShopDomain,
+          token: AccessToken,
+          scope: Scope
+        ) => Effect.succeed(void 0),
+        retrieve: (organizationId: string, shop: ShopDomain) =>
           Effect.fail(
             new OAuthError({
               message: "Database error",
-            }),
+            })
           ),
-        delete: () => Effect.succeed(true),
+        delete: (organizationId: string, shop: ShopDomain) =>
+          Effect.succeed(true),
       }),
       MockShopValidatorValid,
       MockWebhookServiceValid,
       MockEnvLayer,
-      MockEnvironmentConfigService,
-    ),
+      MockEnvironmentConfigService
+    )
   );
 
   describe("handleInstallRequest", () => {
@@ -285,17 +311,20 @@ describe("Shopify OAuth Use Case", () => {
 
           const request = new Request(url.toString());
 
-          const response = yield* useCase.handleInstallRequest(request);
+          const response = yield* useCase.handleInstallRequest(
+            testOrganizationId,
+            request
+          );
 
           expect(response.status).toBe(302);
 
           const location = response.headers.get("Location");
           expect(location).toContain(
-            `https://${testShop}/admin/oauth/authorize`,
+            `https://${testShop}/admin/oauth/authorize`
           );
           expect(location).toContain(`client_id=${testEnv.SHOPIFY_CLIENT_ID}`);
           expect(location).toContain(`state=${testNonce}`);
-        }).pipe(Effect.provide(BaseTestLayer)),
+        }).pipe(Effect.provide(BaseTestLayer))
     );
 
     it.scoped("should redirect to app if token already exists", () =>
@@ -309,13 +338,16 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const response = yield* useCase.handleInstallRequest(request);
+        const response = yield* useCase.handleInstallRequest(
+          testOrganizationId,
+          request
+        );
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`,
+          `https://${testShop}/admin/apps`
         );
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
 
     it.scoped(
@@ -332,7 +364,10 @@ describe("Shopify OAuth Use Case", () => {
 
           const request = new Request(url.toString());
 
-          const response = yield* useCase.handleInstallRequest(request);
+          const response = yield* useCase.handleInstallRequest(
+            testOrganizationId,
+            request
+          );
 
           expect(response.status).toBe(200);
           expect(response.headers.get("Content-Type")).toBe("text/html");
@@ -344,7 +379,7 @@ describe("Shopify OAuth Use Case", () => {
 
           expect(html).toContain("app-bridge");
           expect(html).toContain(testEnv.SHOPIFY_CLIENT_ID);
-        }).pipe(Effect.provide(BaseTestLayer)),
+        }).pipe(Effect.provide(BaseTestLayer))
     );
 
     it.scoped("should reject install request with invalid HMAC", () =>
@@ -359,14 +394,14 @@ describe("Shopify OAuth Use Case", () => {
         const request = new Request(url.toString());
 
         const result = yield* Effect.either(
-          useCase.handleInstallRequest(request),
+          useCase.handleInstallRequest(testOrganizationId, request)
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidHmacError);
         }
-      }).pipe(Effect.provide(BaseTestLayerWithInvalidHmac)),
+      }).pipe(Effect.provide(BaseTestLayerWithInvalidHmac))
     );
 
     it.scoped("should reject install request with invalid shop domain", () =>
@@ -381,14 +416,14 @@ describe("Shopify OAuth Use Case", () => {
         const request = new Request(url.toString());
 
         const result = yield* Effect.either(
-          useCase.handleInstallRequest(request),
+          useCase.handleInstallRequest(testOrganizationId, request)
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(BaseTestLayerWithInvalidShop)),
+      }).pipe(Effect.provide(BaseTestLayerWithInvalidShop))
     );
 
     it.scoped("should fail when client secret is missing", () =>
@@ -403,17 +438,17 @@ describe("Shopify OAuth Use Case", () => {
         const request = new Request(url.toString());
 
         const result = yield* Effect.either(
-          useCase.handleInstallRequest(request),
+          useCase.handleInstallRequest(testOrganizationId, request)
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(OAuthError);
           expect(result.left.message).toContain(
-            "Missing Shopify client secret",
+            "Missing Shopify client secret"
           );
         }
-      }).pipe(Effect.provide(BaseTestLayerWithEmptySecret)),
+      }).pipe(Effect.provide(BaseTestLayerWithEmptySecret))
     );
   });
 
@@ -431,13 +466,16 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const response = yield* useCase.handleCallback(request);
+        const response = yield* useCase.handleCallback(
+          testOrganizationId,
+          request
+        );
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`,
+          `https://${testShop}/admin/apps`
         );
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
 
     it.scoped("should reject callback with invalid HMAC", () =>
@@ -453,13 +491,15 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const result = yield* Effect.either(useCase.handleCallback(request));
+        const result = yield* Effect.either(
+          useCase.handleCallback(testOrganizationId, request)
+        );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidHmacError);
         }
-      }).pipe(Effect.provide(BaseTestLayerWithInvalidHmac)),
+      }).pipe(Effect.provide(BaseTestLayerWithInvalidHmac))
     );
 
     it.scoped("should reject callback with invalid nonce", () =>
@@ -475,13 +515,15 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const result = yield* Effect.either(useCase.handleCallback(request));
+        const result = yield* Effect.either(
+          useCase.handleCallback(testOrganizationId, request)
+        );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidNonceError);
         }
-      }).pipe(Effect.provide(BaseTestLayerWithInvalidNonce)),
+      }).pipe(Effect.provide(BaseTestLayerWithInvalidNonce))
     );
 
     it.scoped("should reject callback with invalid shop domain", () =>
@@ -497,13 +539,15 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const result = yield* Effect.either(useCase.handleCallback(request));
+        const result = yield* Effect.either(
+          useCase.handleCallback(testOrganizationId, request)
+        );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidShopDomainError);
         }
-      }).pipe(Effect.provide(BaseTestLayerWithInvalidShop)),
+      }).pipe(Effect.provide(BaseTestLayerWithInvalidShop))
     );
 
     it.scoped("should handle token exchange failure", () =>
@@ -519,13 +563,15 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const result = yield* Effect.either(useCase.handleCallback(request));
+        const result = yield* Effect.either(
+          useCase.handleCallback(testOrganizationId, request)
+        );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(AccessTokenError);
         }
-      }).pipe(Effect.provide(BaseTestLayerWithFailingTokenService)),
+      }).pipe(Effect.provide(BaseTestLayerWithFailingTokenService))
     );
   });
 
@@ -539,21 +585,22 @@ describe("Shopify OAuth Use Case", () => {
         const redirectUri = "https://example.com/oauth/callback";
 
         const authUrl = yield* useCase.buildAuthorizationUrl(
+          testOrganizationId,
           testShop,
           clientId,
           scopes,
           redirectUri,
-          testNonce,
+          testNonce
         );
 
         expect(authUrl).toContain(`https://${testShop}/admin/oauth/authorize`);
         expect(authUrl).toContain(`client_id=${clientId}`);
         expect(authUrl).toContain(`scope=${scopes.join(",")}`);
         expect(authUrl).toContain(
-          `redirect_uri=${encodeURIComponent(redirectUri)}`,
+          `redirect_uri=${encodeURIComponent(redirectUri)}`
         );
         expect(authUrl).toContain(`state=${testNonce}`);
-      }).pipe(Effect.provide(BaseTestLayer)),
+      }).pipe(Effect.provide(BaseTestLayer))
     );
 
     it.scoped("should handle special characters in redirect URI", () =>
@@ -564,17 +611,18 @@ describe("Shopify OAuth Use Case", () => {
           "https://example.com/oauth/callback?param=value&other=test";
 
         const authUrl = yield* useCase.buildAuthorizationUrl(
+          testOrganizationId,
           testShop,
           testEnv.SHOPIFY_CLIENT_ID,
           ["read_products"] as Scope[],
           redirectUri,
-          testNonce,
+          testNonce
         );
 
         expect(authUrl).toContain(
-          `redirect_uri=${encodeURIComponent(redirectUri)}`,
+          `redirect_uri=${encodeURIComponent(redirectUri)}`
         );
-      }).pipe(Effect.provide(BaseTestLayer)),
+      }).pipe(Effect.provide(BaseTestLayer))
     );
   });
 
@@ -583,24 +631,30 @@ describe("Shopify OAuth Use Case", () => {
       Effect.gen(function* () {
         const useCase = yield* ShopifyOAuthUseCase;
 
-        const status = yield* useCase.checkConnectionStatus(testShop);
+        const status = yield* useCase.checkConnectionStatus(
+          testOrganizationId,
+          testShop
+        );
 
         expect(status.connected).toBe(true);
         expect(status.shop).toBe(testShop);
         expect(status.scope).toBe("read_products,write_products");
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
 
     it.scoped("should return disconnected status when no token exists", () =>
       Effect.gen(function* () {
         const useCase = yield* ShopifyOAuthUseCase;
 
-        const status = yield* useCase.checkConnectionStatus(testShop);
+        const status = yield* useCase.checkConnectionStatus(
+          testOrganizationId,
+          testShop
+        );
 
         expect(status.connected).toBe(false);
         expect(status.shop).toBe(testShop);
         expect(status.scope).toBeUndefined();
-      }).pipe(Effect.provide(BaseTestLayer)),
+      }).pipe(Effect.provide(BaseTestLayer))
     );
 
     it.scoped("should handle access token service errors", () =>
@@ -608,17 +662,17 @@ describe("Shopify OAuth Use Case", () => {
         const useCase = yield* ShopifyOAuthUseCase;
 
         const result = yield* Effect.either(
-          useCase.checkConnectionStatus(testShop),
+          useCase.checkConnectionStatus(testOrganizationId, testShop)
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(OAuthError);
           expect(result.left.message).toContain(
-            "Failed to check connection status",
+            "Failed to check connection status"
           );
         }
-      }).pipe(Effect.provide(BaseTestLayerWithFailingAccessTokenService)),
+      }).pipe(Effect.provide(BaseTestLayerWithFailingAccessTokenService))
     );
   });
 
@@ -627,10 +681,10 @@ describe("Shopify OAuth Use Case", () => {
       Effect.gen(function* () {
         const useCase = yield* ShopifyOAuthUseCase;
 
-        const result = yield* useCase.disconnect(testShop);
+        const result = yield* useCase.disconnect(testOrganizationId, testShop);
 
         expect(result.success).toBe(true);
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
   });
 
@@ -648,17 +702,17 @@ describe("Shopify OAuth Use Case", () => {
         const request = new Request(url.toString());
 
         const result = yield* Effect.either(
-          useCase.handleInstallRequest(request),
+          useCase.handleInstallRequest(testOrganizationId, request)
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(OAuthError);
           expect(result.left.message).toContain(
-            "Invalid install request parameters",
+            "Invalid install request parameters"
           );
         }
-      }).pipe(Effect.provide(BaseTestLayer)),
+      }).pipe(Effect.provide(BaseTestLayer))
     );
 
     it.scoped("should handle malformed callback request parameters", () =>
@@ -675,16 +729,18 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const result = yield* Effect.either(useCase.handleCallback(request));
+        const result = yield* Effect.either(
+          useCase.handleCallback(testOrganizationId, request)
+        );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(OAuthError);
           expect(result.left.message).toContain(
-            "Invalid callback request parameters",
+            "Invalid callback request parameters"
           );
         }
-      }).pipe(Effect.provide(BaseTestLayer)),
+      }).pipe(Effect.provide(BaseTestLayer))
     );
   });
 
@@ -696,13 +752,14 @@ describe("Shopify OAuth Use Case", () => {
           const useCase = yield* ShopifyOAuthUseCase;
 
           const result = yield* useCase.registerWebhooksAfterInstall(
+            testOrganizationId,
             testShop,
-            testToken,
+            testToken
           );
 
           // Should complete without throwing
           expect(result).toBeUndefined();
-        }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
+        }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
 
     it.scoped("should handle webhook registration failure", () =>
@@ -710,7 +767,11 @@ describe("Shopify OAuth Use Case", () => {
         const useCase = yield* ShopifyOAuthUseCase;
 
         const result = yield* Effect.either(
-          useCase.registerWebhooksAfterInstall(testShop, testToken),
+          useCase.registerWebhooksAfterInstall(
+            testOrganizationId,
+            testShop,
+            testToken
+          )
         );
 
         expect(result._tag).toBe("Left");
@@ -729,11 +790,11 @@ describe("Shopify OAuth Use Case", () => {
               MockShopValidatorValid,
               MockWebhookServiceFailing,
               MockEnvLayer,
-              MockEnvironmentConfigService,
-            ),
-          ),
-        ),
-      ),
+              MockEnvironmentConfigService
+            )
+          )
+        )
+      )
     );
   });
 
@@ -751,8 +812,8 @@ describe("Shopify OAuth Use Case", () => {
           },
         }),
         MockEnvLayer,
-        MockEnvironmentConfigService,
-      ),
+        MockEnvironmentConfigService
+      )
     );
 
     const IntegrationTestLayerWithFailingWebhook = Layer.provide(
@@ -764,8 +825,8 @@ describe("Shopify OAuth Use Case", () => {
         MockShopValidatorValid,
         MockWebhookServiceFailing,
         MockEnvLayer,
-        MockEnvironmentConfigService,
-      ),
+        MockEnvironmentConfigService
+      )
     );
 
     it.scoped("should register webhook after successful OAuth callback", () =>
@@ -781,15 +842,18 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const response = yield* useCase.handleCallback(request);
+        const response = yield* useCase.handleCallback(
+          testOrganizationId,
+          request
+        );
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`,
+          `https://${testShop}/admin/apps`
         );
 
         // If we reach here, webhook registration succeeded (no exception thrown)
-      }).pipe(Effect.provide(BaseTestLayerWithValidToken)),
+      }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
 
     it.scoped("should handle webhook failure during OAuth callback", () =>
@@ -805,14 +869,16 @@ describe("Shopify OAuth Use Case", () => {
 
         const request = new Request(url.toString());
 
-        const result = yield* Effect.either(useCase.handleCallback(request));
+        const result = yield* Effect.either(
+          useCase.handleCallback(testOrganizationId, request)
+        );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(OAuthError);
           expect(result.left.message).toContain("Webhook registration failed");
         }
-      }).pipe(Effect.provide(IntegrationTestLayerWithFailingWebhook)),
+      }).pipe(Effect.provide(IntegrationTestLayerWithFailingWebhook))
     );
   });
 });

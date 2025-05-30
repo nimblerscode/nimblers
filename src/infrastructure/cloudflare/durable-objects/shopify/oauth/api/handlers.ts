@@ -8,21 +8,23 @@ import {
   HttpServer,
 } from "@effect/platform";
 import { Effect, Layer, Schema } from "effect";
-import { ShopDomain } from "@/domain/global/shopify/oauth/models";
+import { ShopDomain } from "@/domain/shopify/oauth/models";
 import {
   AccessTokenService,
   NonceManager,
-} from "@/domain/global/shopify/oauth/service";
-import { DurableObjectState } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
+} from "@/domain/shopify/oauth/service";
+import {
+  DurableObjectState,
+  DrizzleDOClientLive,
+} from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { AccessTokenRepoLive } from "@/infrastructure/persistence/tenant/sqlite/shopify/AccessTokenRepoLive";
-import { DrizzleShopifyOAuthClientLive } from "@/infrastructure/persistence/tenant/sqlite/shopify/drizzle";
 import { NonceRepoLive } from "@/infrastructure/persistence/tenant/sqlite/shopify/NonceRepoLive";
 import { ShopifyOAuthApiSchemas } from "./schemas";
 
 // Define endpoints using shared schemas
 const generateNonce = HttpApiEndpoint.post(
   "generateNonce",
-  "/nonce/generate",
+  "/nonce/generate"
 ).addSuccess(ShopifyOAuthApiSchemas.generateNonce.response);
 
 const storeNonce = HttpApiEndpoint.post("storeNonce", "/nonce/store")
@@ -39,7 +41,7 @@ const consumeNonce = HttpApiEndpoint.post("consumeNonce", "/nonce/consume")
 
 const storeAccessToken = HttpApiEndpoint.post(
   "storeAccessToken",
-  "/token/store",
+  "/token/store"
 )
   .setPayload(ShopifyOAuthApiSchemas.storeToken.request)
   .addSuccess(ShopifyOAuthApiSchemas.storeToken.response);
@@ -50,14 +52,14 @@ const retrieveAccessToken = HttpApiEndpoint.get("retrieveAccessToken", "/token")
 
 const deleteAccessToken = HttpApiEndpoint.post(
   "deleteAccessToken",
-  "/token/delete",
+  "/token/delete"
 )
   .setPayload(ShopifyOAuthApiSchemas.deleteToken.request)
   .addSuccess(ShopifyOAuthApiSchemas.deleteToken.response);
 
 const exchangeCodeForToken = HttpApiEndpoint.post(
   "exchangeCodeForToken",
-  "/token/exchange",
+  "/token/exchange"
 )
   .setPayload(ShopifyOAuthApiSchemas.exchangeToken.request)
   .addSuccess(ShopifyOAuthApiSchemas.exchangeToken.response);
@@ -87,78 +89,89 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
     Effect.gen(function* () {
       const nonceManager = yield* NonceManager;
       const accessTokenService = yield* AccessTokenService;
+      // Use a default organizationId for this Durable Object instance
+      const organizationId = "shopify-oauth-do";
 
       return handlers
         .handle("generateNonce", () =>
           Effect.gen(function* () {
             const nonce = yield* nonceManager.generate();
             return { nonce };
-          }),
+          })
         )
         .handle("storeNonce", ({ payload }) =>
           Effect.gen(function* () {
-            yield* nonceManager.store(payload.nonce);
+            yield* nonceManager.store(organizationId, payload.nonce);
             return { success: true };
           }).pipe(
             Effect.mapError(
               (error) =>
                 new HttpApiError.HttpApiDecodeError({
-                  message: error.message || String(error),
+                  message:
+                    error instanceof Error ? error.message : String(error),
                   issues: [],
-                }),
-            ),
-          ),
+                })
+            )
+          )
         )
         .handle("verifyNonce", ({ payload }) =>
           Effect.gen(function* () {
-            const valid = yield* nonceManager.verify(payload.nonce);
+            const valid = yield* nonceManager.verify(
+              organizationId,
+              payload.nonce
+            );
             return { valid };
           }).pipe(
             Effect.mapError(
               (error) =>
                 new HttpApiError.HttpApiDecodeError({
-                  message: error.message || String(error),
+                  message:
+                    error instanceof Error ? error.message : String(error),
                   issues: [],
-                }),
-            ),
-          ),
+                })
+            )
+          )
         )
         .handle("consumeNonce", ({ payload }) =>
           Effect.gen(function* () {
-            yield* nonceManager.consume(payload.nonce);
+            yield* nonceManager.consume(organizationId, payload.nonce);
             return { success: true };
           }).pipe(
             Effect.mapError(
               (error) =>
                 new HttpApiError.HttpApiDecodeError({
-                  message: error.message || String(error),
+                  message:
+                    error instanceof Error ? error.message : String(error),
                   issues: [],
-                }),
-            ),
-          ),
+                })
+            )
+          )
         )
         .handle("storeAccessToken", ({ payload }) =>
           Effect.gen(function* () {
             yield* accessTokenService.store(
+              organizationId,
               payload.shop,
               payload.accessToken,
-              payload.scope,
+              payload.scope
             );
             return { success: true };
           }).pipe(
             Effect.mapError(
               (error) =>
                 new HttpApiError.HttpApiDecodeError({
-                  message: error.message || String(error),
+                  message:
+                    error instanceof Error ? error.message : String(error),
                   issues: [],
-                }),
-            ),
-          ),
+                })
+            )
+          )
         )
         .handle("retrieveAccessToken", ({ urlParams }) =>
           Effect.gen(function* () {
             const accessToken = yield* accessTokenService.retrieve(
-              urlParams.shop,
+              organizationId,
+              urlParams.shop
             );
             return {
               accessToken,
@@ -168,25 +181,30 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
             Effect.mapError(
               (error) =>
                 new HttpApiError.HttpApiDecodeError({
-                  message: error.message || String(error),
+                  message:
+                    error instanceof Error ? error.message : String(error),
                   issues: [],
-                }),
-            ),
-          ),
+                })
+            )
+          )
         )
         .handle("deleteAccessToken", ({ payload }) =>
           Effect.gen(function* () {
-            const deleted = yield* accessTokenService.delete(payload.shop);
+            const deleted = yield* accessTokenService.delete(
+              organizationId,
+              payload.shop
+            );
             return { success: true, deleted };
           }).pipe(
             Effect.mapError(
               (error) =>
                 new HttpApiError.HttpApiDecodeError({
-                  message: error.message || String(error),
+                  message:
+                    error instanceof Error ? error.message : String(error),
                   issues: [],
-                }),
-            ),
-          ),
+                })
+            )
+          )
         )
         .handle("exchangeCodeForToken", ({ payload }) =>
           Effect.gen(function* () {
@@ -194,33 +212,33 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
               payload.shop,
               payload.code,
               payload.clientId,
-              payload.clientSecret,
+              payload.clientSecret
             );
             return response;
           }).pipe(
             Effect.mapError(
               (error) =>
                 new HttpApiError.HttpApiDecodeError({
-                  message: error.message || String(error),
+                  message:
+                    error instanceof Error ? error.message : String(error),
                   issues: [],
-                }),
-            ),
-          ),
+                })
+            )
+          )
         );
-    }),
+    })
 );
 
 export function getShopifyOAuthHandler(doState: DurableObjectState) {
-  // Create layers
+  // Create layers following the organization pattern
   const DORepoLayer = Layer.succeed(DurableObjectState, doState);
 
-  const DrizzleLayer = Layer.provide(
-    DrizzleShopifyOAuthClientLive,
-    DORepoLayer,
+  // Provide DrizzleDOClientLive directly to repository layers
+  const NonceLayer = Layer.provide(NonceRepoLive, DrizzleDOClientLive);
+  const AccessTokenLayer = Layer.provide(
+    AccessTokenRepoLive,
+    DrizzleDOClientLive
   );
-
-  const NonceLayer = Layer.provide(NonceRepoLive, DrizzleLayer);
-  const AccessTokenLayer = Layer.provide(AccessTokenRepoLive, DrizzleLayer);
 
   const ServiceLayers = Layer.mergeAll(NonceLayer, AccessTokenLayer);
 
@@ -229,21 +247,21 @@ export function getShopifyOAuthHandler(doState: DurableObjectState) {
   // Group layer with all dependencies
   const shopifyOAuthGroupLayerLive = Layer.provide(
     shopifyOAuthGroupLive,
-    finalLayer,
+    finalLayer
   );
 
   // API layer with Swagger
   const ShopifyOAuthApiLive = HttpApiBuilder.api(api).pipe(
-    Layer.provide(shopifyOAuthGroupLayerLive),
+    Layer.provide(shopifyOAuthGroupLayerLive)
   );
 
   const SwaggerLayer = HttpApiSwagger.layer().pipe(
-    Layer.provide(ShopifyOAuthApiLive),
+    Layer.provide(ShopifyOAuthApiLive)
   );
 
   // Final handler with all layers merged
   const { dispose, handler } = HttpApiBuilder.toWebHandler(
-    Layer.mergeAll(ShopifyOAuthApiLive, SwaggerLayer, HttpServer.layerContext),
+    Layer.mergeAll(ShopifyOAuthApiLive, SwaggerLayer, HttpServer.layerContext)
   );
 
   // Wrap handler with additional error logging

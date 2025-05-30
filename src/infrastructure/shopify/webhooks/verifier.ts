@@ -2,8 +2,8 @@ import { Effect, Layer } from "effect";
 import {
   type ShopifyWebhookHeaders,
   WebhookVerificationError,
-} from "@/domain/global/shopify/webhooks/models";
-import { ShopifyWebhookVerifier } from "@/domain/global/shopify/webhooks/service";
+} from "@/domain/shopify/webhooks/models";
+import { ShopifyWebhookVerifier } from "@/domain/shopify/webhooks/service";
 
 export const ShopifyWebhookVerifierLive = Layer.succeed(
   ShopifyWebhookVerifier,
@@ -11,16 +11,25 @@ export const ShopifyWebhookVerifierLive = Layer.succeed(
     verifyWebhook: (
       body: string,
       headers: ShopifyWebhookHeaders,
-      secret: string,
+      secret: string
     ) =>
       Effect.gen(function* () {
-        const hmacHeader = headers["x-shopify-hmac-sha256"];
+        const hmacHeader = headers["X-Shopify-Hmac-Sha256"];
 
         if (!hmacHeader) {
           return yield* Effect.fail(
             new WebhookVerificationError({
               message: "Missing HMAC header",
-            }),
+            })
+          );
+        }
+
+        // Validate secret
+        if (!secret || secret.trim() === "") {
+          return yield* Effect.fail(
+            new WebhookVerificationError({
+              message: "Webhook secret is empty or undefined",
+            })
           );
         }
 
@@ -36,7 +45,7 @@ export const ShopifyWebhookVerifierLive = Layer.succeed(
               keyData,
               { name: "HMAC", hash: "SHA-256" },
               false,
-              ["sign"],
+              ["sign"]
             ),
           catch: (error) =>
             new WebhookVerificationError({
@@ -56,22 +65,33 @@ export const ShopifyWebhookVerifierLive = Layer.succeed(
 
         // Convert to base64 for comparison
         const calculatedHmac = btoa(
-          String.fromCharCode(...new Uint8Array(signature)),
+          String.fromCharCode(...new Uint8Array(signature))
         );
 
-        // Compare with provided HMAC
-        const providedHmac = hmacHeader;
+        // Compare with provided HMAC (remove any whitespace)
+        const providedHmac = hmacHeader.trim();
         const isValid = calculatedHmac === providedHmac;
+
+        // Add debug logging for HMAC comparison
+        yield* Effect.log("🔐 HMAC Comparison Debug", {
+          providedHmac,
+          calculatedHmac,
+          secretLength: secret.length,
+          bodyLength: body.length,
+          bodyPreview: body.substring(0, 100),
+          headerKeys: Object.keys(headers),
+          isValid,
+        });
 
         if (!isValid) {
           return yield* Effect.fail(
             new WebhookVerificationError({
               message: "HMAC verification failed",
-            }),
+            })
           );
         }
 
         return true;
       }),
-  },
+  }
 );

@@ -50,6 +50,11 @@ export const makeOrgD1DrizzleAdapter = (
       .from(schema.organization)
       .where(eq(schema.organization.slug, slug));
 
+    // Check if organization exists
+    if (!orgResults || orgResults.length === 0) {
+      throw new Error(`Organization with slug "${slug}" not found`);
+    }
+
     const orgId = orgResults[0].id;
     // check if the user authed is in the organization in the organizationMembership table
     const isUserInOrg = await db

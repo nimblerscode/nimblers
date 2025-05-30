@@ -1,6 +1,7 @@
 import { prefix, render, route } from "rwsdk/router";
 import type { RequestInfo } from "rwsdk/worker";
 import { acceptInvitationAction } from "@/app/actions/invitations/accept";
+import { getOrganizationConnectedStores } from "@/app/actions/organization/getStoreConnections";
 import { handleShopifyComplianceWebhook } from "@/app/actions/shopify/compliance";
 // import CreateOrganizationForm from "@/app/components/CreateOrganizationForm"; // No longer directly used here
 import { Document } from "@/app/Document";
@@ -58,6 +59,34 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   }
 };
 
+// Organization stores API handler
+const getOrganizationStoresRoute = async (requestInfo: RequestInfo) => {
+  if (requestInfo.request.method !== "GET") {
+    return new Response("Method not allowed", { status: 405 });
+  }
+
+  try {
+    const orgSlug = requestInfo.params.orgSlug;
+    if (!orgSlug) {
+      return Response.json(
+        { error: "Organization slug is required" },
+        { status: 400 },
+      );
+    }
+
+    const stores = await getOrganizationConnectedStores(orgSlug);
+    return Response.json(stores, { status: 200 });
+  } catch (error) {
+    return Response.json(
+      {
+        error: "Failed to fetch stores",
+        message: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    );
+  }
+};
+
 export const organizationRoutes = [
   route("/create", [sessionHandler, OrganizationCreateLayout]), // Use the wrapper page
   route("/:orgSlug", [sessionHandler, OrganizationSlugLayout]),
@@ -83,6 +112,10 @@ export const allRoutes = [
   route("/api/invitations/accept", [
     optionalSessionHandler,
     acceptInvitationRoute,
+  ]),
+  route("/api/organization/:orgSlug/stores", [
+    sessionHandler,
+    getOrganizationStoresRoute,
   ]),
 
   // Shopify Compliance Webhooks

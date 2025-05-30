@@ -3,8 +3,8 @@ import {
   type AccessToken,
   OAuthError,
   type ShopDomain,
-} from "@/domain/global/shopify/oauth/models";
-import { WebhookService } from "@/domain/global/shopify/oauth/service";
+} from "@/domain/shopify/oauth/models";
+import { WebhookService } from "@/domain/shopify/oauth/service";
 
 export const WebhookServiceLive = Layer.effect(
   WebhookService,
@@ -13,7 +13,7 @@ export const WebhookServiceLive = Layer.effect(
       registerAppUninstallWebhook: (
         shop: ShopDomain,
         accessToken: AccessToken,
-        webhookUrl: string,
+        webhookUrl: string
       ) =>
         Effect.gen(function* () {
           const webhookEndpoint = `https://${shop}/admin/api/2024-04/webhooks.json`;
@@ -55,12 +55,12 @@ export const WebhookServiceLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Webhook registration failed with status ${response.status}: ${errorText}`,
-              }),
+              })
             );
           }
 
           // Successfully registered webhook - return void
         }),
     };
-  }),
+  })
 );

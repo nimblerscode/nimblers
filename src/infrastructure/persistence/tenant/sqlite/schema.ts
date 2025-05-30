@@ -1,4 +1,4 @@
-import { sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 import { normalizeDate } from "@/infrastructure/persistence/common/utils"; // Import the helper
 
 // --- Better Auth Organization Plugin Tables ---
@@ -18,20 +18,27 @@ export const organization = sqliteTable("organization", {
 });
 
 // Connected stores table - for Shopify, WooCommerce, etc.
-export const connectedStore = sqliteTable("connected_store", {
-  id: text("id").primaryKey(),
-  organizationId: text("organizationId")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  type: text("type").notNull(), // 'shopify', 'woocommerce', etc.
-  shopDomain: text("shopDomain").notNull(), // e.g., 'my-shop.myshopify.com'
-  scope: text("scope"), // OAuth scopes granted
-  status: text("status").notNull().default("active"), // 'active', 'disconnected', 'error'
-  connectedAt: normalizeDate("connectedAt").notNull(),
-  lastSyncAt: normalizeDate("lastSyncAt"), // Track when we last synced data
-  metadata: text("metadata"), // JSON for store-specific data
-  createdAt: normalizeDate("createdAt").notNull(),
-});
+export const connectedStore = sqliteTable(
+  "connected_store",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organizationId")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // 'shopify', 'woocommerce', etc.
+    shopDomain: text("shopDomain").notNull(), // Shop domain (uniqueness enforced globally in D1)
+    scope: text("scope"), // OAuth scopes granted
+    status: text("status").notNull().default("active"), // 'active', 'disconnected', 'error'
+    connectedAt: normalizeDate("connectedAt").notNull(),
+    lastSyncAt: normalizeDate("lastSyncAt"), // Track when we last synced data
+    metadata: text("metadata"), // JSON for store-specific data
+    createdAt: normalizeDate("createdAt").notNull(),
+  },
+  (table) => ({
+    // Organization-scoped unique constraint: same org cannot connect to same shop multiple times
+    uniqueOrgShop: unique().on(table.organizationId, table.shopDomain),
+  })
+);
 
 // Member table (aligned with better-auth)
 export const member = sqliteTable("member", {

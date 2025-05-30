@@ -1,11 +1,11 @@
 import { Schema as S } from "effect";
 
-// Shopify webhook headers
+// Shopify webhook headers - using the actual case that Shopify sends
 export const ShopifyWebhookHeaders = S.Struct({
-  "x-shopify-topic": S.String,
-  "x-shopify-hmac-sha256": S.String,
-  "x-shopify-shop-domain": S.String,
-  "x-shopify-webhook-id": S.String,
+  "X-Shopify-Topic": S.String,
+  "X-Shopify-Hmac-Sha256": S.String,
+  "X-Shopify-Shop-Domain": S.String,
+  "X-Shopify-Webhook-Id": S.String,
 });
 
 // App uninstalled webhook payload
@@ -79,7 +79,7 @@ export class WebhookVerificationError extends S.TaggedError<WebhookVerificationE
   {
     message: S.String,
     cause: S.optional(S.Unknown),
-  },
+  }
 ) {}
 
 export class WebhookProcessingError extends S.TaggedError<WebhookProcessingError>()(
@@ -87,5 +87,5 @@ export class WebhookProcessingError extends S.TaggedError<WebhookProcessingError
   {
     message: S.String,
     cause: S.optional(S.Unknown),
-  },
+  }
 ) {}

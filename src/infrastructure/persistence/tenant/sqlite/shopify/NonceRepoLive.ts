@@ -1,61 +1,90 @@
+import { eq } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import {
-  InvalidNonceError,
   type Nonce,
   OAuthError,
-} from "@/domain/global/shopify/oauth/models";
-import { NonceManager } from "@/domain/global/shopify/oauth/service";
-import { DrizzleShopifyOAuthClient } from "./drizzle";
-import { makeShopifyOAuthDrizzleAdapter } from "./ShopifyOAuthDrizzleAdapter";
+  InvalidNonceError,
+} from "@/domain/shopify/oauth/models";
+import { NonceManager } from "@/domain/shopify/oauth/service";
+import { DrizzleDOClient } from "../drizzle";
+import { nonces } from "./schema";
 
 export const NonceRepoLive = Layer.effect(
   NonceManager,
   Effect.gen(function* () {
-    const drizzleClient = yield* DrizzleShopifyOAuthClient;
-    const adapter = makeShopifyOAuthDrizzleAdapter(drizzleClient.db);
+    const drizzleClient = yield* DrizzleDOClient;
 
     return {
-      generate: () => {
-        const nonce = crypto.randomUUID();
-        return Effect.succeed(nonce as Nonce);
-      },
+      generate: () => Effect.succeed(crypto.randomUUID() as Nonce),
 
-      store: (nonce: Nonce) =>
+      store: (organizationId: string, nonce: Nonce) =>
         Effect.gen(function* () {
           const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
           yield* Effect.tryPromise({
-            try: () => adapter.storeNonce(nonce, expiresAt),
+            try: () =>
+              drizzleClient.db.insert(nonces).values({
+                nonce,
+                expiresAt,
+                consumed: false,
+              }),
             catch: (error) =>
               new OAuthError({
                 message: "Failed to store nonce",
+                cause: error,
               }),
           });
         }),
 
-      verify: (nonce: Nonce) =>
+      verify: (organizationId: string, nonce: Nonce) =>
         Effect.gen(function* () {
-          const isValid = yield* Effect.tryPromise({
-            try: () => adapter.verifyNonce(nonce),
+          const result = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .select()
+                .from(nonces)
+                .where(eq(nonces.nonce, nonce))
+                .limit(1),
             catch: (error) =>
               new InvalidNonceError({
                 message: "Failed to verify nonce",
               }),
           });
 
-          return isValid;
+          if (result.length === 0) {
+            return false;
+          }
+
+          const nonceRecord = result[0];
+          return (
+            !nonceRecord.consumed &&
+            new Date() < new Date(nonceRecord.expiresAt)
+          );
         }),
 
-      consume: (nonce: Nonce) =>
+      consume: (organizationId: string, nonce: Nonce) =>
         Effect.gen(function* () {
-          yield* Effect.tryPromise({
-            try: () => adapter.consumeNonce(nonce),
+          const updated = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .update(nonces)
+                .set({ consumed: true })
+                .where(eq(nonces.nonce, nonce)),
             catch: (error) =>
               new InvalidNonceError({
-                message: "Invalid or expired nonce",
+                message: "Failed to consume nonce",
               }),
           });
+
+          // Check if any rows were affected by checking the result
+          if (!updated || Object.keys(updated).length === 0) {
+            return yield* Effect.fail(
+              new InvalidNonceError({
+                message: "Nonce not found or already consumed",
+              })
+            );
+          }
         }),
     };
-  }),
+  })
 );

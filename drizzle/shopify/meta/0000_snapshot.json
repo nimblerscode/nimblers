@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f5001338-203d-4f7c-9627-66c2472a2f88",
+  "id": "005ce728-28b5-4bd0-938b-611782880e8b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "access_tokens": {
@@ -61,7 +61,7 @@
           "name": "createdAt",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false,
           "default": "(unixepoch() * 1000)"
         },
@@ -69,7 +69,7 @@
           "name": "updatedAt",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false,
           "default": "(unixepoch() * 1000)"
         }
@@ -95,8 +95,7 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "(unixepoch() * 1000)"
+          "autoincrement": false
         },
         "consumed": {
           "name": "consumed",
@@ -110,7 +109,7 @@
           "name": "createdAt",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false,
           "default": "(unixepoch() * 1000)"
         },
@@ -118,7 +117,7 @@
           "name": "updatedAt",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false,
           "default": "(unixepoch() * 1000)"
         }

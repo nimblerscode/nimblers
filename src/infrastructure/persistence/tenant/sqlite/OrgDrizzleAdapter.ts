@@ -23,12 +23,14 @@ export const makeOrgDrizzleAdapter = (
     return orgResults[0] as unknown as Organization;
   },
   createOrg: async (data: NewOrganization, creatorUserId: string) => {
-    const id = uuidv4();
+    // Use slug as ID to ensure consistency with D1 database and auto-creation scenarios
+    const id = data.slug;
     const orgInsertData = {
       id,
       name: data.name,
       slug: data.slug,
       logo: data.logo,
+      createdAt: new Date(),
     };
     const orgResults = await db
       .insert(organizationTable)
