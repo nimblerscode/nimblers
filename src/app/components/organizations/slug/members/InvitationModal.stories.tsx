@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Button } from "@/app/design-system/Button";
-import { InvitationModal, SimpleInvitationModal } from "./InvitationModal";
+import { InvitationModal } from "./InvitationModal";
 
 // Mock user for stories
 const mockUser = {
@@ -50,11 +50,3 @@ export const WithCallbacks: Story = {
     onClose: () => {},
   },
 };
-
-export const SimpleExample = () => (
-  <SimpleInvitationModal
-    slug="design-system"
-    user={mockUser}
-    onSuccess={(_invitation) => {}}
-  />
-);

@@ -14,11 +14,11 @@ export * from "./Icon";
 export {
   Input,
   type InputProps,
-  inputCva, // Aliased from inputStyles
+  inputStyles as inputCva, // Aliased from inputStyles
   Label,
   type LabelProps,
-  TextFieldDescription, // Aliased from Text in Input.tsx
-  TextFieldErrorMessage, // Aliased from Text in Input.tsx
+  Text as TextFieldDescription, // Export with more specific names if desired
+  Text as TextFieldErrorMessage,
   type TextFieldProps,
   TextFieldRoot as TextField, // Main export, aliased from TextFieldRoot
   type TextProps as InputTextProps, // Aliased TextProps from Input.tsx

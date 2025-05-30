@@ -69,8 +69,8 @@ The implementation uses a Durable Object with SQLite for storing nonces and acce
 
 Configure your app in the Shopify Partner Dashboard:
 
-- **App URL**: `https://nimblers.com/`
-- **Allowed redirection URL**: `https://nimblers.com/shopify/oauth/callback`
+- **App URL**: `https://nimblers.co/`
+- **Allowed redirection URL**: `https://nimblers.co/shopify/oauth/callback`
 
 ## Routes
 

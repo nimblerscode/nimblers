@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import type { RequestInfo } from "rwsdk/worker";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InvitationDOLive } from "@/config/layers";
-import { AcceptInvitationForm } from "../components/AcceptInvitationForm";
+import { AcceptInvitationForm } from "../components/invite/AcceptInvitationForm";
 
 // This is a server component (no "use client" directive)
 export default async function InvitationsPage({ params }: RequestInfo) {

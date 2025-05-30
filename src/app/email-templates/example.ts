@@ -11,7 +11,7 @@ export async function exampleVerificationEmail() {
   const props = {
     userEmail: "user@example.com",
     userName: "John Doe",
-    verificationLink: "https://nimblers.com/verify?token=abc123",
+    verificationLink: "https://nimblers.co/verify?token=abc123",
   };
 
   const html = await renderVerificationEmailHTML(props);
@@ -27,7 +27,7 @@ export async function exampleInvitationEmail() {
     organizationName: "Acme Corp",
     organizationSlug: "acme-corp",
     role: "member",
-    invitationLink: "https://nimblers.com/invite?token=xyz789",
+    invitationLink: "https://nimblers.co/invite?token=xyz789",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
   };
 

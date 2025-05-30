@@ -9,7 +9,7 @@ import { Icon } from "@/app/design-system/Icon";
 import { Box, Container, Flex, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
 import { css } from "../../../../styled-system/css";
-import { AcceptInvitationForm } from "./AcceptInvitationForm";
+import { AcceptInvitation } from "./AcceptInvitation";
 
 interface InvitationLandingPageProps {
   token: string;
@@ -20,10 +20,10 @@ interface InvitationLandingPageProps {
     expiresAt: Date;
   };
   userState:
-    | "user_not_exists"
-    | "user_exists_not_logged_in"
-    | "user_logged_in_email_mismatch"
-    | "user_logged_in_email_match";
+  | "user_not_exists"
+  | "user_exists_not_logged_in"
+  | "user_logged_in_email_mismatch"
+  | "user_logged_in_email_match";
   currentUser?: any;
 }
 
@@ -249,7 +249,7 @@ export function InvitationLandingPage({
             )}
 
             {userState === "user_logged_in_email_match" && (
-              <AcceptInvitationForm token={token} invitation={invitation} />
+              <AcceptInvitation token={token} invitation={invitation} />
             )}
 
             {/* Help Link */}

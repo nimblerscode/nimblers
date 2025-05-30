@@ -612,7 +612,7 @@ const webhookUrl =
 **Production:**
 
 ```typescript
-const webhookUrl = "https://nimblers.com/shopify/webhooks/app/uninstalled";
+const webhookUrl = "https://nimblers.co/shopify/webhooks/app/uninstalled";
 ```
 
 ### 2. Environment-Specific Configuration
@@ -622,9 +622,9 @@ const webhookUrl = "https://nimblers.com/shopify/webhooks/app/uninstalled";
 const getWebhookUrl = (env: string) => {
   switch (env) {
     case "production":
-      return "https://nimblers.com/shopify/webhooks/app/uninstalled";
+      return "https://nimblers.co/shopify/webhooks/app/uninstalled";
     case "staging":
-      return "https://staging.nimblers.com/shopify/webhooks/app/uninstalled";
+      return "https://staging.nimblers.co/shopify/webhooks/app/uninstalled";
     default:
       return "https://country-centers-never-austria.trycloudflare.com/shopify/webhooks/app/uninstalled";
   }
@@ -718,7 +718,7 @@ curl -X POST \
      -H "x-shopify-shop-domain: test-shop.myshopify.com" \
      -H "Content-Type: application/json" \
      -d '{"shop_domain":"test-shop.myshopify.com"}' \
-     https://nimblers.com/shopify/webhooks/app/uninstalled
+     https://nimblers.co/shopify/webhooks/app/uninstalled
 
 # Check Durable Object storage
 # (through admin interface or debug endpoint)

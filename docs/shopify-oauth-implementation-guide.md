@@ -610,7 +610,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
 
           const clientId = env.SHOPIFY_CLIENT_ID as ClientId;
           const scopes = ["read_products", "write_products"] as Scope[];
-          const redirectUri = "https://nimblers.com/shopify/oauth/callback";
+          const redirectUri = "https://nimblers.co/shopify/oauth/callback";
 
           const authUrl = yield* Effect.succeed(
             `https://${shop}/admin/oauth/authorize?` +

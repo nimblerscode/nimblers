@@ -24,7 +24,7 @@ const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
       return [
         "https://nimblers.co",
         "https://www.nimblers.co",
-        "https://staging.nimblers.com",
+        "https://staging.nimblers.co",
         "http://localhost:5173", // Development
         "http://localhost:3000", // Alternative dev port
       ];

@@ -152,7 +152,7 @@ export function CreateOrganization() {
                   <Text fontSize="sm" color="content.secondary">
                     Your organization URL will be:{" "}
                     <Text as="span" fontWeight="bold">
-                      nimblers.com/
+                      nimblers.co/
                       {organizationName.toLowerCase().replace(/ /g, "-")}
                     </Text>
                   </Text>
@@ -176,7 +176,7 @@ export function CreateOrganization() {
                   onChange={(value) =>
                     setSelectedPlan(
                       PRICING_PLANS.find((plan) => plan.id === value) ||
-                        PRICING_PLANS[0],
+                      PRICING_PLANS[0],
                     )
                   }
                 >

@@ -51,7 +51,7 @@ export function Overview({ organization }: { organization: Organization }) {
             <DList.Description>
               <HStack gap="2">
                 <Icon icon={Globe} color="colors.content.subtle" size={16} />
-                <Text>https://nimblers.com/{organization.slug}</Text>
+                <Text>https://nimblers.co/{organization.slug}</Text>
               </HStack>
             </DList.Description>
           </DList.Root>

@@ -34,9 +34,9 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
       const environment = getEnvironment();
       switch (environment) {
         case "production":
-          return "https://nimblers.com";
+          return "https://nimblers.co";
         case "staging":
-          return "https://staging.nimblers.com";
+          return "https://staging.nimblers.co";
         default:
           // Check for dev tunnel URL from Cloudflare Workers env
           if (env.DEV_TUNNEL_URL && !env.DEV_TUNNEL_URL.includes("localhost")) {
@@ -114,9 +114,9 @@ function getBaseUrl(): string {
   const environment = getEnvironment();
   switch (environment) {
     case "production":
-      return "https://nimblers.com";
+      return "https://nimblers.co";
     case "staging":
-      return "https://staging.nimblers.com";
+      return "https://staging.nimblers.co";
     default:
       // Check for dev tunnel URL from Cloudflare Workers env
       if (env.DEV_TUNNEL_URL && !env.DEV_TUNNEL_URL.includes("localhost")) {

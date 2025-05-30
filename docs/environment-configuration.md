@@ -10,7 +10,7 @@ The environment configuration system provides a centralized way to manage URLs a
 
 **Before Implementation:**
 
-- Hardcoded URLs scattered throughout the codebase (`nimblers.com`, `localhost:5173`, etc.)
+- Hardcoded URLs scattered throughout the codebase (`nimblers.co`, `localhost:5173`, etc.)
 - Manual URL changes required for different environments
 - Inconsistent URL handling across services
 - CloudFlare tunnel URLs hardcoded in development
@@ -72,9 +72,9 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
       const env = getEnvironment();
       switch (env) {
         case "production":
-          return "https://nimblers.com";
+          return "https://nimblers.co";
         case "staging":
-          return "https://staging.nimblers.com";
+          return "https://staging.nimblers.co";
         default:
           // Development with tunnel support
           if (globalThis.DEV_TUNNEL_URL) {
@@ -103,8 +103,8 @@ The system detects the current environment from multiple sources:
 
 | Environment | Base URL                                               |
 | ----------- | ------------------------------------------------------ |
-| Production  | `https://nimblers.com`                                 |
-| Staging     | `https://staging.nimblers.com`                         |
+| Production  | `https://nimblers.co`                                  |
+| Staging     | `https://staging.nimblers.co`                          |
 | Development | `http://localhost:5173` or `globalThis.DEV_TUNNEL_URL` |
 
 ### Generated URLs
@@ -151,7 +151,7 @@ const invitationLink = envConfig.getInvitationUrl(token);
 
 ### 1. Shopify OAuth Service
 
-- **Before**: Hardcoded `"https://nimblers.com/shopify/oauth/callback"`
+- **Before**: Hardcoded `"https://nimblers.co/shopify/oauth/callback"`
 - **After**: `envConfig.getShopifyOAuthCallbackUrl()`
 
 ### 2. Webhook Registration

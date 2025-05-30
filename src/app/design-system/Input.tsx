@@ -205,7 +205,6 @@ export {
   TextFieldRoot, // Main export
   Input,
   Label,
-  Text as TextFieldDescription, // Export with more specific names if desired
-  Text as TextFieldErrorMessage,
-  inputStyles as inputCva, // Export CVA if needed for advanced customization
+  Text,
+  inputStyles,
 };
