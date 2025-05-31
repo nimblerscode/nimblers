@@ -1,0 +1,48 @@
+# Development and testing
+.github/
+.storybook/
+tests/
+coverage/
+docs/
+
+# Configuration files
+.cursorrules
+.editorconfig
+.env*
+.dev.vars
+biome.json
+postcss.config.cjs
+panda.config.ts
+tsconfig.json
+vite.config.mts
+vitest.config.ts
+react-aria-components.js
+
+# Package management
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+
+# Documentation
+arch.md
+README.md
+
+# Shopify development
+.shopify/
+shopify.app.nimblers.toml
+
+# Generated files (but keep styled-system as it's needed)
+dist/
+
+# IDE and OS files
+.DS_Store
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Large example/demo folders
+coverage/example-drizzle/ 

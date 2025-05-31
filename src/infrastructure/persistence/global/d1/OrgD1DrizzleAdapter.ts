@@ -5,10 +5,11 @@ import type {
   OrganizationD1,
   OrganizationWithMembership,
 } from "@/domain/global/organization/model";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import * as schema from "./schema";
 
 export const makeOrgD1DrizzleAdapter = (
-  db: DrizzleD1Database<typeof schema>,
+  db: DrizzleD1Database<typeof schema>
 ) => ({
   create: async (organizationData: NewOrganizationD1) => {
     const orgInsertData = {
@@ -44,7 +45,19 @@ export const makeOrgD1DrizzleAdapter = (
       .where(eq(schema.organization.id, id));
     return orgResults[0] as unknown as OrganizationD1;
   },
-  getOrgIdBySlug: async (slug: string, userId: string) => {
+  getOrgBySlug: async (slug: OrganizationSlug) => {
+    const orgResults = await db
+      .select()
+      .from(schema.organization)
+      .where(eq(schema.organization.slug, slug));
+
+    if (!orgResults || orgResults.length === 0) {
+      throw new Error(`Organization with slug "${slug}" not found`);
+    }
+
+    return orgResults[0] as unknown as OrganizationD1;
+  },
+  getOrgIdBySlugAndUser: async (slug: string, userId: string) => {
     const orgResults = await db
       .select()
       .from(schema.organization)
@@ -63,8 +76,8 @@ export const makeOrgD1DrizzleAdapter = (
       .where(
         and(
           eq(schema.organizationMembership.userId, userId),
-          eq(schema.organizationMembership.organizationId, orgId),
-        ),
+          eq(schema.organizationMembership.organizationId, orgId)
+        )
       );
 
     if (isUserInOrg.length === 0) {
@@ -74,7 +87,7 @@ export const makeOrgD1DrizzleAdapter = (
     return orgResults[0].slug as unknown as string;
   },
   getOrganizationsForUser: async (
-    userId: string,
+    userId: string
   ): Promise<OrganizationWithMembership[]> => {
     const results = await db
       .select({
@@ -87,10 +100,7 @@ export const makeOrgD1DrizzleAdapter = (
       .from(schema.organization)
       .innerJoin(
         schema.organizationMembership,
-        eq(
-          schema.organization.id,
-          schema.organizationMembership.organizationId,
-        ),
+        eq(schema.organization.id, schema.organizationMembership.organizationId)
       )
       .where(eq(schema.organizationMembership.userId, userId));
 

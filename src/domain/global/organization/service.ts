@@ -9,6 +9,7 @@ import type {
 import type {
   NewShopConnection,
   OrganizationId,
+  OrganizationSlug,
   ShopAlreadyConnectedError,
   ShopConnection,
   ShopConnectionError,
@@ -22,7 +23,10 @@ export abstract class OrgD1Repo extends Context.Tag("@core/OrgD1Repo")<
     readonly create: (
       organization: NewOrganizationD1
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
-    readonly getOrgIdBySlug: (
+    readonly getOrgBySlug: (
+      slug: OrganizationSlug
+    ) => Effect.Effect<OrganizationD1, OrgDbError>;
+    readonly getOrgIdBySlugAndUser: (
       slug: string,
       userId: UserId
     ) => Effect.Effect<string, OrgDbError>;
@@ -39,7 +43,10 @@ export abstract class OrgD1Service extends Context.Tag("@core/OrgD1Service")<
     readonly create: (
       organization: NewOrganizationD1
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
-    readonly getOrgIdBySlug: (
+    readonly getOrgBySlug: (
+      slug: OrganizationSlug
+    ) => Effect.Effect<OrganizationD1, OrgDbError>;
+    readonly getOrgIdBySlugAndUser: (
       slug: string,
       userId: UserId
     ) => Effect.Effect<string, OrgDbError>;

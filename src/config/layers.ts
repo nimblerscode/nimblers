@@ -1,13 +1,8 @@
 import { env } from "cloudflare:workers";
-import { Effect, Layer } from "effect";
+import { Layer } from "effect";
 import { EmailVerificationUseCaseLive } from "@/application/global/auth/emailVerification";
 import { SessionUseCaseLive } from "@/application/global/session/service";
-import {
-  ShopifyOAuthEnv,
-  ShopifyOAuthUseCaseLive,
-} from "@/application/shopify/oauth/service";
 import { InvitationUseCaseLive } from "@/application/tenant/invitations/service";
-import { NonceManager } from "@/domain/shopify/oauth/service";
 import { InviteTokenLive } from "@/domain/tenant/invitations/tokenUtils";
 import { createBetterAuthServiceAdapter } from "@/infrastructure/auth/better-auth/adapter";
 import { BetterAuthConfigLive } from "@/infrastructure/auth/better-auth/config";
@@ -20,8 +15,6 @@ import {
   OrganizationDOAdapterLive,
   OrganizationDONamespace,
 } from "@/infrastructure/cloudflare/durable-objects/OrganizationDONameSpace";
-import { AccessTokenServiceDOLive } from "@/infrastructure/cloudflare/durable-objects/shopify/oauth/services";
-import { ShopifyOAuthDONamespace } from "@/infrastructure/cloudflare/durable-objects/shopify/oauth/shopifyOAuthDO";
 import { ResendEmailAdapterLive } from "@/infrastructure/email/resend/adapter";
 import { ResendConfigLive } from "@/infrastructure/email/resend/config";
 import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
@@ -34,17 +27,6 @@ import { UserRepoLive } from "@/infrastructure/persistence/global/d1/UserRepoAda
 import { DrizzleDOClientLive } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { InvitationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/InvitationRepoLive";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
-import { AccessTokenRepoLive } from "@/infrastructure/persistence/tenant/sqlite/shopify/AccessTokenRepoLive";
-import { DrizzleShopifyOAuthClientLive } from "@/infrastructure/persistence/tenant/sqlite/shopify/drizzle";
-import { NonceRepoLive } from "@/infrastructure/persistence/tenant/sqlite/shopify/NonceRepoLive";
-import { ShopifyOAuthHmacVerifierLive } from "@/infrastructure/shopify/oauth/hmac";
-import { ShopValidatorLive } from "@/infrastructure/shopify/oauth/shop";
-import { WebhookServiceLive } from "@/infrastructure/shopify/webhooks/WebhookService";
-
-// Declare global nonce store type
-declare global {
-  var nonceStore: Map<string, number> | undefined;
-}
 
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
@@ -152,101 +134,4 @@ export const EmailVerificationLayerLive = (db: { DB: D1Database }) => {
     EmailVerificationUseCaseLive,
     Layer.mergeAll(UserRepoLayer, EmailLayer, EnvironmentConfigServiceLive)
   );
-};
-
-// === Shopify OAuth Complete Layer ===
-export function ShopifyOAuthLayerLive(env: {
-  SHOPIFY_OAUTH_DO: DurableObjectNamespace;
-  SHOPIFY_CLIENT_ID: string;
-  SHOPIFY_CLIENT_SECRET: string;
-}) {
-  // Environment layer
-  const envLayer = Layer.succeed(ShopifyOAuthEnv, {
-    SHOPIFY_CLIENT_ID: env.SHOPIFY_CLIENT_ID,
-    SHOPIFY_CLIENT_SECRET: env.SHOPIFY_CLIENT_SECRET,
-  });
-
-  // Durable Object namespace layer
-  const doNamespaceLayer = Layer.succeed(
-    ShopifyOAuthDONamespace,
-    env.SHOPIFY_OAUTH_DO
-  );
-
-  // Use stateless nonce manager - encode organization context in state parameter
-  const StatelessNonceManagerLive = Layer.effect(
-    NonceManager,
-    Effect.gen(function* () {
-      return {
-        generate: () => {
-          const nonce = crypto.randomUUID();
-          return Effect.succeed(nonce as any);
-        },
-        store: (nonce: any) => {
-          // No-op for stateless approach - state is in the URL
-          return Effect.succeed(void 0);
-        },
-        verify: (nonce: any) => {
-          // For stateless approach, we trust the HMAC verification
-          // The nonce is just for uniqueness, not for storage validation
-          return Effect.succeed(true);
-        },
-        consume: (nonce: any) => {
-          // No-op for stateless approach
-          return Effect.succeed(void 0);
-        },
-      };
-    })
-  );
-
-  // DO service layers that communicate with the Durable Object handlers
-  const nonceManagerLayer = StatelessNonceManagerLive;
-  const accessTokenServiceLayer = Layer.provide(
-    AccessTokenServiceDOLive,
-    doNamespaceLayer
-  );
-
-  // Infrastructure service layers
-  const hmacVerifierLayer = ShopifyOAuthHmacVerifierLive;
-  const shopValidatorLayer = ShopValidatorLive;
-  const webhookServiceLayer = WebhookServiceLive;
-
-  // Merge all service layers
-  const serviceLayers = Layer.mergeAll(
-    hmacVerifierLayer,
-    shopValidatorLayer,
-    nonceManagerLayer,
-    accessTokenServiceLayer,
-    webhookServiceLayer,
-    envLayer,
-    doNamespaceLayer,
-    EnvironmentConfigServiceLive
-  );
-
-  // Use case layer
-  const useCaseLayer = Layer.provide(ShopifyOAuthUseCaseLive, serviceLayers);
-
-  return useCaseLayer;
-}
-
-// === Shopify OAuth Durable Object Layers (for internal DO use) ===
-export function ShopifyOAuthDOLive(doEnv: {
-  SHOPIFY_OAUTH_DO: DurableObjectNamespace;
-}) {
-  const doNamespaceLayer = Layer.succeed(
-    ShopifyOAuthDONamespace,
-    doEnv.SHOPIFY_OAUTH_DO
-  );
-  return doNamespaceLayer;
-}
-
-export const ShopifyOAuthRepoLayerLive = (doId: DurableObjectId) => {
-  const NonceRepoLayer = Layer.provide(
-    NonceRepoLive,
-    DrizzleShopifyOAuthClientLive
-  );
-  const AccessTokenRepoLayer = Layer.provide(
-    AccessTokenRepoLive,
-    DrizzleShopifyOAuthClientLive
-  );
-  return Layer.mergeAll(NonceRepoLayer, AccessTokenRepoLayer);
 };

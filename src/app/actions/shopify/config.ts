@@ -1,10 +1,18 @@
 "use server";
 
 import { env } from "cloudflare:workers";
+import { Effect } from "effect";
+import {
+  ShopifyConfigApplicationService,
+  type ShopifyConfig,
+} from "@/application/shopify/config/configService";
 
-export async function getShopifyConfig() {
-  return {
-    clientId: env.SHOPIFY_CLIENT_ID,
-    // Don't expose client secret to the client
-  };
+export type { ShopifyConfig };
+
+export async function getShopifyConfig(): Promise<ShopifyConfig> {
+  return Effect.runPromise(
+    ShopifyConfigApplicationService.getShopifyConfig({
+      SHOPIFY_CLIENT_ID: env.SHOPIFY_CLIENT_ID,
+    })
+  );
 }

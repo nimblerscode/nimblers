@@ -7,6 +7,7 @@ import { OrgDbError } from "@/domain/tenant/organization/model";
 import { OrganizationProvisionError } from "@/domain/tenant/organization/provision/service";
 import { OrganizationDOService } from "@/domain/tenant/organization/service";
 import { createOrganizationDOClient } from "./organization/api/client";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 // The DO namespace needed by the adapter
 export class OrganizationDONamespace extends Context.Tag(
@@ -63,7 +64,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
       );
     };
 
-    const getOrganizationDO = (slug: string) => {
+    const getOrganizationDO = (slug: OrganizationSlug) => {
       return Effect.gen(function* () {
         const doId = orgDONamespace.idFromName(slug);
         const stub = orgDONamespace.get(doId);

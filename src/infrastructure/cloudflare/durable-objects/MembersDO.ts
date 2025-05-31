@@ -4,13 +4,14 @@ import { MemberDOError } from "@/domain/tenant/member/model";
 import { MemberDOService } from "@/domain/tenant/member/service";
 import { OrganizationDONamespace } from "./OrganizationDONameSpace";
 import { createOrganizationDOClient } from "./organization/api/client";
+import { OrganizationSlug } from "@/domain/global/organization/models";
 
 export const MembersDOServiceLive = Layer.effect(
   MemberDOService,
   Effect.gen(function* () {
     const orgDONamespace = yield* OrganizationDONamespace;
 
-    const get = (slug: string) => {
+    const get = (slug: OrganizationSlug) => {
       return Effect.gen(function* () {
         const doId = orgDONamespace.idFromName(slug);
         const stub = orgDONamespace.get(doId);
@@ -31,19 +32,19 @@ export const MembersDOServiceLive = Layer.effect(
               return new MemberDOError({
                 cause: error,
               });
-            }),
+            })
           );
 
         // Convert readonly array to mutable array to match service interface
         return [...members];
       }).pipe(
         // Provide the HttpClient layer needed by the client
-        Effect.provide(FetchHttpClient.layer),
+        Effect.provide(FetchHttpClient.layer)
       );
     };
 
     return {
       get,
     };
-  }),
+  })
 );

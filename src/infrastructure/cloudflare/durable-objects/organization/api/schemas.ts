@@ -9,6 +9,7 @@ import {
   NewOrganizationSchema,
   OrganizationSchema,
 } from "@/domain/tenant/organization/model";
+import { OrganizationSlug } from "@/domain/global/organization/models";
 
 /**
  * Shared API schemas for Organization Durable Object
@@ -34,7 +35,7 @@ export const OrganizationApiSchemas = {
   // Get Organization
   getOrganization: {
     path: Schema.Struct({
-      organizationSlug: Schema.String,
+      organizationSlug: OrganizationSlug,
     }),
     response: OrganizationSchema,
   },
@@ -52,7 +53,7 @@ export const OrganizationApiSchemas = {
   // Get Invitation
   getInvitation: {
     path: Schema.Struct({
-      organizationSlug: Schema.String,
+      organizationSlug: OrganizationSlug,
     }),
     urlParams: Schema.Struct({
       token: Schema.String,
@@ -77,7 +78,7 @@ export const OrganizationApiSchemas = {
   // Get Members
   getMembers: {
     path: Schema.Struct({
-      organizationSlug: Schema.String,
+      organizationSlug: OrganizationSlug,
     }),
     response: Schema.Array(MemberSchema),
   },

@@ -14,13 +14,16 @@ import { Icon } from "@/app/design-system/Icon";
 import { Check, ExternalLink, ShoppingCart } from "@/app/design-system/icons";
 import { HStack, VStack } from "@/app/design-system/Layout";
 import { Text } from "@/app/design-system/Text";
+import { checkShopConnection } from "@/app/actions/shopify/checkConnection";
+import type { ShopDomain } from "@/domain/shopify/oauth/models";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 interface ShopifyConnectCardClientProps {
-  organizationSlug: string;
+  organizationSlug: OrganizationSlug;
   shopifyClientId: string;
   initialConnectionStatus?: {
     connected: boolean;
-    shop?: string;
+    shop?: ShopDomain;
     error?: string;
   } | null;
   oauthMessage?: {
@@ -102,7 +105,7 @@ export function ShopifyConnectCardClient({
     fetchConnectedStores();
 
     const urlParams = new URLSearchParams(window.location.search);
-    const connectedShop = urlParams.get("shop");
+    const connectedShop = urlParams.get("shop") as ShopDomain;
     const wasConnected = urlParams.get("connected") === "true";
     const errorMessage = urlParams.get("error");
 
@@ -176,8 +179,7 @@ export function ShopifyConnectCardClient({
         : `${shop}.myshopify.com`;
 
       // Check if the shop is already connected using the new server action
-      const { checkShopConnection } = await import("@/app/actions/shopify/checkConnection");
-      const connectionCheck = await checkShopConnection(normalizedShop, organizationSlug);
+      const connectionCheck = await checkShopConnection(normalizedShop as any, organizationSlug);
 
       if (!connectionCheck.canConnect) {
         setIsConnecting(false);

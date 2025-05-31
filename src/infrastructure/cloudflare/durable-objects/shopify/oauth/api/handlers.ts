@@ -9,6 +9,7 @@ import {
 } from "@effect/platform";
 import { Effect, Layer, Schema } from "effect";
 import { ShopDomain } from "@/domain/shopify/oauth/models";
+import { OrganizationSlug } from "@/domain/global/organization/models";
 import {
   AccessTokenService,
   NonceManager,
@@ -47,7 +48,9 @@ const storeAccessToken = HttpApiEndpoint.post(
   .addSuccess(ShopifyOAuthApiSchemas.storeToken.response);
 
 const retrieveAccessToken = HttpApiEndpoint.get("retrieveAccessToken", "/token")
-  .setUrlParams(Schema.Struct({ shop: ShopDomain }))
+  .setUrlParams(
+    Schema.Struct({ organizationId: OrganizationSlug, shop: ShopDomain })
+  )
   .addSuccess(ShopifyOAuthApiSchemas.retrieveToken.response);
 
 const deleteAccessToken = HttpApiEndpoint.post(
@@ -81,7 +84,7 @@ const api = HttpApi.make("shopifyOAuthApi").add(shopifyOAuthGroup);
 // Export the API for use in client generation
 export { api as shopifyOAuthApi };
 
-// Implement handlers
+// Implement handlers - no organization ID parameter needed since it comes from requests
 const shopifyOAuthGroupLive = HttpApiBuilder.group(
   api,
   "shopifyOAuth",
@@ -89,8 +92,6 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
     Effect.gen(function* () {
       const nonceManager = yield* NonceManager;
       const accessTokenService = yield* AccessTokenService;
-      // Use a default organizationId for this Durable Object instance
-      const organizationId = "shopify-oauth-do";
 
       return handlers
         .handle("generateNonce", () =>
@@ -101,7 +102,7 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
         )
         .handle("storeNonce", ({ payload }) =>
           Effect.gen(function* () {
-            yield* nonceManager.store(organizationId, payload.nonce);
+            yield* nonceManager.store(payload.nonce);
             return { success: true };
           }).pipe(
             Effect.mapError(
@@ -116,10 +117,8 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
         )
         .handle("verifyNonce", ({ payload }) =>
           Effect.gen(function* () {
-            const valid = yield* nonceManager.verify(
-              organizationId,
-              payload.nonce
-            );
+            // Extract organizationId from payload
+            const valid = yield* nonceManager.verify(payload.nonce);
             return { valid };
           }).pipe(
             Effect.mapError(
@@ -134,7 +133,8 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
         )
         .handle("consumeNonce", ({ payload }) =>
           Effect.gen(function* () {
-            yield* nonceManager.consume(organizationId, payload.nonce);
+            // Extract organizationId from payload
+            yield* nonceManager.consume(payload.nonce);
             return { success: true };
           }).pipe(
             Effect.mapError(
@@ -149,8 +149,9 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
         )
         .handle("storeAccessToken", ({ payload }) =>
           Effect.gen(function* () {
+            // Extract organizationId from payload
             yield* accessTokenService.store(
-              organizationId,
+              payload.organizationId,
               payload.shop,
               payload.accessToken,
               payload.scope
@@ -169,8 +170,9 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
         )
         .handle("retrieveAccessToken", ({ urlParams }) =>
           Effect.gen(function* () {
+            // Extract organizationId from URL params
             const accessToken = yield* accessTokenService.retrieve(
-              organizationId,
+              urlParams.organizationId,
               urlParams.shop
             );
             return {
@@ -190,8 +192,9 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
         )
         .handle("deleteAccessToken", ({ payload }) =>
           Effect.gen(function* () {
+            // Extract organizationId from payload
             const deleted = yield* accessTokenService.delete(
-              organizationId,
+              payload.organizationId,
               payload.shop
             );
             return { success: true, deleted };
@@ -230,6 +233,9 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
 );
 
 export function getShopifyOAuthHandler(doState: DurableObjectState) {
+  // For shared Shopify OAuth DO, we don't extract organization ID from DO name
+  // Organization context comes from individual requests
+
   // Create layers following the organization pattern
   const DORepoLayer = Layer.succeed(DurableObjectState, doState);
 
@@ -244,7 +250,7 @@ export function getShopifyOAuthHandler(doState: DurableObjectState) {
 
   const finalLayer = Layer.provide(ServiceLayers, DORepoLayer);
 
-  // Group layer with all dependencies
+  // Group layer with all dependencies - no organization ID needed at this level
   const shopifyOAuthGroupLayerLive = Layer.provide(
     shopifyOAuthGroupLive,
     finalLayer

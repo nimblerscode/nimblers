@@ -21,9 +21,10 @@ import {
   ShopValidator,
   WebhookService,
 } from "../../../src/domain/shopify/oauth/service";
+import type { OrganizationSlug } from "../../../src/domain/global/organization/models";
 
 describe("Shopify OAuth Routes", () => {
-  const testOrganizationId = "test-org-123";
+  const testOrganizationSlug = "test-org-123" as OrganizationSlug;
   const testEnv = {
     SHOPIFY_CLIENT_ID: "test_client_id" as ClientId,
     SHOPIFY_CLIENT_SECRET: "test_client_secret" as ClientSecret,
@@ -42,9 +43,9 @@ describe("Shopify OAuth Routes", () => {
 
   const MockNonceManagerValid = Layer.succeed(NonceManager, {
     generate: () => Effect.succeed(testNonce),
-    store: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
-    verify: (organizationId: string, nonce: Nonce) => Effect.succeed(true),
-    consume: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
+    store: (nonce: Nonce) => Effect.succeed(void 0),
+    verify: (nonce: Nonce) => Effect.succeed(true),
+    consume: (nonce: Nonce) => Effect.succeed(void 0),
   });
 
   const MockAccessTokenServiceValid = Layer.succeed(AccessTokenService, {
@@ -99,7 +100,8 @@ describe("Shopify OAuth Routes", () => {
       `http://localhost:5173/invite/${token}`,
     getVerificationUrl: (token: string) =>
       `http://localhost:5173/verify?token=${token}`,
-    getOrganizationUrl: (slug: string) => `http://localhost:5173/${slug}`,
+    getOrganizationUrl: (slug: OrganizationSlug) =>
+      `http://localhost:5173/organization/${slug}`,
   });
 
   const MockEnvLayer = Layer.succeed(ShopifyOAuthEnv, testEnv);
@@ -156,7 +158,7 @@ describe("Shopify OAuth Routes", () => {
 
         const request = new Request(url.toString(), { method: "GET" });
         const response = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
 
@@ -182,7 +184,7 @@ describe("Shopify OAuth Routes", () => {
         });
 
         const response = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
 
@@ -205,7 +207,7 @@ describe("Shopify OAuth Routes", () => {
         const request = new Request(url.toString(), { method: "GET" });
 
         const result = yield* Effect.either(
-          useCase.handleInstallRequest(testOrganizationId, request)
+          useCase.handleInstallRequest(testOrganizationSlug, request)
         );
 
         expect(result._tag).toBe("Left");
@@ -223,13 +225,13 @@ describe("Shopify OAuth Routes", () => {
 
         const request = new Request(url.toString(), { method: "GET" });
         const response = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`
+          `http://localhost:5173/organization/${testOrganizationSlug}`
         );
       }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
@@ -246,7 +248,7 @@ describe("Shopify OAuth Routes", () => {
 
         const request = new Request(url.toString(), { method: "GET" });
         const response = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
 
@@ -278,13 +280,13 @@ describe("Shopify OAuth Routes", () => {
 
         const request = new Request(url.toString(), { method: "GET" });
         const response = yield* useCase.handleCallback(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`
+          `http://localhost:5173/organization/${testOrganizationSlug}`
         );
       }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
@@ -301,7 +303,7 @@ describe("Shopify OAuth Routes", () => {
         const request = new Request(url.toString(), { method: "GET" });
 
         const result = yield* Effect.either(
-          useCase.handleCallback(testOrganizationId, request)
+          useCase.handleCallback(testOrganizationSlug, request)
         );
 
         expect(result._tag).toBe("Left");
@@ -325,13 +327,13 @@ describe("Shopify OAuth Routes", () => {
         });
 
         const response = yield* useCase.handleCallback(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
 
         expect(response.status).toBe(302);
         expect(response.headers.get("Location")).toBe(
-          `https://${testShop}/admin/apps`
+          `http://localhost:5173/organization/${testOrganizationSlug}`
         );
       }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
@@ -343,7 +345,7 @@ describe("Shopify OAuth Routes", () => {
         const useCase = yield* ShopifyOAuthUseCase;
 
         const status = yield* useCase.checkConnectionStatus(
-          testOrganizationId,
+          testOrganizationSlug,
           testShop
         );
 
@@ -358,7 +360,7 @@ describe("Shopify OAuth Routes", () => {
         const useCase = yield* ShopifyOAuthUseCase;
 
         const status = yield* useCase.checkConnectionStatus(
-          testOrganizationId,
+          testOrganizationSlug,
           testShop
         );
 
@@ -380,7 +382,7 @@ describe("Shopify OAuth Routes", () => {
         expect(shop).toBe(testShop);
 
         const status = yield* useCase.checkConnectionStatus(
-          testOrganizationId,
+          testOrganizationSlug,
           shop
         );
         expect(status.shop).toBe(testShop);
@@ -393,7 +395,10 @@ describe("Shopify OAuth Routes", () => {
       Effect.gen(function* () {
         const useCase = yield* ShopifyOAuthUseCase;
 
-        const result = yield* useCase.disconnect(testOrganizationId, testShop);
+        const result = yield* useCase.disconnect(
+          testOrganizationSlug,
+          testShop
+        );
 
         expect(result.success).toBe(true);
       }).pipe(Effect.provide(BaseTestLayerWithValidToken))
@@ -410,7 +415,7 @@ describe("Shopify OAuth Routes", () => {
         const shop = formData.get("shop") as ShopDomain;
         expect(shop).toBe(testShop);
 
-        const result = yield* useCase.disconnect(testOrganizationId, shop);
+        const result = yield* useCase.disconnect(testOrganizationSlug, shop);
         expect(result.success).toBe(true);
       }).pipe(Effect.provide(BaseTestLayerWithValidToken))
     );
@@ -429,7 +434,7 @@ describe("Shopify OAuth Routes", () => {
         // Test GET request
         const getRequest = new Request(url.toString(), { method: "GET" });
         const getResponse = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           getRequest
         );
         expect([200, 302]).toContain(getResponse.status);
@@ -437,7 +442,7 @@ describe("Shopify OAuth Routes", () => {
         // Test POST request
         const postRequest = new Request(url.toString(), { method: "POST" });
         const postResponse = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           postRequest
         );
         expect([200, 302]).toContain(postResponse.status);
@@ -458,7 +463,7 @@ describe("Shopify OAuth Routes", () => {
         // Test GET request
         const getRequest = new Request(url.toString(), { method: "GET" });
         const getResponse = yield* useCase.handleCallback(
-          testOrganizationId,
+          testOrganizationSlug,
           getRequest
         );
         expect(getResponse.status).toBe(302);
@@ -466,7 +471,7 @@ describe("Shopify OAuth Routes", () => {
         // Test POST request
         const postRequest = new Request(url.toString(), { method: "POST" });
         const postResponse = yield* useCase.handleCallback(
-          testOrganizationId,
+          testOrganizationSlug,
           postRequest
         );
         expect(postResponse.status).toBe(302);
@@ -493,7 +498,7 @@ describe("Shopify OAuth Routes", () => {
         });
 
         const response = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
         expect([200, 302]).toContain(response.status);
@@ -515,7 +520,7 @@ describe("Shopify OAuth Routes", () => {
         });
 
         const response = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
         expect([200, 302]).toContain(response.status);
@@ -535,7 +540,7 @@ describe("Shopify OAuth Routes", () => {
 
         const request = new Request(url.toString(), { method: "GET" });
         const response = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
 
@@ -557,7 +562,7 @@ describe("Shopify OAuth Routes", () => {
 
         const request = new Request(url.toString(), { method: "GET" });
         const response = yield* useCase.handleInstallRequest(
-          testOrganizationId,
+          testOrganizationSlug,
           request
         );
 

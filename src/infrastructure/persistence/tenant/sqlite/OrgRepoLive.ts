@@ -27,7 +27,13 @@ export const OrgRepoLive = Layer.effect(
         Effect.gen(function* () {
           const result = yield* Effect.tryPromise({
             try: () => drizzleAdapter.getOrgBySlug(slug),
-            catch: mapToOrgDbError,
+            catch: (error) => {
+              // Handle OrganizationNotFoundError specifically
+              if (error instanceof Error) {
+                return new OrgDbError({ cause: error });
+              }
+              return mapToOrgDbError(error);
+            },
           });
 
           return { ...result };
@@ -49,5 +55,5 @@ export const OrgRepoLive = Layer.effect(
           return result.org;
         }),
     };
-  }),
+  })
 );

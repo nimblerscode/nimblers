@@ -10,6 +10,7 @@ import type {
   OrgDbError,
 } from "./model";
 import type { OrganizationProvisionError } from "./provision/service";
+import { OrganizationSlug } from "@/domain/global/organization/models";
 
 // ===== Domain Services =====
 
@@ -54,7 +55,9 @@ export class OrganizationDOService extends Context.Tag(
 )<
   OrganizationDOService,
   {
-    getOrganization: (slug: string) => Effect.Effect<Organization, OrgDbError>;
+    getOrganization: (
+      slug: OrganizationSlug
+    ) => Effect.Effect<Organization, OrgDbError>;
     createOrganization: (
       organization: NewOrganization,
       creatorId: UserId
@@ -71,15 +74,15 @@ export abstract class OrganizationRepo extends Context.Tag(
   {
     readonly createOrg: (
       data: NewOrganization,
-      creatorUserId: string
+      creatorUserId: UserId
     ) => Effect.Effect<
       { org: Organization; memberCreateData: any },
       OrgDbError,
       never
     >;
     readonly getOrgBySlug: (
-      slug: string
-    ) => Effect.Effect<Organization, OrgDbError, never>;
+      slug: OrganizationSlug
+    ) => Effect.Effect<Organization, OrgDbError>;
   }
 >() {}
 
@@ -91,27 +94,25 @@ export abstract class ConnectedStoreRepo extends Context.Tag(
   {
     readonly create: (
       store: NewConnectedStore
-    ) => Effect.Effect<ConnectedStore, OrgDbError, never>;
+    ) => Effect.Effect<ConnectedStore, OrgDbError>;
     readonly upsert: (
       store: NewConnectedStore
-    ) => Effect.Effect<ConnectedStore, OrgDbError, never>;
+    ) => Effect.Effect<ConnectedStore, OrgDbError>;
     readonly getByOrganizationId: (
       organizationId: OrganizationId
-    ) => Effect.Effect<ConnectedStore[], OrgDbError, never>;
+    ) => Effect.Effect<ConnectedStore[], OrgDbError>;
     readonly getByShopDomain: (
       shopDomain: string
-    ) => Effect.Effect<ConnectedStore | null, OrgDbError, never>;
+    ) => Effect.Effect<ConnectedStore | null, OrgDbError>;
     readonly getByOrganizationAndShop: (
       organizationId: OrganizationId,
       shopDomain: string
-    ) => Effect.Effect<ConnectedStore | null, OrgDbError, never>;
+    ) => Effect.Effect<ConnectedStore | null, OrgDbError>;
     readonly updateStatus: (
       storeId: string,
       status: ConnectedStore["status"]
-    ) => Effect.Effect<void, OrgDbError, never>;
-    readonly delete: (
-      storeId: string
-    ) => Effect.Effect<void, OrgDbError, never>;
+    ) => Effect.Effect<void, OrgDbError>;
+    readonly delete: (storeId: string) => Effect.Effect<void, OrgDbError>;
   }
 >() {}
 
@@ -125,25 +126,24 @@ export abstract class OrganizationUseCase extends Context.Tag(
       creatorUserId: UserId
     ) => Effect.Effect<
       { org: Organization; memberCreateData: any },
-      OrgDbError,
-      never
+      OrgDbError
     >;
     readonly getOrgBySlug: (
-      slug: string
-    ) => Effect.Effect<Organization, OrgDbError, never>;
+      slug: OrganizationSlug
+    ) => Effect.Effect<Organization, OrgDbError>;
     readonly getOrgWithStores: (
-      slug: string
-    ) => Effect.Effect<OrganizationWithStores, OrgDbError, never>;
+      slug: OrganizationSlug
+    ) => Effect.Effect<OrganizationWithStores, OrgDbError>;
     readonly connectStore: (
       organizationId: OrganizationId,
       storeData: Omit<NewConnectedStore, "organizationId">
-    ) => Effect.Effect<ConnectedStore, OrgDbError, never>;
+    ) => Effect.Effect<ConnectedStore, OrgDbError>;
     readonly disconnectStore: (
       organizationId: OrganizationId,
       shopDomain: string
-    ) => Effect.Effect<void, OrgDbError, never>;
+    ) => Effect.Effect<void, OrgDbError>;
     readonly getConnectedStores: (
       organizationId: OrganizationId
-    ) => Effect.Effect<ConnectedStore[], OrgDbError, never>;
+    ) => Effect.Effect<ConnectedStore[], OrgDbError>;
   }
 >() {}

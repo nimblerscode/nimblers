@@ -1,4 +1,4 @@
-"use server";
+"use client";
 
 import { VStack } from "@/app/design-system/Layout";
 import type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";

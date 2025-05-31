@@ -8,6 +8,7 @@ import {
   Scope,
   ShopDomain,
 } from "@/domain/shopify/oauth/models";
+import { OrganizationSlug } from "@/domain/global/organization/models";
 
 // Nonce schemas
 const NonceGenerateResponseSchema = Schema.Struct({
@@ -15,6 +16,7 @@ const NonceGenerateResponseSchema = Schema.Struct({
 });
 
 const NonceRequestSchema = Schema.Struct({
+  organizationId: OrganizationSlug,
   nonce: Nonce,
 });
 
@@ -28,6 +30,7 @@ const NonceSuccessResponseSchema = Schema.Struct({
 
 // Token schemas
 const TokenStoreRequestSchema = Schema.Struct({
+  organizationId: OrganizationSlug,
   shop: ShopDomain,
   accessToken: AccessToken,
   scope: Scope,
@@ -39,6 +42,7 @@ const TokenRetrieveResponseSchema = Schema.Struct({
 });
 
 const TokenDeleteRequestSchema = Schema.Struct({
+  organizationId: OrganizationSlug,
   shop: ShopDomain,
 });
 

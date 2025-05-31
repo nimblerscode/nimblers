@@ -22,7 +22,8 @@ export const UserRepoLive = Layer.effect(
         Effect.gen(function* () {
           const userResult: User | undefined = yield* Effect.tryPromise({
             try: () => drizzleAdapter.findById(userId),
-            catch: (error) => new DbError({ cause: error }),
+            catch: (error) =>
+              new DbError({ message: error.message, cause: error }),
           });
 
           if (!userResult) {
@@ -30,7 +31,7 @@ export const UserRepoLive = Layer.effect(
               new UserNotFoundError({
                 message: "User not found",
                 identifier: { type: "id", value: userId },
-              }),
+              })
             );
           }
           return userResult;
@@ -42,7 +43,7 @@ export const UserRepoLive = Layer.effect(
             Effect.tryPromise({
               try: () => drizzleAdapter.findByEmail(email),
               catch: (error) => new DbError({ cause: error }),
-            }),
+            })
           );
           if (!userResult) {
             return yield* _(
@@ -50,8 +51,8 @@ export const UserRepoLive = Layer.effect(
                 new UserNotFoundError({
                   message: "User not found",
                   identifier: { type: "email", value: email },
-                }),
-              ),
+                })
+              )
             );
           }
           return userResult;
@@ -73,7 +74,7 @@ export const UserRepoLive = Layer.effect(
         }),
 
       createOrganization: (
-        data: import("@/domain/global/user/service").NewOrganization,
+        data: import("@/domain/global/user/service").NewOrganization
       ) =>
         Effect.tryPromise({
           try: () => drizzleAdapter.createOrganization(data),
@@ -99,5 +100,5 @@ export const UserRepoLive = Layer.effect(
         }),
     };
     return serviceMethods;
-  }),
+  })
 );

@@ -1,5 +1,5 @@
 import type { SerializableInvitation } from "@/app/actions/invitations/list";
-import { EntityList, Text } from "@/app/design-system";
+import { EntityList } from "@/app/design-system";
 
 export function PendingInvitationsList({
   title,
@@ -19,9 +19,7 @@ export function PendingInvitationsList({
           subtitle={invitation.role ?? "Member (Pending)"}
           avatarProps={{ name: invitation.email }}
           extraInfo={
-            <Text color="content.subtle">
-              Invited {new Date(invitation.createdAt).toLocaleDateString()}
-            </Text>
+            `Invited ${new Date(invitation.createdAt).toLocaleDateString()}`
           }
           actions={actions}
         />

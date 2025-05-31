@@ -28,7 +28,7 @@ interface ConnectedStore {
 
 export async function getOrganizationStoreConnections(
   organizationSlug: string,
-  shopDomain?: string,
+  shopDomain?: string
 ): Promise<StoreConnection[]> {
   const program = Effect.gen(function* () {
     const doId = env.ORG_DO.idFromName(organizationSlug);
@@ -57,8 +57,8 @@ export async function getOrganizationStoreConnections(
         Effect.catchAll((_error) => {
           // Silently return empty array on errors to prevent data leakage
           return Effect.succeed([]);
-        }),
-      ),
+        })
+      )
     );
     return result;
   } catch (_error) {
@@ -70,11 +70,11 @@ export async function getOrganizationStoreConnections(
 // Simple helper to check if a specific shop is connected to a specific organization
 export async function isShopConnected(
   organizationSlug: string,
-  shopDomain: string,
+  shopDomain: string
 ): Promise<{ connected: boolean; shop?: string }> {
   const connections = await getOrganizationStoreConnections(
     organizationSlug,
-    shopDomain,
+    shopDomain
   );
   const connection = connections.find((c) => c.shop === shopDomain);
 
@@ -85,7 +85,7 @@ export async function isShopConnected(
 }
 
 export async function getOrganizationConnectedStores(
-  organizationSlug: string,
+  organizationSlug: string
 ): Promise<ConnectedStore[]> {
   const program = Effect.gen(function* () {
     const doId = env.ORG_DO.idFromName(organizationSlug);
@@ -119,8 +119,8 @@ export async function getOrganizationConnectedStores(
         Effect.catchAll((_error) => {
           // Silently return empty array on errors to prevent data leakage
           return Effect.succeed([]);
-        }),
-      ),
+        })
+      )
     );
     return result;
   } catch (_error) {

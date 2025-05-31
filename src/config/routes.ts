@@ -42,7 +42,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   try {
     const result = await acceptInvitationAction(
       requestInfo.request,
-      requestInfo,
+      requestInfo
     );
     return Response.json(result, { status: 200 });
   } catch (error) {
@@ -54,7 +54,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
             ? error.message
             : "Failed to accept invitation",
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 };
@@ -70,7 +70,7 @@ const getOrganizationStoresRoute = async (requestInfo: RequestInfo) => {
     if (!orgSlug) {
       return Response.json(
         { error: "Organization slug is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -82,7 +82,7 @@ const getOrganizationStoresRoute = async (requestInfo: RequestInfo) => {
         error: "Failed to fetch stores",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 };

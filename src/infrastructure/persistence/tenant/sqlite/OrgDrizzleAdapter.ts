@@ -1,14 +1,25 @@
 import { eq } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
 import { v4 as uuidv4 } from "uuid";
+import { Schema } from "effect";
 import type {
   NewOrganization,
   Organization,
 } from "@/domain/tenant/organization/model";
 import type { schema } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { organization as organizationTable } from "@/infrastructure/persistence/tenant/sqlite/schema";
+
+// Define the error type with Effect-TS patterns
+export class OrganizationNotFoundError extends Schema.TaggedError<OrganizationNotFoundError>()(
+  "OrganizationNotFoundError",
+  {
+    slug: Schema.String,
+    message: Schema.optional(Schema.String),
+  }
+) {}
+
 export const makeOrgDrizzleAdapter = (
-  db: DrizzleSqliteDODatabase<typeof schema>,
+  db: DrizzleSqliteDODatabase<typeof schema>
 ) => ({
   getOrgBySlug: async (slug: string) => {
     const orgResults = await db
@@ -17,7 +28,10 @@ export const makeOrgDrizzleAdapter = (
       .where(eq(organizationTable.slug, slug));
 
     if (!orgResults || orgResults.length === 0) {
-      throw new Error("No organization found");
+      throw new OrganizationNotFoundError({
+        slug,
+        message: `Organization with slug '${slug}' not found`,
+      });
     }
 
     return orgResults[0] as unknown as Organization;

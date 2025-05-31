@@ -6,13 +6,151 @@ import {
   type AuthorizationCode,
   type ClientId,
   type ClientSecret,
+  InvalidNonceError,
+  type Nonce,
   OAuthError,
   type OnlineAccessTokenResponse,
   type Scope,
   type ShopDomain,
 } from "@/domain/shopify/oauth/models";
-import { AccessTokenService } from "@/domain/shopify/oauth/service";
+import { OrganizationSlug } from "@/domain/global/organization/models";
+import {
+  AccessTokenService,
+  NonceManager,
+} from "@/domain/shopify/oauth/service";
 import { ShopifyOAuthDONamespace } from "./shopifyOAuthDO";
+
+export const NonceManagerDOLive = Layer.effect(
+  NonceManager,
+  Effect.gen(function* () {
+    const doNamespace = yield* ShopifyOAuthDONamespace;
+    const doId = doNamespace.idFromName("shopify-oauth");
+    const doStub = doNamespace.get(doId);
+
+    return {
+      generate: () =>
+        Effect.gen(function* () {
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              doStub.fetch("http://internal/nonce/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+              }),
+            catch: () => new Error("Network error"), // This should never fail according to domain
+          });
+
+          if (!response.ok) {
+            return yield* Effect.die(
+              new Error(
+                `Nonce generation failed with status ${response.status}`
+              )
+            );
+          }
+
+          const data = yield* Effect.tryPromise({
+            try: () => response.json() as Promise<{ nonce: string }>,
+            catch: () => new Error("Parse error"), // This should never fail according to domain
+          });
+
+          return data.nonce as Nonce;
+        }).pipe(
+          Effect.orDie // Convert all errors to defects since domain expects never
+        ),
+
+      store: (organizationSlug: OrganizationSlug, nonce: Nonce) =>
+        Effect.gen(function* () {
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              doStub.fetch("http://internal/nonce/store", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  organizationId: organizationSlug,
+                  nonce,
+                }),
+              }),
+            catch: (error) =>
+              new OAuthError({
+                message: "Failed to store nonce",
+                cause: error,
+              }),
+          });
+
+          if (!response.ok) {
+            return yield* Effect.fail(
+              new OAuthError({
+                message: `Nonce store failed with status ${response.status}`,
+              })
+            );
+          }
+        }),
+
+      verify: (organizationSlug: OrganizationSlug, nonce: Nonce) =>
+        Effect.gen(function* () {
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              doStub.fetch("http://internal/nonce/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  organizationId: organizationSlug,
+                  nonce,
+                }),
+              }),
+            catch: () =>
+              new InvalidNonceError({
+                message: "Failed to verify nonce",
+              }),
+          });
+
+          if (!response.ok) {
+            return yield* Effect.fail(
+              new InvalidNonceError({
+                message: `Nonce verification failed with status ${response.status}`,
+              })
+            );
+          }
+
+          const data = yield* Effect.tryPromise({
+            try: () => response.json() as Promise<{ valid: boolean }>,
+            catch: () =>
+              new InvalidNonceError({
+                message: "Failed to parse nonce verification response",
+              }),
+          });
+
+          return data.valid;
+        }),
+
+      consume: (organizationSlug: OrganizationSlug, nonce: Nonce) =>
+        Effect.gen(function* () {
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              doStub.fetch("http://internal/nonce/consume", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  organizationId: organizationSlug,
+                  nonce,
+                }),
+              }),
+            catch: () =>
+              new InvalidNonceError({
+                message: "Failed to consume nonce",
+              }),
+          });
+
+          if (!response.ok) {
+            return yield* Effect.fail(
+              new InvalidNonceError({
+                message: `Nonce consumption failed with status ${response.status}`,
+              })
+            );
+          }
+        }),
+    };
+  })
+);
 
 export const AccessTokenServiceDOLive = Layer.effect(
   AccessTokenService,
@@ -72,7 +210,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
         }),
 
       store: (
-        organizationId: string,
+        organizationSlug: OrganizationSlug,
         shop: ShopDomain,
         token: AccessToken,
         scope: Scope
@@ -84,7 +222,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  organizationId,
+                  organizationId: organizationSlug,
                   shop,
                   accessToken: token,
                   scope,
@@ -106,13 +244,13 @@ export const AccessTokenServiceDOLive = Layer.effect(
           }
         }),
 
-      retrieve: (organizationId: string, shop: ShopDomain) =>
+      retrieve: (organizationSlug: OrganizationSlug, shop: ShopDomain) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
             try: () =>
               doStub.fetch(
                 `http://internal/token?organizationId=${encodeURIComponent(
-                  organizationId
+                  organizationSlug
                 )}&shop=${encodeURIComponent(shop)}`,
                 {
                   method: "GET",
@@ -147,14 +285,17 @@ export const AccessTokenServiceDOLive = Layer.effect(
           return data.accessToken as AccessToken | null;
         }),
 
-      delete: (organizationId: string, shop: ShopDomain) =>
+      delete: (organizationSlug: OrganizationSlug, shop: ShopDomain) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
             try: () =>
               doStub.fetch("http://internal/token/delete", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ organizationId, shop }),
+                body: JSON.stringify({
+                  organizationId: organizationSlug,
+                  shop,
+                }),
               }),
             catch: (error) =>
               new OAuthError({

@@ -22,6 +22,7 @@ import {
   ShopValidator,
   WebhookService,
 } from "@/domain/shopify/oauth/service";
+import { OrganizationSlug } from "@/domain/global/organization/models";
 
 // Environment binding for Shopify OAuth
 export abstract class ShopifyOAuthEnv extends Context.Tag(
@@ -103,7 +104,10 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
       });
 
     return {
-      handleInstallRequest: (organizationId: string, request: Request) =>
+      handleInstallRequest: (
+        organizationSlug: OrganizationSlug,
+        request: Request
+      ) =>
         Effect.gen(function* () {
           const params = yield* extractRequestParams(request);
 
@@ -171,15 +175,16 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
 
           // Check if we already have a token for this shop
           const existingToken = yield* accessTokenService.retrieve(
-            organizationId,
+            organizationSlug,
             shop
           );
           if (existingToken) {
-            // Redirect to app with existing token
+            // Redirect to app with existing token using environment config
+            const appUrl = envConfig.getOrganizationUrl(organizationSlug);
             return new Response(null, {
               status: 302,
               headers: {
-                Location: `https://${shop}/admin/apps`,
+                Location: appUrl,
                 "Cache-Control": "no-cache",
               },
             });
@@ -187,7 +192,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
 
           // Generate nonce and build authorization URL
           const nonce = yield* nonceManager.generate();
-          yield* nonceManager.store(organizationId, nonce);
+          yield* nonceManager.store(nonce);
 
           const clientId = env.SHOPIFY_CLIENT_ID as ClientId;
           const scopes = ["read_products", "write_products"] as Scope[]; // Configure as needed
@@ -248,7 +253,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
           });
         }).pipe(Effect.withSpan("ShopifyOAuthUseCase.handleInstallRequest")),
 
-      handleCallback: (organizationId: string, request: Request) =>
+      handleCallback: (organizationSlug: OrganizationSlug, request: Request) =>
         Effect.gen(function* () {
           const params = yield* extractRequestParams(request);
 
@@ -311,7 +316,6 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
 
           // Verify and consume nonce
           const isValidNonce = yield* nonceManager.verify(
-            organizationId,
             callbackRequest.state
           );
           if (!isValidNonce) {
@@ -321,7 +325,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
               })
             );
           }
-          yield* nonceManager.consume(organizationId, callbackRequest.state);
+          yield* nonceManager.consume(callbackRequest.state);
 
           // Validate shop domain
           const shop = yield* shopValidator.validateShopDomain(
@@ -339,7 +343,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
 
           // Store the access token
           yield* accessTokenService.store(
-            organizationId,
+            organizationSlug,
             shop,
             tokenResponse.access_token,
             tokenResponse.scope
@@ -364,10 +368,49 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
               tokenResponse.access_token,
               webhookUrl
             );
-          });
+          }).pipe(
+            Effect.catchAll((error) => {
+              // Log webhook registration errors but don't fail the OAuth flow
+              return Effect.gen(function* () {
+                yield* Effect.logError(
+                  `Webhook registration failed: ${
+                    error instanceof Error ? error.message : String(error)
+                  }`,
+                  {
+                    shop,
+                    webhookUrl: envConfig.getShopifyWebhookUrl(
+                      "/shopify/webhooks/app/uninstalled"
+                    ),
+                    errorType: typeof error,
+                  }
+                );
 
-          // Redirect to app
-          const appUrl = `https://${shop}/admin/apps`;
+                // Check if it's a "webhook already exists" error (422 status)
+                const errorMessage =
+                  error instanceof Error ? error.message : String(error);
+                if (
+                  errorMessage.includes("422") &&
+                  errorMessage.includes("already been taken")
+                ) {
+                  yield* Effect.logInfo(
+                    "Webhook already exists - continuing with OAuth flow",
+                    { shop }
+                  );
+                } else {
+                  yield* Effect.logWarning(
+                    "Unexpected webhook registration error - continuing with OAuth flow",
+                    { shop, error: errorMessage }
+                  );
+                }
+
+                // Return success to continue the OAuth flow
+                return;
+              });
+            })
+          );
+
+          // Redirect to app using environment config
+          const appUrl = envConfig.getOrganizationUrl(organizationSlug);
           return new Response(null, {
             status: 302,
             headers: {
@@ -377,7 +420,6 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
         }).pipe(Effect.withSpan("ShopifyOAuthUseCase.handleCallback")),
 
       buildAuthorizationUrl: (
-        organizationId: string,
         shop: ShopDomain,
         clientId: ClientId,
         scopes: Scope[],
@@ -392,11 +434,14 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             `state=${nonce}`
         ).pipe(Effect.withSpan("ShopifyOAuthUseCase.buildAuthorizationUrl")),
 
-      checkConnectionStatus: (organizationId: string, shop: ShopDomain) =>
+      checkConnectionStatus: (
+        organizationSlug: OrganizationSlug,
+        shop: ShopDomain
+      ) =>
         Effect.gen(function* () {
           // Check if we have a stored access token
           const accessToken = yield* accessTokenService
-            .retrieve(organizationId, shop)
+            .retrieve(organizationSlug, shop)
             .pipe(
               Effect.mapError(
                 (error) =>
@@ -423,11 +468,11 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
           };
         }).pipe(Effect.withSpan("ShopifyOAuthUseCase.checkConnectionStatus")),
 
-      disconnect: (organizationId: string, shop: ShopDomain) =>
+      disconnect: (organizationSlug: OrganizationSlug, shop: ShopDomain) =>
         Effect.gen(function* () {
           // Use the AccessTokenService delete method to remove the token
           const deleted = yield* accessTokenService.delete(
-            organizationId,
+            organizationSlug,
             shop
           );
 
@@ -437,7 +482,6 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
         }).pipe(Effect.withSpan("ShopifyOAuthUseCase.disconnect")),
 
       registerWebhooksAfterInstall: (
-        organizationId: string,
         shop: ShopDomain,
         accessToken: AccessToken
       ) =>

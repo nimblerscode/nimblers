@@ -196,7 +196,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
           Effect.mapError(
             (error) =>
               new HttpApiError.HttpApiDecodeError({
-                message: (error as any)?.message || String(error),
+                message: error.message || String(error),
                 issues: [],
               })
           )
@@ -235,7 +235,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
               ).pipe(Effect.annotateLogs({ error }))
             );
             return new HttpApiError.HttpApiDecodeError({
-              message: (error as any)?.message || String(error),
+              message: error.message || String(error),
               issues: [],
             });
           })
@@ -250,7 +250,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
           return { invitation };
         }).pipe(
           Effect.mapError(
-            (error: any) =>
+            (error) =>
               new HttpApiError.HttpApiDecodeError({
                 message: error.message || String(error),
                 issues: [],
@@ -275,7 +275,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
           return invitation;
         }).pipe(
           Effect.mapError(
-            (error: any) =>
+            (error) =>
               new HttpApiError.HttpApiDecodeError({
                 message: error.message || String(error),
                 issues: [],
@@ -290,7 +290,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
           return members;
         }).pipe(
           Effect.mapError(
-            (error: any) =>
+            (error) =>
               new HttpApiError.HttpApiDecodeError({
                 message: error.message || String(error),
                 issues: [],
@@ -304,7 +304,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
           return yield* invitationService.list().pipe(
             Effect.map((invitations) => invitations),
             Effect.mapError(
-              (error: any) =>
+              (error) =>
                 new HttpApiError.HttpApiDecodeError({
                   message: error.message || String(error),
                   issues: [],
@@ -326,13 +326,13 @@ const organizationsGroupLive = (organizationSlug: string) =>
                   Effect.map(() => {
                     return { ok: true };
                   }),
-                  Effect.mapError((error: any) => {
+                  Effect.mapError((error) => {
                     return new HttpApiError.HttpApiDecodeError({
-                      message: error?.message || String(error),
+                      message: error.message || String(error),
                       issues: [
                         {
                           _tag: "Type",
-                          message: error?.message || String(error),
+                          message: error.message || String(error),
                           path: [],
                         },
                       ],
@@ -374,7 +374,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
                 (error) =>
                   new Error(
                     `Failed to get organization '${organizationSlug}': ${
-                      (error as any)?.message || String(error)
+                      error.message || String(error)
                     }`
                   )
               )
@@ -387,7 +387,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
                 (error) =>
                   new Error(
                     `Failed to get stores for org '${org.id}' (${org.name}): ${
-                      (error as any)?.message || String(error)
+                      error.message || String(error)
                     }`
                   )
               )
@@ -396,9 +396,9 @@ const organizationsGroupLive = (organizationSlug: string) =>
           return stores;
         }).pipe(
           Effect.mapError(
-            (error: any) =>
+            (error) =>
               new HttpApiError.HttpApiDecodeError({
-                message: error?.message || String(error),
+                message: error.message || String(error),
                 issues: [],
               })
           )
@@ -465,13 +465,8 @@ const organizationsGroupLive = (organizationSlug: string) =>
             status: store.status,
           };
         }).pipe(
-          Effect.mapError((error: any) => {
-            // Check for SQLite unique constraint violation
-            if (
-              error?.cause?.message?.includes(
-                "UNIQUE constraint failed: connected_store.shopDomain"
-              )
-            ) {
+          Effect.mapError((error) => {
+            if (error instanceof Error) {
               return new HttpApiError.HttpApiDecodeError({
                 message: `Shop '${payload.shopDomain}' is already connected to another organization. Each Shopify store can only be connected to one organization at a time.`,
                 issues: [],
@@ -480,7 +475,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
 
             return new HttpApiError.HttpApiDecodeError({
               message: `Failed to connect store: ${
-                error?.message || String(error)
+                error.message || String(error)
               }`,
               issues: [],
             });
@@ -499,9 +494,9 @@ const organizationsGroupLive = (organizationSlug: string) =>
           return { success: true };
         }).pipe(
           Effect.mapError(
-            (error: any) =>
+            (error) =>
               new HttpApiError.HttpApiDecodeError({
-                message: error?.message || String(error),
+                message: error.message || String(error),
                 issues: [],
               })
           )

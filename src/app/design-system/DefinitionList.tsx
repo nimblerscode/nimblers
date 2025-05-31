@@ -57,16 +57,15 @@ export const DefinitionList = ({
       {...props}
       css={cssProp}
     >
-      {pairs.map((pair) => (
-        <styled.div
-          key={pair.join("-")}
-          display="flex"
-          flexDirection="column"
-          gap="1"
-        >
-          {pair}
-        </styled.div>
-      ))}
+      {pairs.map(([dt, dd], index) => {
+        const dtKey = (dt as any).key ?? `dt-${index}`;
+        const ddKey = (dd as any).key ?? `dd-${index}`;
+        return (
+          <styled.div key={`${dtKey}-${ddKey}`} display="flex" flexDirection="column" gap="1">
+            {[dt, dd]}
+          </styled.div>
+        );
+      })}
     </styled.dl>
   );
 };

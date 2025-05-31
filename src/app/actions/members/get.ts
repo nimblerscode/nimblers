@@ -23,7 +23,7 @@ function checkIfOrgExists(organizationSlug: string) {
 
   const getOrgIdBySlugProgram = OrgD1Service.pipe(
     Effect.flatMap((service) =>
-      service.getOrgIdBySlug(organizationSlug, userId)
+      service.getOrgIdBySlugAndUser(organizationSlug, userId)
     )
   );
 

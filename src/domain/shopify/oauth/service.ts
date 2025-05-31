@@ -1,4 +1,5 @@
 import { Context, type Effect } from "effect";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type {
   AccessToken,
   AccessTokenError,
@@ -42,18 +43,11 @@ export abstract class NonceManager extends Context.Tag(
   NonceManager,
   {
     readonly generate: () => Effect.Effect<Nonce, never>;
-    readonly store: (
-      organizationId: string,
-      nonce: Nonce
-    ) => Effect.Effect<void, OAuthError>;
+    readonly store: (nonce: Nonce) => Effect.Effect<void, OAuthError>;
     readonly verify: (
-      organizationId: string,
       nonce: Nonce
     ) => Effect.Effect<boolean, InvalidNonceError>;
-    readonly consume: (
-      organizationId: string,
-      nonce: Nonce
-    ) => Effect.Effect<void, InvalidNonceError>;
+    readonly consume: (nonce: Nonce) => Effect.Effect<void, InvalidNonceError>;
   }
 >() {}
 
@@ -73,17 +67,17 @@ export abstract class AccessTokenService extends Context.Tag(
       AccessTokenError
     >;
     readonly store: (
-      organizationId: string,
+      organizationSlug: OrganizationSlug,
       shop: ShopDomain,
       token: AccessToken,
       scope: Scope
     ) => Effect.Effect<void, OAuthError>;
     readonly retrieve: (
-      organizationId: string,
+      organizationSlug: OrganizationSlug,
       shop: ShopDomain
     ) => Effect.Effect<AccessToken | null, OAuthError>;
     readonly delete: (
-      organizationId: string,
+      organizationSlug: OrganizationSlug,
       shop: ShopDomain
     ) => Effect.Effect<boolean, OAuthError>;
   }
@@ -122,14 +116,14 @@ export abstract class ShopifyOAuthUseCase extends Context.Tag(
   ShopifyOAuthUseCase,
   {
     readonly handleInstallRequest: (
-      organizationId: string,
+      organizationSlug: OrganizationSlug,
       request: Request
     ) => Effect.Effect<
       Response,
       OAuthError | InvalidHmacError | InvalidShopDomainError
     >;
     readonly handleCallback: (
-      organizationId: string,
+      organizationSlug: OrganizationSlug,
       request: Request
     ) => Effect.Effect<
       Response,
@@ -140,7 +134,6 @@ export abstract class ShopifyOAuthUseCase extends Context.Tag(
       | InvalidShopDomainError
     >;
     readonly buildAuthorizationUrl: (
-      organizationId: string,
       shop: ShopDomain,
       clientId: ClientId,
       scopes: Scope[],
@@ -148,18 +141,17 @@ export abstract class ShopifyOAuthUseCase extends Context.Tag(
       nonce: Nonce
     ) => Effect.Effect<string, OAuthError>;
     readonly checkConnectionStatus: (
-      organizationId: string,
+      organizationSlug: OrganizationSlug,
       shop: ShopDomain
     ) => Effect.Effect<
       { connected: boolean; shop: ShopDomain; scope?: Scope },
       OAuthError
     >;
     readonly disconnect: (
-      organizationId: string,
+      organizationSlug: OrganizationSlug,
       shop: ShopDomain
     ) => Effect.Effect<{ success: boolean }, OAuthError>;
     readonly registerWebhooksAfterInstall: (
-      organizationId: string,
       shop: ShopDomain,
       accessToken: AccessToken
     ) => Effect.Effect<void, OAuthError>;

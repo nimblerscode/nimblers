@@ -4,6 +4,7 @@ import type {
   OrganizationWithMembership,
 } from "@/domain/global/organization/model";
 import { OrgDbError } from "@/domain/global/organization/model";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { makeOrgD1DrizzleAdapter } from "./OrgD1DrizzleAdapter";
 
 const mapToOrgDbError = (error: unknown): OrgDbError => {
@@ -11,7 +12,7 @@ const mapToOrgDbError = (error: unknown): OrgDbError => {
 };
 
 export const makeOrgD1EffectAdapter = (
-  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>,
+  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>
 ) => ({
   create: (organizationData: NewOrganizationD1) =>
     Effect.gen(function* () {
@@ -21,7 +22,7 @@ export const makeOrgD1EffectAdapter = (
       });
       if (!orgResult) {
         return yield* Effect.fail(
-          mapToOrgDbError("Insert returned no results"),
+          mapToOrgDbError("Insert returned no results")
         );
       }
       return orgResult;
@@ -37,10 +38,21 @@ export const makeOrgD1EffectAdapter = (
       }
       return orgResult;
     }),
-  getOrgIdBySlug: (slug: string, userId: string) => {
+  getOrgBySlug: (slug: OrganizationSlug) =>
+    Effect.gen(function* () {
+      const orgResult = yield* Effect.tryPromise({
+        try: () => drizzleAdapter.getOrgBySlug(slug),
+        catch: mapToOrgDbError,
+      });
+      if (!orgResult) {
+        return yield* Effect.fail(mapToOrgDbError("Get returned no results"));
+      }
+      return orgResult;
+    }),
+  getOrgIdBySlugAndUser: (slug: string, userId: string) => {
     return Effect.gen(function* () {
       const orgSlug = yield* Effect.tryPromise({
-        try: () => drizzleAdapter.getOrgIdBySlug(slug, userId),
+        try: () => drizzleAdapter.getOrgIdBySlugAndUser(slug, userId),
         catch: (e) => {
           return mapToOrgDbError(e);
         },
@@ -52,7 +64,7 @@ export const makeOrgD1EffectAdapter = (
     });
   },
   getOrganizationsForUser: (
-    userId: string,
+    userId: string
   ): Effect.Effect<OrganizationWithMembership[], OrgDbError> =>
     Effect.gen(function* () {
       const organizations = yield* Effect.tryPromise({

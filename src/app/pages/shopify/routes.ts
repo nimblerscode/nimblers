@@ -7,12 +7,17 @@ import { organizationMiddleware } from "@/app/middleware/organizationMiddleware"
 import type { ShopDomain } from "@/domain/shopify/oauth/models";
 import { ShopifyOAuthUseCase } from "@/domain/shopify/oauth/service";
 import { StoreConnectionService } from "@/domain/shopify/store/service";
-import { ShopifyOAuthDOServiceLive } from "@/config/shopify";
+import {
+  ShopifyOAuthDOServiceLive,
+  ConnectStoreApplicationLayerLive,
+} from "@/config/shopify";
 import {
   StoreConnectionServiceLive,
   ShopifyStoreEnv,
 } from "@/application/shopify/store/service";
+import { ConnectStoreApplicationService } from "@/application/shopify/connection/connectStoreService";
 import { ShopifyDashboard } from "./ShopifyDashboard";
+import { OrganizationSlug } from "@/domain/global/organization/models";
 
 // Define custom errors using Effect-TS Data.TaggedError pattern
 class MissingOrganizationError extends Data.TaggedError(
@@ -118,6 +123,41 @@ const matchInstallError = Match.type<ShopifyRouteError | Error>().pipe(
   )
 );
 
+// Helper to extract organization slug from URL (Shopify routes are org-scoped)
+const extractOrganizationSlug = (
+  request: Request
+): Effect.Effect<OrganizationSlug, MissingOrganizationError> =>
+  Effect.gen(function* () {
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split("/").filter(Boolean);
+
+    // Look for /organization/{slug}/ pattern in the URL
+    const orgIndex = pathSegments.indexOf("organization");
+    if (orgIndex !== -1) {
+      const slug = pathSegments[orgIndex + 1]; // This could be undefined
+      if (slug) {
+        return slug as OrganizationSlug;
+      }
+    }
+
+    // Fallback: check if this is a callback with state parameter containing org info
+    const state = url.searchParams.get("state");
+    if (state && state.includes("_org_")) {
+      const parts = state.split("_org_");
+      const orgSlug = parts[0];
+      if (orgSlug) {
+        return orgSlug as OrganizationSlug;
+      }
+    }
+
+    // If we reach here, no valid organization slug was found
+    return yield* Effect.fail(
+      new MissingOrganizationError({
+        message: "Organization slug not found in URL path or state parameter",
+      })
+    );
+  });
+
 // Helper to validate organization ID from context
 const validateOrganizationId = (ctx: AppContext) =>
   Effect.gen(function* () {
@@ -150,6 +190,13 @@ const createOAuthServiceLayer = () =>
     SHOPIFY_OAUTH_DO: env.SHOPIFY_OAUTH_DO as any,
     SHOPIFY_CLIENT_ID: env.SHOPIFY_CLIENT_ID,
     SHOPIFY_CLIENT_SECRET: env.SHOPIFY_CLIENT_SECRET,
+  });
+
+// Helper to create complete store connection layer (for post-OAuth orchestration)
+const createStoreConnectionLayer = () =>
+  ConnectStoreApplicationLayerLive({
+    ORG_DO: env.ORG_DO as any,
+    DB: env.DB,
   });
 
 export const routes = [
@@ -331,11 +378,11 @@ export const routes = [
       const appCtx = ctx as AppContext;
 
       const program = Effect.gen(function* () {
-        const organizationId = yield* validateOrganizationId(appCtx);
+        const organizationSlug = yield* extractOrganizationSlug(request);
         const oauthUseCase = yield* ShopifyOAuthUseCase;
 
         return yield* oauthUseCase.handleInstallRequest(
-          organizationId,
+          organizationSlug,
           request
         );
       });
@@ -389,7 +436,7 @@ export const routes = [
       // Extract organization slug from state parameter
       const extractOrganizationSlug = (
         state: Option.Option<string>
-      ): Effect.Effect<string, MissingShopParameterError> => {
+      ): Effect.Effect<OrganizationSlug, MissingShopParameterError> => {
         return Option.match(state, {
           onNone: () =>
             Effect.fail(
@@ -407,7 +454,7 @@ export const routes = [
             }
 
             const parts = stateValue.split("_org_");
-            const orgSlug = parts[0];
+            const orgSlug = parts[0] as OrganizationSlug;
 
             if (!orgSlug) {
               return Effect.fail(
@@ -422,7 +469,10 @@ export const routes = [
         });
       };
 
-      const createErrorRedirect = (orgSlug: string, errorMessage: string) =>
+      const createErrorRedirect = (
+        orgSlug: OrganizationSlug,
+        errorMessage: string
+      ) =>
         Effect.succeed(
           new Response(null, {
             status: 302,
@@ -448,7 +498,103 @@ export const routes = [
             Option.fromNullable(state)
           );
           const oauthUseCase = yield* ShopifyOAuthUseCase;
-          return yield* oauthUseCase.handleCallback(organizationSlug, request);
+
+          yield* Effect.logInfo("OAuth callback: Starting OAuth flow", {
+            organizationSlug,
+            shopDomain: shop,
+          });
+
+          // Step 1: Complete OAuth flow
+          const oauthResult = yield* oauthUseCase.handleCallback(
+            organizationSlug,
+            request
+          );
+
+          yield* Effect.logInfo(
+            "OAuth callback: OAuth flow completed successfully",
+            {
+              organizationSlug,
+              shopDomain: shop,
+            }
+          );
+
+          // Step 2: Create store connection record (orchestrated at route level)
+          const connectStoreService = yield* ConnectStoreApplicationService;
+
+          const storeConnectionResult = yield* Effect.gen(function* () {
+            yield* Effect.logInfo("OAuth callback: Starting store connection", {
+              organizationSlug,
+              shopDomain: shop,
+            });
+
+            const connectionResult =
+              yield* connectStoreService.connectShopifyStore({
+                organizationSlug,
+                shopDomain: shop as ShopDomain,
+              });
+
+            yield* Effect.logInfo("OAuth callback: Store connection result", {
+              organizationSlug,
+              shopDomain: shop,
+              success: connectionResult.success,
+              message: connectionResult.message,
+            });
+
+            if (!connectionResult.success) {
+              yield* Effect.logError(
+                `Failed to create global store connection: ${connectionResult.message}`,
+                {
+                  organizationSlug,
+                  shopDomain: shop,
+                  error: connectionResult.error,
+                }
+              );
+            } else {
+              yield* Effect.logInfo(
+                `Successfully created global store connection: ${connectionResult.message}`,
+                {
+                  organizationSlug,
+                  shopDomain: shop,
+                }
+              );
+            }
+
+            return connectionResult;
+          }).pipe(
+            Effect.catchAll((error: unknown) => {
+              // Log error but don't fail the overall flow
+              return Effect.gen(function* () {
+                yield* Effect.logError(
+                  `Error creating global store connection: ${error}`,
+                  {
+                    organizationSlug,
+                    shopDomain: shop,
+                    errorType: typeof error,
+                    errorMessage:
+                      error instanceof Error ? error.message : String(error),
+                  }
+                );
+
+                // Return a failure result but don't propagate the error
+                return {
+                  success: false,
+                  message: `Store connection failed: ${
+                    error instanceof Error ? error.message : String(error)
+                  }`,
+                  error: "STORE_CONNECTION_ERROR",
+                };
+              });
+            })
+          );
+
+          yield* Effect.logInfo("OAuth callback: Flow completed", {
+            organizationSlug,
+            shopDomain: shop,
+            oauthSuccess: true,
+            storeConnectionSuccess: storeConnectionResult.success,
+          });
+
+          return oauthResult;
         });
 
         const effectProgram = Effect.gen(function* () {
@@ -456,7 +602,12 @@ export const routes = [
             try: () =>
               Effect.runPromise(
                 program.pipe(
-                  Effect.provide(createOAuthServiceLayer()),
+                  Effect.provide(
+                    Layer.mergeAll(
+                      createOAuthServiceLayer(),
+                      createStoreConnectionLayer()
+                    )
+                  ),
                   Effect.catchAll((error) => {
                     // Handle different error types appropriately
                     if (error instanceof MissingShopParameterError) {
@@ -467,6 +618,19 @@ export const routes = [
 
                     // For other errors, we need to extract org slug again for redirect
                     return Effect.gen(function* () {
+                      yield* Effect.logError(
+                        "OAuth callback: Effect error caught",
+                        {
+                          error:
+                            error instanceof Error
+                              ? error.message
+                              : String(error),
+                          errorType: typeof error,
+                          state,
+                          shop,
+                        }
+                      );
+
                       const result = yield* extractOrganizationSlug(
                         Option.fromNullable(state)
                       );
@@ -475,11 +639,27 @@ export const routes = [
                         "OAuth authorization failed"
                       );
                     }).pipe(
-                      Effect.catchAll(() =>
-                        createFallbackErrorRedirect(
-                          "OAuth authorization failed"
-                        )
-                      )
+                      Effect.catchAll((fallbackError) => {
+                        return Effect.gen(function* () {
+                          yield* Effect.logError(
+                            "OAuth callback: Fallback error",
+                            {
+                              fallbackError:
+                                fallbackError instanceof Error
+                                  ? fallbackError.message
+                                  : String(fallbackError),
+                              originalError:
+                                error instanceof Error
+                                  ? error.message
+                                  : String(error),
+                            }
+                          );
+
+                          return yield* createFallbackErrorRedirect(
+                            "OAuth authorization failed"
+                          );
+                        });
+                      })
                     );
                   })
                 )
@@ -494,6 +674,13 @@ export const routes = [
           Effect.catchAll((error) => {
             // Handle unexpected errors - try to extract org slug for redirect
             return Effect.gen(function* () {
+              yield* Effect.logError("OAuth callback: Unexpected error", {
+                error: error instanceof Error ? error.message : String(error),
+                errorType: typeof error,
+                state,
+                shop,
+              });
+
               const result = yield* extractOrganizationSlug(
                 Option.fromNullable(state)
               );
@@ -502,11 +689,25 @@ export const routes = [
                 "Unexpected error during OAuth callback"
               );
             }).pipe(
-              Effect.catchAll(() =>
-                createFallbackErrorRedirect(
-                  "Unexpected error during OAuth callback"
-                )
-              )
+              Effect.catchAll((fallbackError) => {
+                return Effect.gen(function* () {
+                  yield* Effect.logError(
+                    "OAuth callback: Final fallback error",
+                    {
+                      fallbackError:
+                        fallbackError instanceof Error
+                          ? fallbackError.message
+                          : String(fallbackError),
+                      originalError:
+                        error instanceof Error ? error.message : String(error),
+                    }
+                  );
+
+                  return yield* createFallbackErrorRedirect(
+                    "Unexpected error during OAuth callback"
+                  );
+                });
+              })
             );
           })
         );
@@ -514,49 +715,20 @@ export const routes = [
         return Effect.runPromise(effectProgram);
       }
 
-      // Fallback: If we don't have shop and organization context, use default
-      const program = Effect.gen(function* () {
-        const oauthUseCase = yield* ShopifyOAuthUseCase;
-        return yield* oauthUseCase.handleCallback("default-org", request);
-      });
-
-      const effectProgram = Effect.gen(function* () {
-        return yield* Effect.tryPromise({
-          try: () =>
-            Effect.runPromise(
-              program.pipe(
-                Effect.provide(createOAuthServiceLayer()),
-                Effect.catchAll((error) => {
-                  return Effect.succeed(
-                    Response.json(
-                      {
-                        error: "Failed to process callback",
-                        details: String(error),
-                      },
-                      { status: 500 }
-                    )
-                  );
-                })
-              )
-            ),
-          catch: (error) =>
-            new EffectExecutionError({
-              message: "Failed to execute OAuth callback fallback",
-              cause: error,
-            }),
-        });
-      }).pipe(
-        Effect.catchAll((error) =>
-          Effect.succeed(
-            Response.json(
-              { error: "Failed to process callback", details: String(error) },
-              { status: 500 }
-            )
-          )
-        )
+      // SECURITY: If we don't have shop parameter, we can't process the OAuth callback properly.
+      // We NEVER use a fallback organization as this could lead to:
+      // 1. OAuth tokens being associated with the wrong organization
+      // 2. Store connections being created under the wrong organization
+      // 3. Data leakage between organizations
+      // A missing shop parameter indicates a malformed or invalid OAuth callback.
+      return Response.json(
+        {
+          error: "Invalid OAuth callback",
+          message:
+            "Missing shop parameter - cannot process OAuth callback without shop information",
+        },
+        { status: 400 }
       );
-
-      return Effect.runPromise(effectProgram);
     }
   ),
 ];

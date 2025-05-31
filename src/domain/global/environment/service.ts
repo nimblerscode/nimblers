@@ -1,11 +1,12 @@
 import { Context } from "effect";
+import { OrganizationSlug } from "../organization/models";
 
 // Environment types
 export type Environment = "development" | "staging" | "production";
 
 // Environment configuration interface
 export abstract class EnvironmentConfigService extends Context.Tag(
-  "@core/environment/ConfigService",
+  "@core/environment/ConfigService"
 )<
   EnvironmentConfigService,
   {
@@ -14,7 +15,7 @@ export abstract class EnvironmentConfigService extends Context.Tag(
     readonly getShopifyWebhookUrl: (path: string) => string;
     readonly getInvitationUrl: (token: string) => string;
     readonly getVerificationUrl: (token: string) => string;
-    readonly getOrganizationUrl: (slug: string) => string;
+    readonly getOrganizationUrl: (slug: OrganizationSlug) => string;
     readonly getEnvironment: () => Environment;
   }
 >() {}
