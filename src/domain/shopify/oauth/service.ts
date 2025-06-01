@@ -104,7 +104,7 @@ export abstract class ShopValidator extends Context.Tag(
   ShopValidator,
   {
     readonly validateShopDomain: (
-      shop: string
+      shop: ShopDomain
     ) => Effect.Effect<ShopDomain, InvalidShopDomainError>;
   }
 >() {}

@@ -6,6 +6,7 @@ import type {
 import { OrgDbError } from "@/domain/global/organization/model";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { makeOrgD1DrizzleAdapter } from "./OrgD1DrizzleAdapter";
+import type { UserId } from "@/domain/global/user/model";
 
 const mapToOrgDbError = (error: unknown): OrgDbError => {
   return new OrgDbError({ cause: error });
@@ -49,10 +50,10 @@ export const makeOrgD1EffectAdapter = (
       }
       return orgResult;
     }),
-  getOrgIdBySlugAndUser: (slug: string, userId: string) => {
+  verifyUserOrgMembership: (slug: OrganizationSlug, userId: UserId) => {
     return Effect.gen(function* () {
       const orgSlug = yield* Effect.tryPromise({
-        try: () => drizzleAdapter.getOrgIdBySlugAndUser(slug, userId),
+        try: () => drizzleAdapter.verifyUserOrgMembership(slug, userId),
         catch: (e) => {
           return mapToOrgDbError(e);
         },
@@ -64,7 +65,7 @@ export const makeOrgD1EffectAdapter = (
     });
   },
   getOrganizationsForUser: (
-    userId: string
+    userId: UserId
   ): Effect.Effect<OrganizationWithMembership[], OrgDbError> =>
     Effect.gen(function* () {
       const organizations = yield* Effect.tryPromise({

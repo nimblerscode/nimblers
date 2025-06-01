@@ -9,7 +9,10 @@ import {
   NewOrganizationSchema,
   OrganizationSchema,
 } from "@/domain/tenant/organization/model";
-import { OrganizationSlug } from "@/domain/global/organization/models";
+import {
+  OrganizationSlug,
+  ShopDomain,
+} from "@/domain/global/organization/models";
 
 /**
  * Shared API schemas for Organization Durable Object
@@ -86,6 +89,55 @@ export const OrganizationApiSchemas = {
   // Get Invitations
   getInvitations: {
     response: Schema.Array(InvitationSchema),
+  },
+
+  // Connect Store
+  connectStore: {
+    request: Schema.Struct({
+      type: Schema.Literal("shopify"),
+      shopDomain: Schema.String,
+      organizationSlug: OrganizationSlug,
+    }),
+    response: Schema.Struct({
+      id: Schema.String,
+      shopDomain: Schema.String,
+      status: Schema.String,
+    }),
+  },
+
+  // Disconnect Store
+  disconnectStore: {
+    path: Schema.Struct({
+      shopDomain: ShopDomain,
+    }),
+    response: Schema.Struct({
+      success: Schema.Boolean,
+    }),
+  },
+
+  // Get Connected Stores
+  getConnectedStores: {
+    path: Schema.Struct({
+      organizationSlug: OrganizationSlug,
+    }),
+    response: Schema.Array(
+      Schema.Struct({
+        id: Schema.String,
+        organizationId: Schema.String,
+        type: Schema.Literal("shopify"),
+        shopDomain: Schema.String,
+        scope: Schema.NullOr(Schema.String),
+        status: Schema.Union(
+          Schema.Literal("active"),
+          Schema.Literal("disconnected"),
+          Schema.Literal("error")
+        ),
+        connectedAt: Schema.Date,
+        lastSyncAt: Schema.NullOr(Schema.Date),
+        metadata: Schema.NullOr(Schema.String),
+        createdAt: Schema.Date,
+      })
+    ),
   },
 } as const;
 

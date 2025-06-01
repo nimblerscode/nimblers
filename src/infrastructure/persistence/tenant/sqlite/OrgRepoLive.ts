@@ -40,10 +40,33 @@ export const OrgRepoLive = Layer.effect(
         }),
       create: (data: NewOrganization, creatorUserId: string) =>
         Effect.gen(function* () {
+          yield* Effect.log("=== ORG REPO CREATE START ===").pipe(
+            Effect.annotateLogs({
+              data: JSON.stringify(data, null, 2),
+              creatorUserId,
+              timestamp: new Date().toISOString(),
+            })
+          );
+
+          yield* Effect.log("Attempting drizzle adapter createOrg");
           const result = yield* Effect.tryPromise({
             try: () => drizzleAdapter.createOrg(data, creatorUserId),
-            catch: mapToOrgDbError,
+            catch: (error) => {
+              console.error("drizzleAdapter.createOrg failed:", error);
+              return mapToOrgDbError(error);
+            },
           });
+
+          yield* Effect.log(
+            "drizzleAdapter.createOrg completed successfully"
+          ).pipe(
+            Effect.annotateLogs({
+              result: JSON.stringify(result, null, 2),
+              timestamp: new Date().toISOString(),
+            })
+          );
+
+          yield* Effect.log("Creating initial member");
           // Now, create the initial member
           const createdMemberEffect = memberRepoService.createMember({
             ...result.memberCreateData,
@@ -51,7 +74,27 @@ export const OrgRepoLive = Layer.effect(
               .userId as unknown as Member["userId"],
           });
 
-          yield* createdMemberEffect.pipe(Effect.mapError(mapToOrgDbError));
+          yield* createdMemberEffect.pipe(
+            Effect.mapError((error) => {
+              console.error("Member creation failed:", error);
+              return mapToOrgDbError(error);
+            }),
+            Effect.tap(() =>
+              Effect.log("Member created successfully").pipe(
+                Effect.annotateLogs({
+                  timestamp: new Date().toISOString(),
+                })
+              )
+            )
+          );
+
+          yield* Effect.log("=== ORG REPO CREATE SUCCESS ===").pipe(
+            Effect.annotateLogs({
+              finalResult: JSON.stringify(result.org, null, 2),
+              timestamp: new Date().toISOString(),
+            })
+          );
+
           return result.org;
         }),
     };

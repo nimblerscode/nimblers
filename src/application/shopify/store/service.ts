@@ -1,15 +1,14 @@
 import { Context, Effect, Layer } from "effect";
 import { FetchHttpClient } from "@effect/platform";
 import type { ShopDomain } from "@/domain/shopify/oauth/models";
-import {
-  StoreManagementService,
-  StoreConnectionService,
-} from "@/domain/shopify/store/service";
-import type { StoreNotFoundError } from "@/domain/shopify/store/models";
+import { ShopifyStoreService } from "@/domain/shopify/store/service";
+import { StoreNotFoundError } from "@/domain/shopify/store/models";
 import { createOrganizationDOClient } from "@/infrastructure/cloudflare/durable-objects/organization/api/client";
 import { DrizzleD1Client } from "@/infrastructure/persistence/global/d1/drizzle";
 import { organization } from "@/infrastructure/persistence/global/d1/schema";
 import { GlobalShopConnectionUseCase } from "@/domain/global/organization/service";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
+import type { ConnectedStore } from "@/domain/tenant/organization/model";
 
 // Environment dependencies
 export abstract class ShopifyStoreEnv extends Context.Tag(
@@ -21,173 +20,83 @@ export abstract class ShopifyStoreEnv extends Context.Tag(
   }
 >() {}
 
-export const StoreManagementServiceLive = Layer.effect(
-  StoreManagementService,
+export const ShopifyStoreServiceLive = Layer.effect(
+  ShopifyStoreService,
   Effect.gen(function* () {
     const env = yield* ShopifyStoreEnv;
+    const drizzleClient = yield* DrizzleD1Client;
+    const globalShopService = yield* GlobalShopConnectionUseCase;
 
     const getAllOrganizationSlugs = () =>
       Effect.gen(function* () {
-        yield* Effect.log("📊 Querying organizations from global D1 database");
-        const db = yield* DrizzleD1Client;
         const organizations = yield* Effect.tryPromise({
-          try: () => db.select({ slug: organization.slug }).from(organization),
+          try: () => drizzleClient.select().from(organization),
           catch: (error) =>
-            new Error(`Failed to query organizations: ${error}`),
+            new Error(`Failed to fetch organizations: ${error}`),
         });
 
-        yield* Effect.log("📊 Organization query result", {
-          count: organizations.length,
-          organizations: organizations.map((org) => org.slug),
-        });
-
-        if (organizations.length === 0) {
-          yield* Effect.log("❌ No organizations found in database");
-          return yield* Effect.fail(
-            new Error("No organizations found in database")
-          );
-        }
-
-        return organizations.map((org) => org.slug);
+        return organizations.map((org) => org.slug as OrganizationSlug);
       });
 
+    // ⚡ OPTIMIZED: Direct O(1) lookup using GlobalShopConnectionRepo
     const findOrganizationByShop = (shopDomain: ShopDomain) =>
       Effect.gen(function* () {
-        // Get list of organization slugs from global database
-        const organizationSlugs = yield* getAllOrganizationSlugs();
-        yield* Effect.log("🔍 Starting organization lookup", {
+        yield* Effect.log("🔍⚡ Using optimized shop lookup", {
           shopDomain,
-          organizationsToCheck: organizationSlugs,
+          method: "Direct D1 query (O1)",
         });
 
-        for (const orgSlug of organizationSlugs) {
-          yield* Effect.log("🔍 Checking organization", {
-            orgSlug,
-            shopDomain,
-          });
-
-          const doId = env.ORG_DO.idFromName(orgSlug);
-          const stub = env.ORG_DO.get(doId);
-
-          const result = yield* Effect.gen(function* () {
-            const client = yield* createOrganizationDOClient(stub);
-            const stores = yield* client.organizations.getConnectedStores();
-
-            yield* Effect.log("🔍 Retrieved stores for organization", {
-              orgSlug,
-              storeCount: stores.length,
-              stores: stores.map((store) => ({
-                shopDomain: store.shopDomain,
-                status: store.status,
-              })),
-            });
-
-            // Check if any store matches our shop domain
-            const hasShop = stores.some(
-              (store) =>
-                store.shopDomain === shopDomain && store.status === "active"
-            );
-
-            if (hasShop) {
-              yield* Effect.log("✅ Found matching shop in organization", {
-                orgSlug,
-                shopDomain,
-              });
-            }
-
-            return hasShop ? orgSlug : null;
-          }).pipe(
-            Effect.provide(FetchHttpClient.layer),
-            // Continue to next organization if this one fails
-            Effect.catchAll((error) => {
-              return Effect.gen(function* () {
-                yield* Effect.log("⚠️ Failed to check organization", {
-                  orgSlug,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-                return null;
-              });
-            })
+        // Direct lookup in the global shop_connection table
+        const shopConnection = yield* globalShopService
+          .checkShopConnection(shopDomain)
+          .pipe(
+            Effect.mapError(
+              (error) =>
+                new StoreNotFoundError({
+                  message: `Failed to lookup shop connection: ${error.message}`,
+                  shopDomain,
+                })
+            )
           );
 
-          if (result) {
-            yield* Effect.log("✅ Organization found for shop", {
+        if (!shopConnection) {
+          yield* Effect.log("❌ No shop connection found", {
+            shopDomain,
+          });
+          return yield* Effect.fail(
+            new StoreNotFoundError({
+              message: "Store not found in global registry",
               shopDomain,
-              organizationSlug: result,
-            });
-            return result; // Found the organization that owns this shop!
-          }
+            })
+          );
         }
 
-        yield* Effect.log("❌ No organization found for shop", {
+        if (!shopConnection.organizationSlug) {
+          yield* Effect.log("⚠️ Found stale shop connection record", {
+            shopDomain,
+            organizationSlug: shopConnection.organizationSlug,
+          });
+          return yield* Effect.fail(
+            new StoreNotFoundError({
+              message:
+                "Shop connection exists but organization slug is missing (stale record)",
+              shopDomain,
+            })
+          );
+        }
+
+        yield* Effect.log("✅ Found organization for shop", {
           shopDomain,
-          checkedOrganizations: organizationSlugs,
+          organizationSlug: shopConnection.organizationSlug,
+          method: "Direct lookup",
         });
-        return yield* Effect.fail({
-          _tag: "StoreNotFoundError",
-          shopDomain,
-        } as StoreNotFoundError);
+
+        return shopConnection.organizationSlug;
       });
 
-    const disconnectStoreFromOrganization = (
-      organizationSlug: string,
-      shopDomain: ShopDomain
-    ) =>
-      Effect.gen(function* () {
-        yield* Effect.log("🔌 Attempting to disconnect shop", {
-          organizationSlug,
-          shopDomain,
-        });
-
-        // Use the typed organization client instead of raw fetch
-        const doId = env.ORG_DO.idFromName(organizationSlug);
-        const stub = env.ORG_DO.get(doId);
-
-        const client = yield* createOrganizationDOClient(stub);
-        const result = yield* client.organizations.disconnectStore({
-          path: { shopDomain },
-        });
-
-        yield* Effect.log("🔌 Disconnection API response", {
-          organizationSlug,
-          shopDomain,
-          success: result.success,
-        });
-
-        if (!result.success) {
-          return yield* Effect.fail({
-            _tag: "StoreNotFoundError",
-            shopDomain,
-          } as StoreNotFoundError);
-        }
-
-        return result.success;
-      }).pipe(
-        Effect.provide(FetchHttpClient.layer),
-        Effect.mapError((error) =>
-          error._tag === "StoreNotFoundError"
-            ? error
-            : new Error(
-                `Failed to disconnect store: ${error._tag || String(error)}`
-              )
-        )
-      );
-
-    return {
-      getAllOrganizationSlugs,
-      findOrganizationByShop,
-      disconnectStoreFromOrganization,
-    };
-  })
-);
-
-export const StoreConnectionServiceLive = Layer.effect(
-  StoreConnectionService,
-  Effect.gen(function* () {
-    const env = yield* ShopifyStoreEnv;
-
+    // Store connection operations
     const checkConnectionStatus = (
-      organizationSlug: string,
+      organizationSlug: OrganizationSlug,
       shopDomain: ShopDomain
     ) =>
       Effect.gen(function* () {
@@ -201,7 +110,9 @@ export const StoreConnectionServiceLive = Layer.effect(
 
         const client = yield* createOrganizationDOClient(stub);
         const stores = yield* client.organizations
-          .getConnectedStores()
+          .getConnectedStores({
+            path: { organizationSlug },
+          })
           .pipe(
             Effect.mapError(
               (error) => new Error(`Failed to get connected stores: ${error}`)
@@ -224,8 +135,37 @@ export const StoreConnectionServiceLive = Layer.effect(
         };
       }).pipe(Effect.provide(FetchHttpClient.layer));
 
+    const getConnectedStores = (organizationSlug: OrganizationSlug) =>
+      Effect.gen(function* () {
+        yield* Effect.log("📋 Getting connected stores", {
+          organizationSlug,
+        });
+
+        const doId = env.ORG_DO.idFromName(organizationSlug);
+        const stub = env.ORG_DO.get(doId);
+
+        const client = yield* createOrganizationDOClient(stub);
+        const stores = yield* client.organizations
+          .getConnectedStores({
+            path: { organizationSlug },
+          })
+          .pipe(
+            Effect.mapError(
+              (error) => new Error(`Failed to get connected stores: ${error}`)
+            )
+          );
+
+        yield* Effect.log("📋 Retrieved connected stores", {
+          organizationSlug,
+          storeCount: stores.length,
+        });
+
+        return stores as readonly ConnectedStore[];
+      }).pipe(Effect.provide(FetchHttpClient.layer));
+
+    // Unified store disconnection
     const disconnectStore = (
-      organizationSlug: string,
+      organizationSlug: OrganizationSlug,
       shopDomain: ShopDomain
     ) =>
       Effect.gen(function* () {
@@ -258,7 +198,10 @@ export const StoreConnectionServiceLive = Layer.effect(
       }).pipe(Effect.provide(FetchHttpClient.layer));
 
     return {
+      getAllOrganizationSlugs,
+      findOrganizationByShop,
       checkConnectionStatus,
+      getConnectedStores,
       disconnectStore,
     };
   })
@@ -281,7 +224,7 @@ export const WebhookProcessingUseCaseLive = Layer.effect(
     >;
   }>("@application/shopify/webhooks/ProcessingUseCase"),
   Effect.gen(function* () {
-    const storeManagement = yield* StoreManagementService;
+    const storeManagement = yield* ShopifyStoreService;
     const globalShopService = yield* GlobalShopConnectionUseCase;
 
     const processAppUninstallWebhook = (
@@ -311,11 +254,11 @@ export const WebhookProcessingUseCaseLive = Layer.effect(
           shopDomain,
           organizationSlug,
         });
-        const disconnected =
-          yield* storeManagement.disconnectStoreFromOrganization(
-            organizationSlug,
-            shopDomain
-          );
+        const disconnectResult = yield* storeManagement.disconnectStore(
+          organizationSlug,
+          shopDomain
+        );
+        const disconnected = disconnectResult.success;
 
         yield* Effect.log("✅ Shop successfully disconnected", {
           shopDomain,

@@ -1,4 +1,5 @@
 import { Schema as S } from "effect";
+import type { ShopDomain } from "@/domain/global/organization/models";
 
 // Shopify webhook headers - using the actual case that Shopify sends
 export const ShopifyWebhookHeaders = S.Struct({
@@ -70,7 +71,7 @@ export type AppUninstalledWebhook = S.Schema.Type<
 export interface WebhookProcessingResult {
   success: boolean;
   message: string;
-  shopDomain?: string;
+  shopDomain?: ShopDomain;
 }
 
 // Errors

@@ -9,6 +9,15 @@ import { PendingInvitationsList } from "./members/PendingInvitationsList";
 import { Overview } from "./overview/Overview";
 import { ShopifyConnectCard } from "./overview/ShopifyConnectCard";
 import { Subscription } from "./overview/Subscription";
+import type { ShopDomain } from "@/domain/global/organization/models";
+
+interface ConnectedStore {
+  id: string;
+  shopDomain: ShopDomain;
+  status: "active" | "disconnected" | "error";
+  connectedAt: string;
+  lastSyncAt: string | null;
+}
 
 export function OrganizationDashboard({
   user,
@@ -23,11 +32,11 @@ export function OrganizationDashboard({
   pendingInvitations?: SerializableInvitation[];
   shopifyData: {
     clientId: string;
+    connectedStores: ConnectedStore[];
     oauthMessage: {
       type: "success" | "error";
       message: string;
     } | null;
-    connectedShop?: string | null;
   };
 }) {
   return (
@@ -42,8 +51,9 @@ export function OrganizationDashboard({
         {/* Shopify Connect Section */}
         <ShopifyConnectCard
           organizationSlug={organization.slug}
-          shopifyData={shopifyData}
-          shopDomain={shopifyData.connectedShop || undefined}
+          shopifyClientId={shopifyData.clientId}
+          connectedStores={shopifyData.connectedStores}
+          oauthMessage={shopifyData.oauthMessage}
         />
       </VStack>
 

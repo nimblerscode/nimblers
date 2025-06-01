@@ -22,7 +22,7 @@ import {
   ShopValidator,
   WebhookService,
 } from "@/domain/shopify/oauth/service";
-import { OrganizationSlug } from "@/domain/global/organization/models";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 // Environment binding for Shopify OAuth
 export abstract class ShopifyOAuthEnv extends Context.Tag(
@@ -135,7 +135,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
                 !params.shop.includes(".myshopify.com")
               ) {
                 return new InvalidShopDomainError({
-                  shop: params.shop,
+                  shop: params.shop as ShopDomain,
                   message: "Invalid shop domain format",
                 });
               }
@@ -194,6 +194,9 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
           const nonce = yield* nonceManager.generate();
           yield* nonceManager.store(nonce);
 
+          // Encode organization slug in state parameter for callback
+          const stateWithOrg = `${organizationSlug}_org_${nonce}`;
+
           const clientId = env.SHOPIFY_CLIENT_ID as ClientId;
           const scopes = ["read_products", "write_products"] as Scope[]; // Configure as needed
           const redirectUri = envConfig.getShopifyOAuthCallbackUrl();
@@ -203,7 +206,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
               `client_id=${clientId}&` +
               `scope=${scopes.join(",")}&` +
               `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-              `state=${nonce}`
+              `state=${stateWithOrg}` // Use organization-encoded state
           );
 
           // Check if embedded and handle iframe escape
@@ -281,7 +284,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
                 !params.shop.includes(".myshopify.com")
               ) {
                 return new InvalidShopDomainError({
-                  shop: params.shop,
+                  shop: params.shop as ShopDomain,
                   message: "Invalid shop domain format",
                 });
               }

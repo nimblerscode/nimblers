@@ -22,7 +22,7 @@ export type ShopDomain = S.Schema.Type<typeof ShopDomain>;
 
 export const ShopConnection = S.Struct({
   shopDomain: ShopDomain,
-  organizationId: OrganizationId,
+  organizationSlug: OrganizationSlug, // Fix: Use OrganizationSlug consistently
   type: S.Literal("shopify", "woocommerce"),
   status: S.Literal("active", "disconnected"),
   connectedAt: S.Date,
@@ -33,7 +33,7 @@ export type ShopConnection = S.Schema.Type<typeof ShopConnection>;
 
 export const NewShopConnection = S.Struct({
   shopDomain: ShopDomain,
-  organizationId: OrganizationId,
+  organizationSlug: OrganizationSlug,
   type: S.Literal("shopify", "woocommerce"),
   status: S.Literal("active", "disconnected"),
   connectedAt: S.Date,
@@ -55,7 +55,7 @@ export class ShopAlreadyConnectedError extends S.TaggedError<ShopAlreadyConnecte
   {
     message: S.String,
     shopDomain: ShopDomain,
-    connectedToOrganization: OrganizationId,
+    connectedToOrganization: OrganizationSlug, // Fix: Use OrganizationSlug consistently
     cause: S.optional(S.Unknown),
   }
 ) {}

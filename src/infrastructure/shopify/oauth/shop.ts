@@ -9,7 +9,7 @@ export const ShopValidatorLive = Layer.effect(
   ShopValidator,
   Effect.gen(function* () {
     return {
-      validateShopDomain: (shop: string) =>
+      validateShopDomain: (shop: ShopDomain) =>
         Effect.gen(function* () {
           // Basic validation: must end with .myshopify.com
           if (!shop.endsWith(".myshopify.com")) {
@@ -27,7 +27,7 @@ export const ShopValidatorLive = Layer.effect(
               (error) =>
                 new InvalidShopDomainError({
                   message: "Invalid shop domain format",
-                  shop,
+                  shop: shop,
                 })
             )
           );

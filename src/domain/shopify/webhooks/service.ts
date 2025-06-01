@@ -6,33 +6,34 @@ import type {
   WebhookProcessingResult,
   WebhookVerificationError,
 } from "./models";
+import type { ShopDomain } from "@/domain/global/organization/models";
 
 // Webhook verification service
 export abstract class ShopifyWebhookVerifier extends Context.Tag(
-  "@core/shopify/webhooks/Verifier",
+  "@core/shopify/webhooks/Verifier"
 )<
   ShopifyWebhookVerifier,
   {
     readonly verifyWebhook: (
       body: string,
       headers: ShopifyWebhookHeaders,
-      secret: string,
+      secret: string
     ) => Effect.Effect<boolean, WebhookVerificationError>;
   }
 >() {}
 
 // Webhook processing use case
 export abstract class ShopifyWebhookUseCase extends Context.Tag(
-  "@core/shopify/webhooks/UseCase",
+  "@core/shopify/webhooks/UseCase"
 )<
   ShopifyWebhookUseCase,
   {
     readonly handleAppUninstalled: (
-      request: Request,
+      request: Request
     ) => Effect.Effect<WebhookProcessingResult, WebhookProcessingError>;
     readonly processAppUninstall: (
-      shopDomain: string,
-      webhookData: AppUninstalledWebhook,
+      shopDomain: ShopDomain,
+      webhookData: AppUninstalledWebhook
     ) => Effect.Effect<WebhookProcessingResult, WebhookProcessingError>;
   }
 >() {}

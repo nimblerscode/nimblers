@@ -8,7 +8,6 @@ import type {
 } from "./model";
 import type {
   NewShopConnection,
-  OrganizationId,
   OrganizationSlug,
   ShopAlreadyConnectedError,
   ShopConnection,
@@ -23,13 +22,16 @@ export abstract class OrgD1Repo extends Context.Tag("@core/OrgD1Repo")<
     readonly create: (
       organization: NewOrganizationD1
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
+    readonly getOrgById: (
+      id: string
+    ) => Effect.Effect<OrganizationD1, OrgDbError>;
     readonly getOrgBySlug: (
       slug: OrganizationSlug
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
-    readonly getOrgIdBySlugAndUser: (
-      slug: string,
+    readonly verifyUserOrgMembership: (
+      slug: OrganizationSlug,
       userId: UserId
-    ) => Effect.Effect<string, OrgDbError>;
+    ) => Effect.Effect<OrganizationSlug, OrgDbError>;
     readonly getOrganizationsForUser: (
       userId: UserId
     ) => Effect.Effect<OrganizationWithMembership[], OrgDbError>;
@@ -43,13 +45,16 @@ export abstract class OrgD1Service extends Context.Tag("@core/OrgD1Service")<
     readonly create: (
       organization: NewOrganizationD1
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
+    readonly getOrgById: (
+      id: string
+    ) => Effect.Effect<OrganizationD1, OrgDbError>;
     readonly getOrgBySlug: (
       slug: OrganizationSlug
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
-    readonly getOrgIdBySlugAndUser: (
-      slug: string,
+    readonly verifyUserOrgMembership: (
+      slug: OrganizationSlug,
       userId: UserId
-    ) => Effect.Effect<string, OrgDbError>;
+    ) => Effect.Effect<OrganizationSlug, OrgDbError>;
     readonly getOrganizationsForUser: (
       userId: UserId
     ) => Effect.Effect<OrganizationWithMembership[], OrgDbError>;
@@ -79,8 +84,8 @@ export abstract class GlobalShopConnectionRepo extends Context.Tag(
     readonly deleteByShopDomain: (
       shopDomain: ShopDomain
     ) => Effect.Effect<boolean, GlobalDbError>;
-    readonly getByOrganizationId: (
-      organizationId: OrganizationId
+    readonly getByOrganizationSlug: (
+      organizationSlug: OrganizationSlug
     ) => Effect.Effect<ShopConnection[], GlobalDbError>;
   }
 >() {}
@@ -104,7 +109,7 @@ export abstract class GlobalShopConnectionUseCase extends Context.Tag(
       shopDomain: ShopDomain
     ) => Effect.Effect<ShopConnection | null, ShopConnectionError>;
     readonly getOrganizationShops: (
-      organizationId: OrganizationId
+      organizationSlug: OrganizationSlug
     ) => Effect.Effect<ShopConnection[], ShopConnectionError>;
   }
 >() {}

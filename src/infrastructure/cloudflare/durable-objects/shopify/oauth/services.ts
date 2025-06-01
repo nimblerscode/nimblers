@@ -13,7 +13,7 @@ import {
   type Scope,
   type ShopDomain,
 } from "@/domain/shopify/oauth/models";
-import { OrganizationSlug } from "@/domain/global/organization/models";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import {
   AccessTokenService,
   NonceManager,
@@ -57,7 +57,7 @@ export const NonceManagerDOLive = Layer.effect(
           Effect.orDie // Convert all errors to defects since domain expects never
         ),
 
-      store: (organizationSlug: OrganizationSlug, nonce: Nonce) =>
+      store: (nonce: Nonce) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
             try: () =>
@@ -65,7 +65,6 @@ export const NonceManagerDOLive = Layer.effect(
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  organizationId: organizationSlug,
                   nonce,
                 }),
               }),
@@ -85,7 +84,7 @@ export const NonceManagerDOLive = Layer.effect(
           }
         }),
 
-      verify: (organizationSlug: OrganizationSlug, nonce: Nonce) =>
+      verify: (nonce: Nonce) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
             try: () =>
@@ -93,7 +92,6 @@ export const NonceManagerDOLive = Layer.effect(
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  organizationId: organizationSlug,
                   nonce,
                 }),
               }),
@@ -122,7 +120,7 @@ export const NonceManagerDOLive = Layer.effect(
           return data.valid;
         }),
 
-      consume: (organizationSlug: OrganizationSlug, nonce: Nonce) =>
+      consume: (nonce: Nonce) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
             try: () =>
@@ -130,7 +128,6 @@ export const NonceManagerDOLive = Layer.effect(
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  organizationId: organizationSlug,
                   nonce,
                 }),
               }),

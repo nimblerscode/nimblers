@@ -1,17 +1,20 @@
 import { Effect, Layer } from "effect";
 import { ShopifyComplianceUseCaseLive } from "@/application/shopify/compliance/service";
+import { ComplianceWebhookServiceLive } from "@/application/shopify/compliance/webhookService";
 import {
   ShopifyOAuthUseCaseLive,
   ShopifyOAuthEnv,
 } from "@/application/shopify/oauth/service";
 import { GlobalShopConnectionUseCaseLive } from "@/application/global/organization/shopConnectionService";
 import {
-  StoreConnectionServiceLive,
-  StoreManagementServiceLive,
+  ShopifyStoreServiceLive,
   ShopifyStoreEnv,
 } from "@/application/shopify/store/service";
 import { ShopConnectionCheckServiceLive } from "@/application/shopify/connection/checkConnectionService";
-import { ConnectStoreApplicationServiceLive } from "@/application/shopify/connection/connectStoreService";
+import {
+  ConnectStoreApplicationServiceLive,
+  ConnectStoreEnv,
+} from "@/application/shopify/connection/connectStoreService";
 import { NonceManager } from "@/domain/shopify/oauth/service";
 import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
 import { ShopifyHmacVerifierLive } from "@/infrastructure/shopify/compliance/hmac";
@@ -29,7 +32,10 @@ import {
 } from "@/infrastructure/persistence/global/d1/drizzle";
 import { FetchHttpClient } from "@effect/platform";
 import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
-
+import { ShopifyValidationServiceLive } from "@/infrastructure/shopify/validation/service";
+import { ShopifyConfigServiceLive } from "@/application/shopify/config/configService";
+import { ShopifyOAuthApplicationServiceLive } from "@/application/shopify/routes/oauthApplicationService";
+import { ShopifyStoreApplicationServiceLive } from "@/application/shopify/routes/storeApplicationService";
 /**
  * Complete Shopify compliance layer with all dependencies
  */
@@ -43,15 +49,24 @@ export const ShopifyComplianceLayerLive = Layer.provide(
 );
 
 /**
+ * Compliance Webhook Application Service Layer
+ */
+export const ComplianceWebhookLayerLive = Layer.provide(
+  ComplianceWebhookServiceLive,
+  ShopifyComplianceLayerLive
+);
+
+/**
  * Global Shop Connection Layer - for checking global shop constraints
  */
 export function GlobalShopConnectionLayerLive(env: { DB: D1Database }) {
   const d1Layer = D1BindingLive(env);
   const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
   const repoLayer = Layer.provide(GlobalShopConnectionRepoLive, drizzleLayer);
+  const orgServiceLayer = Layer.provide(OrgRepoD1LayerLive, drizzleLayer);
   const useCaseLayer = Layer.provide(
     GlobalShopConnectionUseCaseLive,
-    repoLayer
+    Layer.mergeAll(repoLayer, orgServiceLayer)
   );
 
   return useCaseLayer;
@@ -66,7 +81,7 @@ export function ShopConnectionCheckLayerLive(env: { DB: D1Database }) {
 }
 
 /**
- * Store Connection Service Layer - for organization store operations via DO
+ * Unified Store Service Layer - for all store operations
  */
 export function StoreConnectionLayerLive(env: {
   ORG_DO: DurableObjectNamespace<any>;
@@ -78,17 +93,12 @@ export function StoreConnectionLayerLive(env: {
     ORG_DO: env.ORG_DO,
   });
 
-  const storeConnectionLayer = Layer.provide(
-    StoreConnectionServiceLive,
+  const storeServiceLayer = Layer.provide(
+    ShopifyStoreServiceLive,
     Layer.mergeAll(storeEnvLayer, globalShopLayer, FetchHttpClient.layer)
   );
 
-  const storeManagementLayer = Layer.provide(
-    StoreManagementServiceLive,
-    Layer.mergeAll(storeEnvLayer, globalShopLayer, FetchHttpClient.layer)
-  );
-
-  return Layer.mergeAll(storeConnectionLayer, storeManagementLayer);
+  return storeServiceLayer;
 }
 
 /**
@@ -106,9 +116,19 @@ export function ConnectStoreApplicationLayerLive(env: {
   const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
   const orgServiceLayer = Layer.provide(OrgRepoD1LayerLive, drizzleLayer);
 
+  // Add ConnectStoreEnv layer for OrganizationDO access
+  const connectStoreEnvLayer = Layer.succeed(ConnectStoreEnv, {
+    ORG_DO: env.ORG_DO,
+  });
+
   return Layer.provide(
     ConnectStoreApplicationServiceLive,
-    Layer.mergeAll(globalShopLayer, storeConnectionLayer, orgServiceLayer)
+    Layer.mergeAll(
+      globalShopLayer,
+      storeConnectionLayer,
+      orgServiceLayer,
+      connectStoreEnvLayer
+    )
   );
 }
 
@@ -152,16 +172,16 @@ export function ShopifyOAuthDOServiceLive(env: {
           const nonce = crypto.randomUUID();
           return Effect.succeed(nonce as any);
         },
-        store: (organizationId: string, nonce: any) => {
+        store: (nonce: any) => {
           // No-op for stateless approach - state is in the URL
           return Effect.succeed(void 0);
         },
-        verify: (organizationId: string, nonce: any) => {
+        verify: (nonce: any) => {
           // For stateless approach, we trust the HMAC verification
           // The nonce is just for uniqueness, not for storage validation
           return Effect.succeed(true);
         },
-        consume: (organizationId: string, nonce: any) => {
+        consume: (nonce: any) => {
           // No-op for stateless approach
           return Effect.succeed(void 0);
         },
@@ -197,4 +217,30 @@ export function ShopifyOAuthDOServiceLive(env: {
   const useCaseLayer = Layer.provide(ShopifyOAuthUseCaseLive, serviceLayers);
 
   return useCaseLayer;
+}
+
+// Add these new layer exports
+export const ShopifyValidationLayerLive = ShopifyValidationServiceLive;
+export const ShopifyConfigLayerLive = ShopifyConfigServiceLive;
+
+export function ShopifyOAuthApplicationLayerLive(env: {
+  SHOPIFY_OAUTH_DO: DurableObjectNamespace;
+  SHOPIFY_CLIENT_ID: string;
+  SHOPIFY_CLIENT_SECRET: string;
+  ORG_DO: DurableObjectNamespace<any>;
+  DB: D1Database;
+}) {
+  const baseLayer = Layer.merge(
+    ShopifyOAuthDOServiceLive(env),
+    ConnectStoreApplicationLayerLive(env)
+  );
+  return Layer.provide(ShopifyOAuthApplicationServiceLive, baseLayer);
+}
+
+export function ShopifyStoreApplicationLayerLive(env: {
+  ORG_DO: DurableObjectNamespace<any>;
+  DB: D1Database;
+}) {
+  const baseLayer = ConnectStoreApplicationLayerLive(env);
+  return Layer.provide(ShopifyStoreApplicationServiceLive, baseLayer);
 }

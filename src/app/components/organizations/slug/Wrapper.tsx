@@ -8,6 +8,15 @@ import type { Organization } from "@/domain/tenant/organization/model";
 import { MainLayout } from "../../layout/MainLayout";
 import { Header } from "./Header";
 import { OrganizationDashboard } from "./OrganizationDashboard";
+import type { ShopDomain } from "@/domain/global/organization/models";
+
+interface ConnectedStore {
+  id: string;
+  shopDomain: ShopDomain;
+  status: "active" | "disconnected" | "error";
+  connectedAt: string;
+  lastSyncAt: string | null;
+}
 
 export function Wrapper({
   organization,
@@ -37,13 +46,14 @@ export function Wrapper({
   currentPath?: string;
   shopifyData: {
     clientId: string;
+    connectedStores: ConnectedStore[];
     oauthMessage: {
       type: "success" | "error";
       message: string;
     } | null;
-    connectedShop?: string | null;
   };
 }) {
+  console.log("shopifyData", shopifyData);
   return (
     <MainLayout
       user={user}

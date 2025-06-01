@@ -5,8 +5,12 @@ import type {
   OrganizationD1,
   OrganizationWithMembership,
 } from "@/domain/global/organization/model";
-import type { OrganizationSlug } from "@/domain/global/organization/models";
+import type {
+  OrganizationSlug,
+  OrganizationId,
+} from "@/domain/global/organization/models";
 import * as schema from "./schema";
+import type { UserId } from "@/domain/global/user/model";
 
 export const makeOrgD1DrizzleAdapter = (
   db: DrizzleD1Database<typeof schema>
@@ -57,7 +61,7 @@ export const makeOrgD1DrizzleAdapter = (
 
     return orgResults[0] as unknown as OrganizationD1;
   },
-  getOrgIdBySlugAndUser: async (slug: string, userId: string) => {
+  verifyUserOrgMembership: async (slug: OrganizationSlug, userId: UserId) => {
     const orgResults = await db
       .select()
       .from(schema.organization)
@@ -84,10 +88,10 @@ export const makeOrgD1DrizzleAdapter = (
       throw new Error("User not found in organization");
     }
 
-    return orgResults[0].slug as unknown as string;
+    return orgResults[0].slug as OrganizationSlug;
   },
   getOrganizationsForUser: async (
-    userId: string
+    userId: UserId
   ): Promise<OrganizationWithMembership[]> => {
     const results = await db
       .select({
@@ -106,6 +110,8 @@ export const makeOrgD1DrizzleAdapter = (
 
     return results.map((result) => ({
       ...result,
+      id: result.id as OrganizationId,
+      slug: result.slug as OrganizationSlug,
       createdAt: result.createdAt.toISOString(),
     }));
   },

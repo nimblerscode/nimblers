@@ -49,13 +49,13 @@ CREATE TABLE `session` (
 CREATE UNIQUE INDEX `session_token_unique` ON `session` (`token`);--> statement-breakpoint
 CREATE TABLE `shop_connection` (
 	`shopDomain` text PRIMARY KEY NOT NULL,
-	`organizationId` text NOT NULL,
+	`organizationSlug` text NOT NULL,
 	`type` text DEFAULT 'shopify' NOT NULL,
 	`status` text DEFAULT 'active' NOT NULL,
 	`connectedAt` integer DEFAULT (unixepoch() * 1000) NOT NULL,
 	`createdAt` integer DEFAULT (unixepoch() * 1000) NOT NULL,
 	`updatedAt` integer DEFAULT (unixepoch() * 1000) NOT NULL,
-	FOREIGN KEY (`organizationId`) REFERENCES `organization`(`id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`organizationSlug`) REFERENCES `organization`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `user` (

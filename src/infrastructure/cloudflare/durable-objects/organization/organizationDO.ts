@@ -34,6 +34,13 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
     const url = new URL(request.url);
     const method = request.method;
 
+    logger.info("OrganizationDO fetch started", {
+      method,
+      pathname: url.pathname,
+      searchParams: Object.fromEntries(url.searchParams),
+      doId: this.doId,
+    });
+
     try {
       // Add request logging with organization context
       logger.info(`OrganizationDO request: ${method} ${url.pathname}`, {
@@ -43,47 +50,80 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         searchParams: Object.fromEntries(url.searchParams),
       });
 
-      // Get the handler with proper error handling
-      const { handler } = getOrgHandler(this.state);
+      logger.info("Getting handler from getOrgHandler");
+
+      // Extract organization slug from multiple sources
+      let organizationSlug: string | null = null;
+
+      // Method 1: Try doState.id.name first
+      if (this.state.id.name) {
+        organizationSlug = this.state.id.name;
+        logger.info("Found slug from doState.id.name", {
+          slug: organizationSlug,
+        });
+      }
+
+      // Method 2: Extract from request headers
+      if (!organizationSlug) {
+        organizationSlug = request.headers.get("X-Organization-Slug");
+        if (organizationSlug) {
+          logger.info("Found slug from X-Organization-Slug header", {
+            slug: organizationSlug,
+          });
+        }
+      }
+
+      // Method 3: Extract from URL path segments
+      if (!organizationSlug) {
+        const pathSegments = url.pathname.split("/").filter(Boolean);
+        // Look for organization slug in URL (could be first segment or after specific patterns)
+        if (pathSegments.length > 0) {
+          // For requests like /organization, /members/org-slug, etc.
+          organizationSlug = pathSegments[pathSegments.length - 1];
+          logger.info("Found slug from URL path", { slug: organizationSlug });
+        }
+      }
+
+      if (!organizationSlug) {
+        logger.error("No organization slug found in any source", {
+          doIdName: this.state.id.name,
+          headers: Object.fromEntries(request.headers),
+          pathname: url.pathname,
+        });
+        return new Response("Organization slug not found", { status: 400 });
+      }
+
+      logger.info("Organization slug resolved", { slug: organizationSlug });
+
+      // Get handler with the resolved slug
+      const { handler } = getOrgHandler(this.state, organizationSlug);
+
+      logger.info("Handler obtained, calling with request");
       const response = await handler(request);
 
-      // Log successful responses
       const duration = Date.now() - startTime;
-      logger.info(`OrganizationDO response: ${response.status}`, {
-        duration: `${duration}ms`,
+      logger.info("OrganizationDO fetch completed successfully", {
         status: response.status,
-        doId: this.doId,
+        duration: `${duration}ms`,
       });
 
       return response;
     } catch (error) {
-      // Enhanced error handling with context
       const duration = Date.now() - startTime;
-      logger.error("OrganizationDO error handling request", {
+      logger.error("OrganizationDO fetch failed", {
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
         duration: `${duration}ms`,
+      });
+
+      logger.error("OrganizationDO error handling request", {
         doId: this.doId,
         method,
         pathname: url.pathname,
+        error: error instanceof Error ? error.message : String(error),
       });
 
-      // Return structured error response
-      return new Response(
-        JSON.stringify({
-          error: "Internal Server Error",
-          message: "An error occurred while processing your request",
-          timestamp: new Date().toISOString(),
-          requestId: this.doId,
-        }),
-        {
-          status: 500,
-          headers: {
-            "Content-Type": "application/json",
-            "X-Request-ID": this.doId,
-          },
-        }
-      );
+      return new Response("Internal Server Error", { status: 500 });
     }
   }
 

@@ -4,7 +4,7 @@ import { MemberDOError } from "@/domain/tenant/member/model";
 import { MemberDOService } from "@/domain/tenant/member/service";
 import { OrganizationDONamespace } from "./OrganizationDONameSpace";
 import { createOrganizationDOClient } from "./organization/api/client";
-import { OrganizationSlug } from "@/domain/global/organization/models";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 export const MembersDOServiceLive = Layer.effect(
   MemberDOService,

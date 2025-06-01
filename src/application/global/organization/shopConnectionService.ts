@@ -2,10 +2,11 @@ import { Effect, Layer } from "effect";
 import {
   GlobalShopConnectionRepo,
   GlobalShopConnectionUseCase,
+  OrgD1Service,
 } from "@/domain/global/organization/service";
 import {
   type NewShopConnection,
-  type OrganizationId,
+  type OrganizationSlug,
   ShopAlreadyConnectedError,
   ShopConnectionError,
   type ShopDomain,
@@ -15,6 +16,7 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
   GlobalShopConnectionUseCase,
   Effect.gen(function* () {
     const repo = yield* GlobalShopConnectionRepo;
+    const orgService = yield* OrgD1Service;
 
     return {
       connectShop: (connection: NewShopConnection) =>
@@ -33,30 +35,27 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
               )
             );
 
-          if (
-            existingConnection &&
-            existingConnection.organizationId !== connection.organizationId
-          ) {
+          if (existingConnection) {
+            // Check if it's being connected to the same organization
+            if (
+              existingConnection.organizationSlug ===
+              connection.organizationSlug
+            ) {
+              // Shop is already connected to the same organization
+              return existingConnection;
+            }
+
+            // Shop is connected to a different organization
             return yield* Effect.fail(
               new ShopAlreadyConnectedError({
-                message: `Shop '${connection.shopDomain}' is already connected to organization '${existingConnection.organizationId}'`,
+                message: `Shop '${connection.shopDomain}' is already connected to organization '${existingConnection.organizationSlug}'`,
                 shopDomain: connection.shopDomain,
-                connectedToOrganization: existingConnection.organizationId,
+                connectedToOrganization: existingConnection.organizationSlug,
               })
             );
           }
 
-          // If already connected to the same org, update it
-          if (
-            existingConnection &&
-            existingConnection.organizationId === connection.organizationId
-          ) {
-            // For now, return the existing connection
-            // TODO: Implement update logic if needed
-            return existingConnection;
-          }
-
-          // Create new connection
+          // Create new connection since no existing connection was found
           const newConnection = yield* repo.create(connection).pipe(
             Effect.mapError(
               (error) =>
@@ -103,18 +102,22 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
           return connection;
         }),
 
-      getOrganizationShops: (organizationId: OrganizationId) =>
+      getOrganizationShops: (organizationSlug: OrganizationSlug) =>
         Effect.gen(function* () {
-          const shops = yield* repo.getByOrganizationId(organizationId).pipe(
-            Effect.mapError(
-              (error) =>
-                new ShopConnectionError({
-                  message: `Failed to get organization shops: ${error.message}`,
-                  shopDomain: "" as ShopDomain, // Not applicable here
-                  cause: error,
-                })
-            )
-          );
+          const shops = yield* repo
+            .getByOrganizationSlug(organizationSlug)
+            .pipe(
+              Effect.mapError(
+                (error) =>
+                  new ShopConnectionError({
+                    message: `Failed to get organization shops: ${
+                      error instanceof Error ? error.message : String(error)
+                    }`,
+                    shopDomain: "" as ShopDomain, // Not applicable here
+                    cause: error,
+                  })
+              )
+            );
 
           return shops;
         }),

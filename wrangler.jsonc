@@ -17,7 +17,7 @@
     {
       "binding": "DB",
       "database_name": "nimblers-registry",
-      "database_id": "3c62c7a7-5b39-4458-975d-3b3d138deb96",
+      "database_id": "39f0cc45-448b-4a42-97c0-a3ad726f01e4",
       "migrations_dir": "drizzle/gateway"
     }
   ],

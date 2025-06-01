@@ -71,7 +71,7 @@ export class StoreAlreadyConnectedError extends S.TaggedError<StoreAlreadyConnec
   {
     message: S.String,
     shopDomain: ShopDomain,
-    connectedToOrganization: S.optional(S.String),
+    connectedToOrganization: S.optional(OrganizationId),
     cause: S.optional(S.Unknown),
   }
 ) {}

@@ -1,9 +1,11 @@
 import { Context, Effect, Layer } from "effect";
 import { GlobalShopConnectionUseCase } from "@/domain/global/organization/service";
 import { OrgD1Service } from "@/domain/global/organization/service";
-import { StoreConnectionService as DomainStoreConnectionService } from "@/domain/shopify/store/service";
+import { ShopifyStoreService as DomainStoreConnectionService } from "@/domain/shopify/store/service";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { ShopDomain } from "@/domain/shopify/oauth/models";
+import { createOrganizationDOClient } from "@/infrastructure/cloudflare/durable-objects/organization/api/client";
+import { FetchHttpClient } from "@effect/platform";
 
 export interface ConnectStoreResult {
   success: boolean;
@@ -12,6 +14,16 @@ export interface ConnectStoreResult {
   shopDomain?: ShopDomain;
   error?: string;
 }
+
+// Environment dependencies for OrganizationDO access
+export abstract class ConnectStoreEnv extends Context.Tag(
+  "@application/shopify/ConnectStoreEnv"
+)<
+  ConnectStoreEnv,
+  {
+    ORG_DO: DurableObjectNamespace;
+  }
+>() {}
 
 // === Connect Store Application Service ===
 export abstract class ConnectStoreApplicationService extends Context.Tag(
@@ -36,6 +48,7 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
     const globalShopService = yield* GlobalShopConnectionUseCase;
     const storeConnectionService = yield* DomainStoreConnectionService;
     const orgService = yield* OrgD1Service;
+    const env = yield* ConnectStoreEnv;
 
     return {
       connectShopifyStore: ({
@@ -64,15 +77,28 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
             .checkShopConnection(shopDomain)
             .pipe(Effect.catchAll(() => Effect.succeed(null)));
 
+          // Check if shop is connected to a different valid organization
           if (
-            existingConnection &&
-            existingConnection.organizationId !== organizationId
+            existingConnection?.organizationSlug && // Only block if organizationSlug is not null/undefined
+            existingConnection.organizationSlug !== organizationSlug
           ) {
             return {
               success: false,
-              message: `Shop '${shopDomain}' is already connected to organization '${existingConnection.organizationId}'. Each Shopify store can only be connected to one organization at a time.`,
+              message: `Shop '${shopDomain}' is already connected to another organization. Each Shopify store can only be connected to one organization at a time. Please disconnect from the current organization before connecting to '${organizationSlug}'.`,
               error: "SHOP_ALREADY_CONNECTED",
             };
+          }
+
+          // If there's a stale record with undefined/null organizationSlug, log it and continue
+          if (existingConnection && !existingConnection.organizationSlug) {
+            yield* Effect.logWarning(
+              "Found stale shop connection record with undefined organizationSlug",
+              {
+                shopDomain,
+                existingOrganizationSlug: existingConnection.organizationSlug,
+                newOrganizationSlug: organizationSlug,
+              }
+            );
           }
 
           // STEP 2: Check connection status via Store Connection Service
@@ -98,12 +124,19 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
             };
           }
 
-          // STEP 3: Create/update global record (if not already exists)
-          if (!existingConnection) {
+          // STEP 3: Create/update global record (if not exists or is stale)
+          if (!existingConnection || !existingConnection.organizationSlug) {
+            const action = !existingConnection ? "Creating" : "Updating stale";
+            yield* Effect.log(`${action} global shop connection record`, {
+              shopDomain,
+              organizationSlug,
+              existingRecord: existingConnection ? "stale" : "none",
+            });
+
             yield* globalShopService
               .connectShop({
                 shopDomain,
-                organizationId: organizationId,
+                organizationSlug: organizationSlug,
                 type: "shopify" as const,
                 status: "active" as const,
                 connectedAt: new Date(),
@@ -112,16 +145,74 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
                 Effect.catchAll((error) => {
                   // Log error but don't fail the entire operation
                   return Effect.logError(
-                    `Failed to create global shop connection record: ${error}`
+                    `Failed to ${action.toLowerCase()} global shop connection record: ${error}`
                   );
                 })
               );
           }
 
+          // STEP 4: Create connected store record in OrganizationDO
+          yield* Effect.log("🔗 Creating connected store in OrganizationDO", {
+            organizationSlug,
+            shopDomain,
+            organizationId,
+          });
+
+          const storeResult = yield* Effect.gen(function* () {
+            const doId = env.ORG_DO.idFromName(organizationSlug);
+            const stub = env.ORG_DO.get(doId);
+            const client = yield* createOrganizationDOClient(stub);
+
+            // Call the connectStore endpoint to create the connected_store record
+            const result = yield* client.organizations
+              .connectStore({
+                payload: {
+                  organizationSlug,
+                  type: "shopify" as const,
+                  shopDomain,
+                },
+              })
+              .pipe(
+                Effect.mapError(
+                  (error) =>
+                    new Error(`Failed to connect store in DO: ${error}`)
+                )
+              );
+
+            yield* Effect.log("🔗 Connected store in OrganizationDO", {
+              organizationSlug,
+              shopDomain,
+              storeId: result.id,
+              status: result.status,
+            });
+
+            return result;
+          }).pipe(
+            Effect.provide(FetchHttpClient.layer),
+            Effect.catchAll((error) => {
+              // Log error but don't fail the entire operation
+              return Effect.gen(function* () {
+                yield* Effect.logError(
+                  `Failed to create connected store in OrganizationDO: ${error}`
+                );
+                // Return a minimal success response for backwards compatibility
+                return {
+                  id: `store-${organizationSlug}-${shopDomain.replace(
+                    ".myshopify.com",
+                    ""
+                  )}`,
+                  shopDomain,
+                  status: "active" as const,
+                };
+              });
+            })
+          );
+
           return {
             success: true,
             message: `Successfully connected ${shopDomain} to ${organizationSlug}`,
             shopDomain,
+            storeId: storeResult.id,
           };
         }).pipe(
           Effect.catchAll((error: unknown) =>

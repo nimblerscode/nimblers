@@ -6,7 +6,7 @@ import {
 } from "@/domain/global/organization/service";
 import type {
   NewShopConnection,
-  OrganizationId,
+  OrganizationSlug,
   ShopConnection,
   ShopDomain,
 } from "@/domain/global/organization/models";
@@ -27,7 +27,7 @@ export const GlobalShopConnectionRepoLive = Layer.effect(
                 .insert(shopConnection)
                 .values({
                   shopDomain: connection.shopDomain,
-                  organizationId: connection.organizationId,
+                  organizationSlug: connection.organizationSlug,
                   type: connection.type,
                   status: connection.status,
                   connectedAt: connection.connectedAt,
@@ -87,14 +87,14 @@ export const GlobalShopConnectionRepoLive = Layer.effect(
           return result.meta.changes > 0;
         }),
 
-      getByOrganizationId: (organizationId: OrganizationId) =>
+      getByOrganizationSlug: (organizationSlug: OrganizationSlug) =>
         Effect.gen(function* () {
           const result = yield* Effect.tryPromise({
             try: () =>
               db
                 .select()
                 .from(shopConnection)
-                .where(eq(shopConnection.organizationId, organizationId)),
+                .where(eq(shopConnection.organizationSlug, organizationSlug)),
             catch: (error) =>
               new GlobalDbError(
                 `Failed to query organization shops: ${error}`,

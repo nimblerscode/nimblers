@@ -1,33 +1,43 @@
+import type { OrganizationSlug, ShopDomain } from "@/domain/global/organization/models";
 import { ShopifyConnectCardClient } from "./ShopifyConnectCardClient";
 
+interface ConnectedStore {
+  id: string;
+  shopDomain: ShopDomain;
+  status: "active" | "disconnected" | "error";
+  connectedAt: string;
+  lastSyncAt: string | null;
+}
+
 interface ShopifyConnectCardProps {
-  organizationSlug: string;
-  shopifyData: {
-    clientId: string;
-    oauthMessage: {
-      type: "success" | "error";
-      message: string;
-    } | null;
-  };
-  // Optional: if we know a specific shop domain to check
-  shopDomain?: string;
+  organizationSlug: OrganizationSlug;
+  shopifyClientId: string;
+  connectedStores: ConnectedStore[];
+  oauthMessage?: {
+    type: "success" | "error";
+    message: string;
+  } | null;
 }
 
 export function ShopifyConnectCard({
   organizationSlug,
-  shopifyData,
-  shopDomain,
+  shopifyClientId,
+  connectedStores,
+  oauthMessage,
 }: ShopifyConnectCardProps) {
-  // For now, we'll let the client component handle connection status checking
-  // This prevents the async server component issues and excessive DO requests
+  // Find active stores
+  const activeStores = connectedStores.filter((store) => store.status === "active");
+  const hasActiveConnection = activeStores.length > 0;
+  const primaryStore = activeStores[0];
 
   return (
     <ShopifyConnectCardClient
       organizationSlug={organizationSlug}
-      shopifyClientId={shopifyData.clientId}
-      initialConnectionStatus={null} // Let client component handle this
-      oauthMessage={shopifyData.oauthMessage}
-      knownShopDomain={shopDomain}
+      shopifyClientId={shopifyClientId}
+      connectedStores={connectedStores}
+      hasActiveConnection={hasActiveConnection}
+      primaryStore={primaryStore}
+      oauthMessage={oauthMessage}
     />
   );
 }

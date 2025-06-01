@@ -11,8 +11,9 @@ import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
 import { UserRepoLive } from "@/infrastructure/persistence/global/d1/UserRepoAdapter";
 import type { UserId } from "@/domain/global/user/model";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 
-function checkIfOrgExists(organizationSlug: string) {
+function checkIfOrgExists(organizationSlug: OrganizationSlug) {
   const ctx = requestInfo.ctx as AppContext;
 
   if (!ctx.session || !ctx.session.userId) {
@@ -23,7 +24,7 @@ function checkIfOrgExists(organizationSlug: string) {
 
   const getOrgIdBySlugProgram = OrgD1Service.pipe(
     Effect.flatMap((service) =>
-      service.getOrgIdBySlugAndUser(organizationSlug, userId)
+      service.verifyUserOrgMembership(organizationSlug, userId)
     )
   );
 
@@ -56,7 +57,7 @@ async function getUsersFromMembers(members: Member[]) {
   return users;
 }
 
-export async function getMembers(organizationSlug: string) {
+export async function getMembers(organizationSlug: OrganizationSlug) {
   const slug = Effect.tryPromise({
     try: () => checkIfOrgExists(organizationSlug),
     catch: (e) => {

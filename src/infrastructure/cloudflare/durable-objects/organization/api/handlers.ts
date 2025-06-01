@@ -103,62 +103,25 @@ const getInvitations = HttpApiEndpoint.get("getInvitations", "/invitations")
   .addError(HttpApiError.NotFound);
 
 // Store management endpoints
-const getConnectedStores = HttpApiEndpoint.get("getConnectedStores", "/stores")
-  .addSuccess(
-    Schema.Array(
-      Schema.Struct({
-        id: Schema.String,
-        organizationId: Schema.String,
-        type: Schema.Literal("shopify"),
-        shopDomain: Schema.String,
-        scope: Schema.NullOr(Schema.String),
-        status: Schema.Union(
-          Schema.Literal("active"),
-          Schema.Literal("disconnected"),
-          Schema.Literal("error")
-        ),
-        connectedAt: Schema.Date,
-        lastSyncAt: Schema.NullOr(Schema.Date),
-        metadata: Schema.NullOr(Schema.String),
-        createdAt: Schema.Date,
-      })
-    )
-  )
+const getConnectedStores = HttpApiEndpoint.get(
+  "getConnectedStores",
+  "/:organizationSlug/stores"
+)
+  .setPath(OrganizationApiSchemas.getConnectedStores.path)
+  .addSuccess(OrganizationApiSchemas.getConnectedStores.response)
   .addError(HttpApiError.NotFound);
 
 const connectStore = HttpApiEndpoint.post("connectStore", "/stores")
-  .setPayload(
-    Schema.Struct({
-      type: Schema.Literal("shopify"),
-      shopDomain: Schema.String,
-      scope: Schema.String,
-      accessToken: Schema.String,
-      organizationSlug: Schema.String,
-    })
-  )
-  .addSuccess(
-    Schema.Struct({
-      id: Schema.String,
-      shopDomain: Schema.String,
-      status: Schema.String,
-    })
-  )
+  .setPayload(OrganizationApiSchemas.connectStore.request)
+  .addSuccess(OrganizationApiSchemas.connectStore.response)
   .addError(HttpApiError.BadRequest);
 
 const disconnectStore = HttpApiEndpoint.del(
   "disconnectStore",
   "/stores/:shopDomain"
 )
-  .setPath(
-    Schema.Struct({
-      shopDomain: Schema.String,
-    })
-  )
-  .addSuccess(
-    Schema.Struct({
-      success: Schema.Boolean,
-    })
-  )
+  .setPath(OrganizationApiSchemas.disconnectStore.path)
+  .addSuccess(OrganizationApiSchemas.disconnectStore.response)
   .addError(HttpApiError.NotFound);
 
 // Group all user-related endpoints
@@ -205,34 +168,102 @@ const organizationsGroupLive = (organizationSlug: string) =>
       .handle("createOrganization", ({ payload }) => {
         return Effect.gen(function* () {
           try {
-            yield* Effect.log("createOrganization handler started").pipe(
-              Effect.annotateLogs({ payload })
+            yield* Effect.log("=== CREATE ORGANIZATION HANDLER START ===").pipe(
+              Effect.annotateLogs({
+                payload: JSON.stringify(payload, null, 2),
+                timestamp: new Date().toISOString(),
+              })
             );
 
+            yield* Effect.log(
+              "Attempting to get OrganizationUseCase dependency"
+            );
             const organizationUseCase = yield* OrganizationUseCase;
-            yield* Effect.log("OrganizationUseCase obtained successfully");
+            yield* Effect.log("OrganizationUseCase obtained successfully").pipe(
+              Effect.annotateLogs({
+                useCaseType: typeof organizationUseCase,
+                availableMethods: Object.keys(organizationUseCase),
+              })
+            );
+
+            yield* Effect.log("Calling organizationUseCase.createOrg").pipe(
+              Effect.annotateLogs({
+                organization: JSON.stringify(payload.organization, null, 2),
+                userId: payload.userId,
+              })
+            );
 
             const result = yield* organizationUseCase.createOrg(
               payload.organization,
               payload.userId
             );
+
             yield* Effect.log("Organization created successfully").pipe(
-              Effect.annotateLogs({ result })
+              Effect.annotateLogs({
+                result: JSON.stringify(result, null, 2),
+                timestamp: new Date().toISOString(),
+              })
             );
 
-            return result.org;
+            // The use case returns { org: Organization, memberCreateData: {} }
+            // We need to return just the org part, properly formatted
+            const organization = result.org;
+
+            yield* Effect.log(
+              "=== CREATE ORGANIZATION HANDLER SUCCESS ==="
+            ).pipe(
+              Effect.annotateLogs({
+                resultOrg: JSON.stringify(organization, null, 2),
+              })
+            );
+
+            // Ensure the organization object matches OrganizationSchema
+            const formattedOrganization = {
+              id: organization.id,
+              name: organization.name,
+              slug: organization.slug,
+              logo: organization.logo || null,
+              metadata: organization.metadata || null,
+              createdAt: organization.createdAt,
+            };
+
+            yield* Effect.log("Formatted organization for response").pipe(
+              Effect.annotateLogs({
+                formattedOrganization: JSON.stringify(
+                  formattedOrganization,
+                  null,
+                  2
+                ),
+              })
+            );
+
+            return formattedOrganization;
           } catch (error) {
             yield* Effect.logError(
-              "Sync error in createOrganization handler"
-            ).pipe(Effect.annotateLogs({ error }));
+              "=== SYNC ERROR IN CREATE ORGANIZATION HANDLER ==="
+            ).pipe(
+              Effect.annotateLogs({
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
+                errorType: typeof error,
+                timestamp: new Date().toISOString(),
+              })
+            );
             throw error;
           }
         }).pipe(
           Effect.mapError((error) => {
             Effect.runSync(
               Effect.logError(
-                "Effect error in createOrganization handler"
-              ).pipe(Effect.annotateLogs({ error }))
+                "=== EFFECT ERROR IN CREATE ORGANIZATION HANDLER ==="
+              ).pipe(
+                Effect.annotateLogs({
+                  error: error instanceof Error ? error.message : String(error),
+                  stack: error instanceof Error ? error.stack : undefined,
+                  errorType: typeof error,
+                  timestamp: new Date().toISOString(),
+                })
+              )
             );
             return new HttpApiError.HttpApiDecodeError({
               message: error.message || String(error),
@@ -363,7 +394,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
           });
         }
       )
-      .handle("getConnectedStores", () => {
+      .handle("getConnectedStores", ({ path: { organizationSlug } }) => {
         return Effect.gen(function* () {
           const repository = yield* OrgService;
           const connectedStoreRepo = yield* ConnectedStoreRepo;
@@ -449,11 +480,11 @@ const organizationsGroupLive = (organizationSlug: string) =>
             organizationId: org.id,
             type: payload.type,
             shopDomain: payload.shopDomain,
-            scope: payload.scope,
+            scope: null, // Will be populated during OAuth flow
             status: "active" as const,
             connectedAt: new Date(),
             lastSyncAt: null,
-            metadata: JSON.stringify({ accessToken: payload.accessToken }),
+            metadata: null, // Will be populated during OAuth flow
           };
 
           // Use upsert instead of create to handle updates for the same org
@@ -504,75 +535,150 @@ const organizationsGroupLive = (organizationSlug: string) =>
       })
   );
 
-export function getOrgHandler(doState: DurableObjectState) {
-  // Extract organization slug from Durable Object ID
-  // Use .name to get the original name used with idFromName(), fallback to toString()
-  const organizationSlug = doState.id.name || doState.id.toString();
+export function getOrgHandler(
+  doState: DurableObjectState,
+  organizationSlug: string
+) {
+  console.log("=== GET ORG HANDLER START ===", {
+    timestamp: new Date().toISOString(),
+    doStateId: doState.id.toString(),
+    doStateName: doState.id.name,
+    providedSlug: organizationSlug,
+  });
 
-  // Member repository layer
-  const MemberServiceLayer = Layer.provide(MemberRepoLive, DrizzleDOClientLive);
+  // Use the provided organization slug instead of relying on doState.id.name
+  if (!organizationSlug || organizationSlug.trim().length === 0) {
+    const errorMessage = `Organization slug parameter is required but was empty or undefined. Provided slug: "${organizationSlug}"`;
+    console.error("Invalid organization slug parameter", {
+      doStateId: doState.id.toString(),
+      doStateName: doState.id.name,
+      providedSlug: organizationSlug,
+      slugType: typeof organizationSlug,
+      timestamp: new Date().toISOString(),
+    });
+    throw new Error(errorMessage);
+  }
 
-  // Organization repository layer
-  const OrgServiceLayer = Layer.provide(
-    OrgRepoLive,
-    Layer.merge(DrizzleDOClientLive, MemberServiceLayer)
-  );
+  console.log("Organization slug validated successfully", {
+    organizationSlug,
+    timestamp: new Date().toISOString(),
+  });
 
-  // Connected Store repository layer
-  const ConnectedStoreLayer = Layer.provide(
-    ConnectedStoreRepoLive,
-    DrizzleDOClientLive
-  );
+  try {
+    console.log("Building layer dependencies...");
 
-  // Organization Use Case layer
-  const OrganizationUseCaseLayer = Layer.provide(
-    OrganizationUseCaseLive,
-    Layer.merge(OrgServiceLayer, ConnectedStoreLayer)
-  );
+    // Member repository layer
+    console.log("Creating MemberServiceLayer...");
+    const MemberServiceLayer = Layer.provide(
+      MemberRepoLive,
+      DrizzleDOClientLive
+    );
 
-  const DORepoLayer = Layer.succeed(DurableObjectState, doState);
+    // Organization repository layer
+    console.log("Creating OrgServiceLayer...");
+    const OrgServiceLayer = Layer.provide(
+      OrgRepoLive,
+      Layer.merge(DrizzleDOClientLive, MemberServiceLayer)
+    );
 
-  const InvitationRepoLayer = Layer.provide(
-    InvitationLayerLive(doState.id),
-    DORepoLayer
-  );
+    // Connected Store repository layer
+    console.log("Creating ConnectedStoreLayer...");
+    const ConnectedStoreLayer = Layer.provide(
+      ConnectedStoreRepoLive,
+      DrizzleDOClientLive
+    );
 
-  const finalLayer = Layer.provide(
-    Layer.mergeAll(
-      OrgServiceLayer,
-      InvitationRepoLayer,
-      MemberServiceLayer,
-      ConnectedStoreLayer,
-      OrganizationUseCaseLayer
-    ),
-    DORepoLayer
-  );
+    // Organization Use Case layer
+    console.log("Creating OrganizationUseCaseLayer...");
+    const OrganizationUseCaseLayer = Layer.provide(
+      OrganizationUseCaseLive,
+      Layer.merge(OrgServiceLayer, ConnectedStoreLayer)
+    );
 
-  // Organizations group layer with all dependencies
-  const organizationsGroupLayerLive = Layer.provide(
-    organizationsGroupLive(organizationSlug), // Pass the organization slug
-    finalLayer
-  );
+    console.log("Creating DORepoLayer...");
+    const DORepoLayer = Layer.succeed(DurableObjectState, doState);
 
-  // API layer with Swagger
-  const OrganizationApiLive = HttpApiBuilder.api(api).pipe(
-    Layer.provide(organizationsGroupLayerLive)
-  );
+    console.log("Creating InvitationRepoLayer...");
+    const InvitationRepoLayer = Layer.provide(
+      InvitationLayerLive(doState.id),
+      DORepoLayer
+    );
 
-  const SwaggerLayer = HttpApiSwagger.layer().pipe(
-    Layer.provide(OrganizationApiLive)
-  );
+    console.log("Merging all layers into finalLayer...");
+    const finalLayer = Layer.provide(
+      Layer.mergeAll(
+        OrgServiceLayer,
+        InvitationRepoLayer,
+        MemberServiceLayer,
+        ConnectedStoreLayer,
+        OrganizationUseCaseLayer
+      ),
+      DORepoLayer
+    );
 
-  // Final handler with all layers merged
-  const { dispose, handler } = HttpApiBuilder.toWebHandler(
-    Layer.mergeAll(OrganizationApiLive, SwaggerLayer, HttpServer.layerContext)
-  );
+    console.log("Creating organizationsGroupLayerLive...");
+    // Organizations group layer with all dependencies
+    const organizationsGroupLayerLive = Layer.provide(
+      organizationsGroupLive(organizationSlug), // Pass the organization slug
+      finalLayer
+    );
 
-  // Wrap handler with additional error logging
-  const wrappedHandler = async (request: Request): Promise<Response> => {
-    const response = await handler(request);
-    return response;
-  };
+    console.log("Creating OrganizationApiLive...");
+    // API layer with Swagger
+    const OrganizationApiLive = HttpApiBuilder.api(api).pipe(
+      Layer.provide(organizationsGroupLayerLive)
+    );
 
-  return { dispose, handler: wrappedHandler };
+    console.log("Creating SwaggerLayer...");
+    const SwaggerLayer = HttpApiSwagger.layer().pipe(
+      Layer.provide(OrganizationApiLive)
+    );
+
+    console.log("Creating final web handler...");
+    // Final handler with all layers merged
+    const { dispose, handler } = HttpApiBuilder.toWebHandler(
+      Layer.mergeAll(OrganizationApiLive, SwaggerLayer, HttpServer.layerContext)
+    );
+
+    console.log("Handler created successfully, creating wrapper...");
+    // Wrap handler with additional error logging
+    const wrappedHandler = async (request: Request): Promise<Response> => {
+      console.log("=== WRAPPED HANDLER CALLED ===", {
+        method: request.method,
+        url: request.url,
+        timestamp: new Date().toISOString(),
+      });
+
+      try {
+        const response = await handler(request);
+        console.log("Handler response received", {
+          status: response.status,
+          timestamp: new Date().toISOString(),
+        });
+        return response;
+      } catch (error) {
+        console.error("Error in wrapped handler", {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          timestamp: new Date().toISOString(),
+        });
+        throw error;
+      }
+    };
+
+    console.log("=== GET ORG HANDLER SUCCESS ===", {
+      timestamp: new Date().toISOString(),
+      organizationSlug,
+    });
+
+    return { dispose, handler: wrappedHandler };
+  } catch (error) {
+    console.error("=== ERROR IN GET ORG HANDLER ===", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+      organizationSlug,
+    });
+    throw error;
+  }
 }

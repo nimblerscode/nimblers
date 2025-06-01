@@ -32,7 +32,7 @@ export const ShopConnectionCheckServiceLive = Layer.effect(
     return {
       checkShopConnection: (
         shopDomain: ShopDomain,
-        organizationId: OrganizationSlug
+        organizationSlug: OrganizationSlug
       ) =>
         Effect.gen(function* () {
           // Check if shop is already connected to any organization
@@ -48,12 +48,12 @@ export const ShopConnectionCheckServiceLive = Layer.effect(
             };
           }
 
-          if (existingConnection.organizationId === organizationId) {
+          if (existingConnection.organizationSlug === organizationSlug) {
             // Shop is already connected to THIS organization
             return {
               canConnect: false,
               isConnected: true,
-              connectedToOrganization: organizationId,
+              connectedToOrganization: organizationSlug,
               message: `Shop ${shopDomain} is already connected to this organization`,
             };
           }
@@ -62,8 +62,8 @@ export const ShopConnectionCheckServiceLive = Layer.effect(
           return {
             canConnect: false,
             isConnected: true,
-            connectedToOrganization: existingConnection.organizationId,
-            message: `Shop ${shopDomain} is already connected to organization '${existingConnection.organizationId}'. Each Shopify store can only be connected to one organization at a time.`,
+            connectedToOrganization: existingConnection.organizationSlug,
+            message: `Shop ${shopDomain} is already connected to organization '${existingConnection.organizationSlug}'. Each Shopify store can only be connected to one organization at a time.`,
           };
         }).pipe(
           Effect.catchAll(() =>

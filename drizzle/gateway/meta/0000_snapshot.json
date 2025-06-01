@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "6f16bb88-593e-4816-b02c-7185d7ec03e0",
+  "id": "649e81e7-dd52-42c7-9040-acbae8927f41",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -353,8 +353,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "organizationId": {
-          "name": "organizationId",
+        "organizationSlug": {
+          "name": "organizationSlug",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -403,12 +403,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "shop_connection_organizationId_organization_id_fk": {
-          "name": "shop_connection_organizationId_organization_id_fk",
+        "shop_connection_organizationSlug_organization_id_fk": {
+          "name": "shop_connection_organizationSlug_organization_id_fk",
           "tableFrom": "shop_connection",
           "tableTo": "organization",
           "columnsFrom": [
-            "organizationId"
+            "organizationSlug"
           ],
           "columnsTo": [
             "id"

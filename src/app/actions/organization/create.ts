@@ -8,10 +8,7 @@ import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
 
 import { OrgD1Service } from "@/domain/global/organization/service";
 import type { UserId } from "@/domain/global/user/model";
-import type {
-  NewOrganization,
-  OrganizationId,
-} from "@/domain/tenant/organization/model";
+import type { NewOrganization } from "@/domain/tenant/organization/model";
 import { OrganizationDOService } from "@/domain/tenant/organization/service";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
@@ -26,24 +23,6 @@ export interface CreateOrganizationActionState {
   errors?: { [key: string]: string[] } | null;
   organization?: NewOrganization | null; // Or a more specific DTO for the created org
 }
-
-// Type for the successfully created organization data returned by the DO/Action
-// This should match the structure returned by the DO on successful init
-type OrganizationClientResponse = {
-  id: string;
-  name: string;
-  slug: string;
-  logo?: string | null;
-};
-
-// TODO: Define and uncomment if needed for switchActiveOrganization
-/*
-export type SwitchOrganizationActionState = {
-  success: boolean;
-  message: string;
-  error?: string | null; // Simple error message for client
-};
-*/
 
 // === CREATE ORGANIZATION ACTION ===
 export async function createOrganizationAction(
@@ -67,11 +46,33 @@ export async function createOrganizationAction(
   const name = formData.get("name") as string;
   const logo = formData.get("logo") as string | undefined;
 
+  // Validate organization name
+  if (!name || typeof name !== "string" || name.trim().length === 0) {
+    return {
+      success: false,
+      message: "Organization name is required and cannot be empty.",
+      errors: { name: ["Organization name is required and cannot be empty."] },
+      organization: null,
+    };
+  }
+
   // the slug is the name in lowercase with dashes
-  const slug = name.toLowerCase().replace(/ /g, "-");
+  const slug = name.trim().toLowerCase().replace(/ /g, "-");
+
+  // Validate slug
+  if (!slug || slug.length === 0) {
+    return {
+      success: false,
+      message: "Invalid organization name. Please provide a valid name.",
+      errors: {
+        name: ["Invalid organization name. Please provide a valid name."],
+      },
+      organization: null,
+    };
+  }
 
   const orgCreatePayload: NewOrganization = {
-    name,
+    name: name.trim(),
     slug,
     logo: logo ?? undefined,
     // id and createdAt will be handled by the DO/service layer
@@ -102,7 +103,7 @@ export async function createOrganizationAction(
     const create = OrgD1Service.pipe(
       Effect.flatMap((service) =>
         service.create({
-          id: organization.slug as OrganizationId, // Use slug as ID for consistency
+          id: organization.id, // Use slug as ID for consistency
           slug: organization.slug,
           creatorId: creatorId as UserId,
         })
@@ -147,21 +148,3 @@ export async function createOrganizationAction(
     errors: null,
   };
 }
-
-// --- PLACEHOLDER FOR OTHER ACTIONS ---
-// TODO: Refactor getOrganizationsForUser and switchActiveOrganization similarly
-
-export async function getOrganizationsForUser(): Promise<
-  OrganizationClientResponse[]
-> {
-  // ... Implementation needed (likely query DB via ctx.env.DB)
-  return [];
-}
-
-/*
-export async function switchActiveOrganization(organizationId: string): Promise<SwitchOrganizationActionState> {
-  "use server";
-  // ... Implementation needed (likely update session via ctx.session)
-  return { success: false, message: "Not implemented", error: "Not Implemented" };
-}
-*/

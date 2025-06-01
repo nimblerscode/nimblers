@@ -13,9 +13,9 @@ export {
 
 // Configuration Services
 export {
-  ShopifyConfigApplicationService,
+  ShopifyConfigServiceLive,
   type ShopifyConfig,
 } from "./config/configService";
 
 // Compliance Services
-export { ComplianceWebhookApplicationService } from "./compliance/webhookService";
+export { ComplianceWebhookServiceLive } from "./compliance/webhookService";

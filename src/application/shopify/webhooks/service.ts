@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Schema as S } from "effect";
+import { ShopDomain } from "@/domain/global/organization/models";
 import {
   type AppUninstalledWebhook,
   AppUninstalledWebhookSchema,
@@ -11,6 +11,7 @@ import {
   ShopifyWebhookVerifier,
 } from "@/domain/shopify/webhooks/service";
 import { ConnectedStoreRepo } from "@/domain/tenant/organization/service";
+import { Context, Effect, Layer, Schema as S } from "effect";
 
 // Environment for webhook secret
 export abstract class ShopifyWebhookEnv extends Context.Tag(
@@ -30,7 +31,7 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
     const env = yield* ShopifyWebhookEnv;
 
     const processAppUninstall = (
-      shopDomain: string,
+      shopDomain: ShopDomain,
       webhookData: AppUninstalledWebhook
     ) =>
       Effect.gen(function* () {
@@ -173,7 +174,18 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
           );
 
           // Process the app uninstall
-          const shopDomain = headers["X-Shopify-Shop-Domain"];
+          const shopDomainString = headers["X-Shopify-Shop-Domain"];
+          const shopDomain = yield* S.decodeUnknown(ShopDomain)(
+            shopDomainString
+          ).pipe(
+            Effect.mapError(
+              (error) =>
+                new WebhookProcessingError({
+                  message: "Invalid shop domain",
+                  cause: error,
+                })
+            )
+          );
           return yield* processAppUninstall(shopDomain, appUninstallData);
         }).pipe(Effect.withSpan("ShopifyWebhookUseCase.handleAppUninstalled")),
 

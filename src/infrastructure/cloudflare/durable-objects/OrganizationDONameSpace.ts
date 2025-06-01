@@ -25,11 +25,54 @@ export const OrganizationDOAdapterLive = Layer.effect(
       creatorId: UserId
     ) => {
       return Effect.gen(function* () {
+        yield* Effect.log("CREATE ORGANIZATION DO START").pipe(
+          Effect.annotateLogs({
+            organizationName: organization.name,
+            slug: organization.slug,
+            creatorId,
+            slugType: typeof organization.slug,
+            slugLength: organization.slug?.length,
+            timestamp: new Date().toISOString(),
+          })
+        );
+
+        // Validate slug before creating DO
+        if (!organization.slug || organization.slug.trim().length === 0) {
+          return yield* Effect.fail(
+            new OrganizationProvisionError({
+              message: "Organization slug is required for DO creation",
+              cause: new Error(`Invalid slug: ${organization.slug}`),
+            })
+          );
+        }
+
+        yield* Effect.log("Creating DO ID from slug").pipe(
+          Effect.annotateLogs({
+            slug: organization.slug,
+            method: "idFromName",
+          })
+        );
+
         const doId = orgDONamespace.idFromName(organization.slug);
+
+        yield* Effect.log("DO ID created successfully").pipe(
+          Effect.annotateLogs({
+            doIdString: doId.toString(),
+            doIdName: doId.name,
+            doIdHasName: !!doId.name,
+            originalSlug: organization.slug,
+            slugMatches: doId.name === organization.slug,
+          })
+        );
+
         const stub = orgDONamespace.get(doId);
+
+        yield* Effect.log("DO stub obtained, creating client");
 
         // Create type-safe client using TypeOnce.dev pattern
         const client = yield* createOrganizationDOClient(stub);
+
+        yield* Effect.log("Client created, calling createOrganization");
 
         // Use auto-generated method with perfect type safety!
         // The client.organizations.createOrganization method is automatically generated
@@ -40,22 +83,39 @@ export const OrganizationDOAdapterLive = Layer.effect(
               organization: {
                 name: organization.name,
                 slug: organization.slug,
-                logo: organization.logo,
+                ...(organization.logo ? { logo: organization.logo } : {}),
               },
               userId: creatorId,
             },
           })
           .pipe(
             Effect.mapError((error) => {
-              // Map HTTP API errors to domain errors
               return new OrganizationProvisionError({
                 message: `Failed to create organization: ${
                   error.message || String(error)
                 }`,
                 cause: error,
               });
-            })
+            }),
+            Effect.tapError((error) =>
+              Effect.logError(
+                "Error in client.organizations.createOrganization"
+              ).pipe(
+                Effect.annotateLogs({
+                  error: error.message || String(error),
+                  organizationSlug: organization.slug,
+                })
+              )
+            )
           );
+
+        yield* Effect.log("Organization created successfully in DO").pipe(
+          Effect.annotateLogs({
+            orgId: org.id,
+            orgSlug: org.slug,
+            orgName: org.name,
+          })
+        );
 
         return org;
       }).pipe(

@@ -9,11 +9,12 @@ import type { UserId } from "@/domain/global/user/model";
 import { OrganizationDOService } from "@/domain/tenant/organization/service";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 // Re-export for backward compatibility
 export type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";
 
-function checkIfOrgExists(organizationSlug: string) {
+function checkIfOrgExists(organizationSlug: OrganizationSlug) {
   const ctx = requestInfo.ctx as AppContext;
 
   if (!ctx.session || !ctx.session.userId) {
@@ -24,7 +25,7 @@ function checkIfOrgExists(organizationSlug: string) {
 
   const getOrgIdBySlugProgram = OrgD1Service.pipe(
     Effect.flatMap((service) =>
-      service.getOrgIdBySlugAndUser(organizationSlug, userId)
+      service.verifyUserOrgMembership(organizationSlug, userId)
     )
   );
 
@@ -39,7 +40,7 @@ function checkIfOrgExists(organizationSlug: string) {
   return slug;
 }
 
-export async function getOrganization(organizationSlug: string) {
+export async function getOrganization(organizationSlug: OrganizationSlug) {
   const slug = Effect.tryPromise({
     try: () => checkIfOrgExists(organizationSlug),
     catch: (e) => {

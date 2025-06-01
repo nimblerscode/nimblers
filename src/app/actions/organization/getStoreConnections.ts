@@ -1,17 +1,19 @@
 "use server";
 
 import { env } from "cloudflare:workers";
-import { FetchHttpClient } from "@effect/platform";
-import { Effect } from "effect";
-import { createOrganizationDOClient } from "@/infrastructure/cloudflare/durable-objects/organization/api/client";
-
-interface StoreConnection {
-  connected: boolean;
-  shop?: string;
-  scope?: string;
-  connectedAt?: Date;
-  lastSync?: Date;
-}
+import { Data, Effect, Layer } from "effect";
+import { StoreConnectionLayerLive } from "@/config/shopify";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
+import {
+  StoreConnectionError,
+  StoreDbError,
+  StoreNotFoundError,
+} from "@/domain/shopify/store/models";
+import { ShopifyStoreService } from "@/domain/shopify/store/service";
+import {
+  D1BindingLive,
+  DrizzleD1ClientLive,
+} from "@/infrastructure/persistence/global/d1/drizzle";
 
 interface ConnectedStore {
   id: string;
@@ -26,82 +28,62 @@ interface ConnectedStore {
   createdAt: string;
 }
 
-export async function getOrganizationStoreConnections(
-  organizationSlug: string,
-  shopDomain?: string
-): Promise<StoreConnection[]> {
-  const program = Effect.gen(function* () {
-    const doId = env.ORG_DO.idFromName(organizationSlug);
-    const stub = env.ORG_DO.get(doId);
+// UI-friendly error types
+export class OrganizationNotFoundError extends Data.TaggedError(
+  "OrganizationNotFoundError"
+)<{
+  message: string;
+  retryable: boolean;
+}> {}
 
-    // Create the DO client
-    const client = yield* createOrganizationDOClient(stub);
+export class DatabaseUnavailableError extends Data.TaggedError(
+  "DatabaseUnavailableError"
+)<{
+  message: string;
+  retryable: boolean;
+}> {}
 
-    // Call the new getConnectedStores endpoint
-    const stores = yield* client.organizations.getConnectedStores();
+export class PermissionDeniedError extends Data.TaggedError(
+  "PermissionDeniedError"
+)<{
+  message: string;
+  retryable: boolean;
+}> {}
 
-    // Convert to the interface format
-    return stores.map((store) => ({
-      connected: store.status === "active",
-      shop: store.shopDomain,
-      scope: store.scope || undefined,
-      connectedAt: store.connectedAt,
-      lastSync: store.lastSyncAt || undefined,
-    }));
-  });
+export class NetworkError extends Data.TaggedError("NetworkError")<{
+  message: string;
+  retryable: boolean;
+}> {}
 
-  try {
-    const result = await Effect.runPromise(
-      program.pipe(
-        Effect.provide(FetchHttpClient.layer),
-        Effect.catchAll((_error) => {
-          // Silently return empty array on errors to prevent data leakage
-          return Effect.succeed([]);
-        })
-      )
-    );
-    return result;
-  } catch (_error) {
-    // Fallback to empty array to prevent data leakage
-    return [];
-  }
-}
+export class UnknownStoreError extends Data.TaggedError("UnknownStoreError")<{
+  message: string;
+  retryable: boolean;
+}> {}
 
-// Simple helper to check if a specific shop is connected to a specific organization
-export async function isShopConnected(
-  organizationSlug: string,
-  shopDomain: string
-): Promise<{ connected: boolean; shop?: string }> {
-  const connections = await getOrganizationStoreConnections(
-    organizationSlug,
-    shopDomain
-  );
-  const connection = connections.find((c) => c.shop === shopDomain);
+type StoreActionError =
+  | OrganizationNotFoundError
+  | DatabaseUnavailableError
+  | PermissionDeniedError
+  | NetworkError
+  | UnknownStoreError;
 
-  return {
-    connected: connection?.connected || false,
-    shop: connection?.shop,
-  };
-}
+export type ConnectedStoreResult =
+  | { success: true; data: ConnectedStore[] }
+  | { success: false; error: StoreActionError };
 
 export async function getOrganizationConnectedStores(
-  organizationSlug: string
-): Promise<ConnectedStore[]> {
+  organizationSlug: OrganizationSlug
+): Promise<ConnectedStoreResult> {
   const program = Effect.gen(function* () {
-    const doId = env.ORG_DO.idFromName(organizationSlug);
-    const stub = env.ORG_DO.get(doId);
+    const storeService = yield* ShopifyStoreService;
 
-    // Create the DO client
-    const client = yield* createOrganizationDOClient(stub);
-
-    // Call the getConnectedStores endpoint
-    const stores = yield* client.organizations.getConnectedStores();
+    const stores = yield* storeService.getConnectedStores(organizationSlug);
 
     // Return the full store data with proper format
     return stores.map((store) => ({
       id: store.id,
       organizationId: store.organizationId,
-      type: store.type,
+      type: "shopify" as const,
       shopDomain: store.shopDomain,
       scope: store.scope,
       status: store.status,
@@ -110,21 +92,67 @@ export async function getOrganizationConnectedStores(
       metadata: store.metadata,
       createdAt: store.createdAt.toISOString(),
     }));
-  });
+  }).pipe(
+    // Map all errors to our UI-friendly error types
+    Effect.mapError((error): StoreActionError => {
+      if (error instanceof StoreNotFoundError) {
+        return new OrganizationNotFoundError({
+          message: "Organization not found",
+          retryable: false,
+        });
+      }
+      if (error instanceof StoreDbError) {
+        return new DatabaseUnavailableError({
+          message: "Database temporarily unavailable",
+          retryable: true,
+        });
+      }
+      if (error instanceof StoreConnectionError) {
+        return new NetworkError({
+          message: "Network error occurred",
+          retryable: true,
+        });
+      }
+      // Handle generic Error objects from the service layer
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.toLowerCase().includes("not found")) {
+        return new OrganizationNotFoundError({
+          message: "Organization not found",
+          retryable: false,
+        });
+      }
+      if (
+        errorMessage.toLowerCase().includes("database") ||
+        errorMessage.toLowerCase().includes("d1")
+      ) {
+        return new DatabaseUnavailableError({
+          message: "Database temporarily unavailable",
+          retryable: true,
+        });
+      }
+      return new UnknownStoreError({
+        message: "An unexpected error occurred",
+        retryable: true,
+      });
+    })
+  );
 
-  try {
-    const result = await Effect.runPromise(
-      program.pipe(
-        Effect.provide(FetchHttpClient.layer),
-        Effect.catchAll((_error) => {
-          // Silently return empty array on errors to prevent data leakage
-          return Effect.succeed([]);
-        })
-      )
-    );
-    return result;
-  } catch (_error) {
-    // Fallback to empty array to prevent data leakage
-    return [];
-  }
+  const d1Layer = D1BindingLive(env);
+  const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
+
+  const layer = StoreConnectionLayerLive({
+    ORG_DO: env.ORG_DO,
+    DB: env.DB,
+  }).pipe(Layer.provide(drizzleLayer));
+
+  return Effect.runPromise(
+    program.pipe(
+      Effect.provide(layer),
+      Effect.match({
+        onFailure: (error) => ({ success: false as const, error }),
+        onSuccess: (data) => ({ success: true as const, data }),
+      })
+    )
+  );
 }

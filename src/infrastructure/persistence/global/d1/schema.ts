@@ -86,7 +86,7 @@ export const organizationMembership = sqliteTable("organization_membership", {
 // Prevents shops from being connected to multiple organizations
 export const shopConnection = sqliteTable("shop_connection", {
   shopDomain: text("shopDomain").primaryKey().notNull(), // e.g., "example.myshopify.com"
-  organizationId: text("organizationId")
+  organizationSlug: text("organizationSlug")
     .notNull()
     .references(() => organization.id, { onDelete: "cascade" }),
   type: text("type").notNull().default("shopify"), // 'shopify', 'woocommerce', etc.

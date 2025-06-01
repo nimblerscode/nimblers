@@ -10,7 +10,7 @@ import type {
   OrgDbError,
 } from "./model";
 import type { OrganizationProvisionError } from "./provision/service";
-import { OrganizationSlug } from "@/domain/global/organization/models";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 // ===== Domain Services =====
 
@@ -20,7 +20,7 @@ import { OrganizationSlug } from "@/domain/global/organization/models";
 export class OrgService extends Context.Tag("core/organization/OrgService")<
   OrgService,
   {
-    get: (slug: string) => Effect.Effect<Organization, OrgDbError>;
+    get: (slug: OrganizationSlug) => Effect.Effect<Organization, OrgDbError>;
     create: (
       data: NewOrganization,
       creatorUserId: UserId
@@ -38,11 +38,11 @@ export class OrgRepositoryService extends Context.Tag(
 )<
   OrgRepositoryService,
   {
-    get: (slug: string) => Effect.Effect<Organization, OrgDbError>;
+    get: (slug: OrganizationSlug) => Effect.Effect<Organization, OrgDbError>;
     create: (org: {
       name: string;
-      id: string;
-      creatorId: string;
+      id: OrganizationId;
+      creatorId: UserId;
     }) => Effect.Effect<void, OrgDbError>;
   }
 >() {}
