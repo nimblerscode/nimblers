@@ -1,17 +1,17 @@
 import { eq } from "drizzle-orm";
 import { Effect, Layer } from "effect";
-import {
-  type AccessToken,
-  AccessTokenError,
-  type AccessTokenResponse,
-  type AuthorizationCode,
-  type ClientId,
-  type ClientSecret,
-  OAuthError,
-  type OnlineAccessTokenResponse,
-  type Scope,
-  type ShopDomain,
+import type { OrganizationSlug } from "@/domain/global/organization/models";
+import type {
+  AccessToken,
+  AccessTokenResponse,
+  AuthorizationCode,
+  ClientId,
+  ClientSecret,
+  OnlineAccessTokenResponse,
+  Scope,
+  ShopDomain,
 } from "@/domain/shopify/oauth/models";
+import { AccessTokenError, OAuthError } from "@/domain/shopify/oauth/models";
 import { AccessTokenService } from "@/domain/shopify/oauth/service";
 import { DrizzleDOClient } from "../drizzle";
 import { accessTokens } from "./schema";
@@ -72,10 +72,10 @@ export const AccessTokenRepoLive = Layer.effect(
         }),
 
       store: (
-        organizationId: string,
         shop: ShopDomain,
         token: AccessToken,
         scope: Scope,
+        organizationSlug: OrganizationSlug,
       ) =>
         Effect.gen(function* () {
           yield* Effect.tryPromise({
@@ -86,6 +86,7 @@ export const AccessTokenRepoLive = Layer.effect(
                   shop,
                   accessToken: token,
                   scope,
+                  organizationSlug: organizationSlug || null,
                   tokenType: "bearer",
                 })
                 .onConflictDoUpdate({
@@ -93,18 +94,19 @@ export const AccessTokenRepoLive = Layer.effect(
                   set: {
                     accessToken: token,
                     scope,
+                    organizationSlug: organizationSlug || null,
                     updatedAt: new Date(),
                   },
                 }),
             catch: (error) =>
               new OAuthError({
-                message: "Failed to store access token",
+                message: "Failed to store token",
                 cause: error,
               }),
           });
         }),
 
-      retrieve: (organizationId: string, shop: ShopDomain) =>
+      retrieve: (shop: ShopDomain) =>
         Effect.gen(function* () {
           const result = yield* Effect.tryPromise({
             try: () =>
@@ -115,31 +117,58 @@ export const AccessTokenRepoLive = Layer.effect(
                 .limit(1),
             catch: (error) =>
               new OAuthError({
-                message: "Failed to retrieve access token",
+                message: "Failed to retrieve token",
                 cause: error,
               }),
           });
 
-          return result.length > 0
-            ? (result[0].accessToken as AccessToken)
-            : null;
+          if (result.length === 0) {
+            return null;
+          }
+
+          return result[0].accessToken as AccessToken;
         }),
 
-      delete: (organizationId: string, shop: ShopDomain) =>
+      delete: (shop: ShopDomain) =>
         Effect.gen(function* () {
-          const result = yield* Effect.tryPromise({
+          yield* Effect.tryPromise({
             try: () =>
               drizzleClient.db
                 .delete(accessTokens)
                 .where(eq(accessTokens.shop, shop)),
             catch: (error) =>
               new OAuthError({
-                message: "Failed to delete access token",
+                message: "Failed to delete token",
+                cause: error,
+              }),
+          });
+        }),
+
+      retrieveWithOrganization: (shop: ShopDomain) =>
+        Effect.gen(function* () {
+          const result = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .select()
+                .from(accessTokens)
+                .where(eq(accessTokens.shop, shop))
+                .limit(1),
+            catch: (error) =>
+              new OAuthError({
+                message: "Failed to retrieve token with organization",
                 cause: error,
               }),
           });
 
-          return true; // Assume success for now
+          if (result.length === 0) {
+            return null;
+          }
+
+          return {
+            accessToken: result[0].accessToken as AccessToken,
+            scope: result[0].scope as Scope,
+            organizationSlug: result[0].organizationSlug as OrganizationSlug,
+          };
         }),
     };
   }),

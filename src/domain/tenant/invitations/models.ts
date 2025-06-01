@@ -1,8 +1,9 @@
 import { Data, Schema as S } from "effect";
 import { EmailSchema } from "@/domain/global/email/model";
-import type { UserError } from "@/domain/global/user/model";
+import type { UserError, UserId } from "@/domain/global/user/model";
 import { UserIdSchema } from "@/domain/global/user/model";
 import {
+  type OrganizationId,
   OrganizationIdSchema,
   type OrgDbError,
 } from "@/domain/tenant/organization/model";
@@ -82,11 +83,11 @@ export class DuplicatePendingInvitation extends Data.TaggedError(
 
 export class MaxPendingInvitationsReached extends Data.TaggedError(
   "MaxPendingInvitationsReached",
-)<{ message: string; organizationId: string; limit: number }> {}
+)<{ message: string; organizationId: OrganizationId; limit: number }> {}
 
 export class UserAlreadyMember extends Data.TaggedError("UserAlreadyMember")<{
   message: string;
-  userId: string;
+  userId: UserId;
 }> {}
 
 export class InvalidInvitationStatusTransition extends Data.TaggedError(

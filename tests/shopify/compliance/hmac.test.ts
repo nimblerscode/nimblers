@@ -99,7 +99,7 @@ describe("ShopifyHmacVerifier", () => {
       const validHmac = yield* Effect.promise(() =>
         createValidHmac(testPayload, testSecret),
       );
-      const modifiedPayload = testPayload + " modified";
+      const modifiedPayload = `${testPayload} modified`;
       const request = createMockRequest(modifiedPayload, validHmac);
 
       const result = yield* hmacVerifier.verify(request, testSecret);

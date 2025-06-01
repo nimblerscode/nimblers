@@ -109,8 +109,8 @@ export async function acceptInvitationAction(
     // 5. Verify token and extract organization info
     const tokenPayload = yield* pipe(
       InviteToken,
-      Effect.flatMap((tokenService) => tokenService.verify(token)),
       Effect.provide(tokenLayer),
+      Effect.flatMap((tokenService) => tokenService.verify(token)),
       Effect.mapError(
         (error) =>
           new ValidationError({

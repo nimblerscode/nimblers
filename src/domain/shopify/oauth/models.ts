@@ -71,7 +71,7 @@ export class InvalidShopDomainError extends S.TaggedError<InvalidShopDomainError
   "InvalidShopDomainError",
   {
     message: S.String,
-    shop: ShopDomain,
+    shop: S.String, // Accept raw string since the shop domain is invalid
   },
 ) {}
 

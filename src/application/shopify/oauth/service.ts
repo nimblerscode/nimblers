@@ -174,10 +174,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
           );
 
           // Check if we already have a token for this shop
-          const existingToken = yield* accessTokenService.retrieve(
-            organizationSlug,
-            shop,
-          );
+          const existingToken = yield* accessTokenService.retrieve(shop);
           if (existingToken) {
             // Redirect to app with existing token using environment config
             const appUrl = envConfig.getOrganizationUrl(organizationSlug);
@@ -317,10 +314,12 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             );
           }
 
-          // Verify and consume nonce
-          const isValidNonce = yield* nonceManager.verify(
-            callbackRequest.state,
-          );
+          // Verify and consume nonce - extract organizationSlug from state
+          const stateParts = callbackRequest.state.split("_org_");
+          const organizationSlugFromState = stateParts[0] as OrganizationSlug;
+          const actualNonce = stateParts[1] as Nonce;
+
+          const isValidNonce = yield* nonceManager.verify(actualNonce);
           if (!isValidNonce) {
             return yield* Effect.fail(
               new InvalidNonceError({
@@ -328,7 +327,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
               }),
             );
           }
-          yield* nonceManager.consume(callbackRequest.state);
+          yield* nonceManager.consume(actualNonce);
 
           // Validate shop domain
           const shop = yield* shopValidator.validateShopDomain(
@@ -344,12 +343,12 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             clientSecret,
           );
 
-          // Store the access token
+          // Store the access token with organization context from state
           yield* accessTokenService.store(
-            organizationSlug,
             shop,
             tokenResponse.access_token,
             tokenResponse.scope,
+            organizationSlugFromState, // Use org slug extracted from state
           );
 
           // Register webhooks after successful installation
@@ -443,17 +442,15 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
       ) =>
         Effect.gen(function* () {
           // Check if we have a stored access token
-          const accessToken = yield* accessTokenService
-            .retrieve(organizationSlug, shop)
-            .pipe(
-              Effect.mapError(
-                (error) =>
-                  new OAuthError({
-                    message: "Failed to check connection status",
-                    cause: error,
-                  }),
-              ),
-            );
+          const accessToken = yield* accessTokenService.retrieve(shop).pipe(
+            Effect.mapError(
+              (error) =>
+                new OAuthError({
+                  message: "Failed to check connection status",
+                  cause: error,
+                }),
+            ),
+          );
 
           if (accessToken) {
             // We have a token, connection is active
@@ -474,13 +471,10 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
       disconnect: (organizationSlug: OrganizationSlug, shop: ShopDomain) =>
         Effect.gen(function* () {
           // Use the AccessTokenService delete method to remove the token
-          const deleted = yield* accessTokenService.delete(
-            organizationSlug,
-            shop,
-          );
+          yield* accessTokenService.delete(shop);
 
           return {
-            success: deleted,
+            success: true, // Return boolean success as expected by interface
           };
         }).pipe(Effect.withSpan("ShopifyOAuthUseCase.disconnect")),
 

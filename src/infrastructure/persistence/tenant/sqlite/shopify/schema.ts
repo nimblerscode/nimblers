@@ -19,6 +19,7 @@ export const accessTokens = sqliteTable("access_tokens", {
   shop: text("shop").primaryKey().notNull(), // shop.myshopify.com
   accessToken: text("access_token").notNull(),
   scope: text("scope").notNull(),
+  organizationSlug: text("organization_slug"), // Make nullable for migration
   tokenType: text("token_type").default("bearer"), // Usually 'bearer'
   expiresIn: integer("expires_in"), // Token expiration in seconds (if applicable)
   associatedUserScope: text("associated_user_scope"), // For online tokens

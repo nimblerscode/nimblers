@@ -101,7 +101,7 @@ export const ShopifyOAuthApplicationServiceLive = Layer.effect(
 
           return oauthResult;
         }).pipe(
-          Effect.catchAll((error) => {
+          Effect.catchAll((_error) => {
             const url = new URL(request.url);
             const state = url.searchParams.get("state");
             const orgSlug = state?.split("_org_")[0] as OrganizationSlug;

@@ -14,12 +14,13 @@ import {
   VStack,
 } from "@/app/design-system";
 import { Home } from "@/app/design-system/icons";
+import type { OrganizationId } from "@/domain/shopify/store/models";
 
 interface OrganizationSelectorProps {
   organizations: Awaited<ReturnType<typeof getUserOrganizations>>;
   activeOrganizationId?: string | null;
   currentPath?: string;
-  onOrganizationChange?: (organizationId: string) => void;
+  onOrganizationChange?: (organizationId: OrganizationId) => void;
 }
 
 export function OrganizationSelector({
@@ -34,7 +35,7 @@ export function OrganizationSelector({
   const handleSelectionChange = (selectedKey: Key | null) => {
     if (!selectedKey) return;
 
-    const organizationId = String(selectedKey);
+    const organizationId = selectedKey as OrganizationId;
 
     if (organizationId === activeOrganizationId) {
       return; // No change needed

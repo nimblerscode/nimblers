@@ -65,7 +65,7 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
           const organization = yield* orgService
             .getOrgBySlug(organizationSlug)
             .pipe(
-              Effect.catchAll((error) =>
+              Effect.catchAll((_error) =>
                 Effect.fail(
                   new Error(`Organization not found: ${organizationSlug}`),
                 ),

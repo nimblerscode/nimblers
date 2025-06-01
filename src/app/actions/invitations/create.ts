@@ -5,6 +5,7 @@ import { Data, Effect, pipe } from "effect";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InvitationDOLive } from "@/config/layers";
 import type { Email } from "@/domain/global/email/model";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { User, UserId } from "@/domain/global/user/model";
 import type { Invitation } from "@/domain/tenant/invitations/models";
 
@@ -89,14 +90,16 @@ const validateFormData = (
   {
     email: Email;
     role: string;
-    organizationSlug: string;
+    organizationSlug: OrganizationSlug;
   },
   ValidationError
 > =>
   Effect.gen(function* (_) {
     const email = formData.get("email") as string;
     const role = formData.get("role") as string;
-    const organizationSlug = formData.get("organizationSlug") as string;
+    const organizationSlug = formData.get(
+      "organizationSlug",
+    ) as OrganizationSlug;
 
     // Validate required fields
     if (!email) {
@@ -235,14 +238,13 @@ export async function inviteUserAction(
   formData: FormData,
 ): Promise<InviteUserState> {
   const program = pipe(
-    Effect.gen(function* (_) {
+    Effect.gen(function* () {
       // Validate user authentication
-      const user = yield* _(validateUser(prevState.user));
+      const user = yield* validateUser(prevState.user);
 
       // Validate and extract form data
-      const { email, role, organizationSlug } = yield* _(
-        validateFormData(formData),
-      );
+      const { email, role, organizationSlug } =
+        yield* validateFormData(formData);
 
       const invitationProgram = InvitationDOService.pipe(
         Effect.flatMap((service) =>
@@ -261,21 +263,17 @@ export async function inviteUserAction(
         ORG_DO: env.ORG_DO,
       });
 
-      const invitation = yield* _(
-        Effect.tryPromise({
-          try: () =>
-            Effect.runPromise(
-              invitationProgram.pipe(Effect.provide(fullLayer)),
-            ),
-          catch: (error) => {
-            return new InvitationError({
-              message: "Failed to create invitation",
-              code: "INVITATION_CREATION_FAILED",
-              cause: error,
-            });
-          },
-        }),
-      );
+      const invitation = yield* Effect.tryPromise({
+        try: () =>
+          Effect.runPromise(invitationProgram.pipe(Effect.provide(fullLayer))),
+        catch: (error) => {
+          return new InvitationError({
+            message: "Failed to create invitation",
+            code: "INVITATION_CREATION_FAILED",
+            cause: error,
+          });
+        },
+      });
 
       return buildSuccessState(user, email, role, invitation);
     }),

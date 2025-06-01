@@ -49,8 +49,6 @@ export function ShopifyConnectCardClient({
   const [isConnecting, setIsConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  console.log("connectedStores", connectedStores);
-
   const handleConnect = async () => {
     if (!shopDomain.trim()) {
       setErrorMessage("Please enter your shop domain");
@@ -69,12 +67,12 @@ export function ShopifyConnectCardClient({
       // Normalize shop domain
       const normalizedShop = shopDomain.includes(".myshopify.com")
         ? shopDomain
-        : shopDomain + ".myshopify.com";
+        : `${shopDomain}.myshopify.com`;
 
       // Build proper Shopify app installation URL
       // This should redirect to Shopify's OAuth flow
       const shopifyInstallUrl = new URL(
-        "https://" + normalizedShop + "/admin/oauth/authorize",
+        `https://${normalizedShop}/admin/oauth/authorize`,
       );
       shopifyInstallUrl.searchParams.set("client_id", shopifyClientId);
       shopifyInstallUrl.searchParams.set(
@@ -83,16 +81,16 @@ export function ShopifyConnectCardClient({
       );
       shopifyInstallUrl.searchParams.set(
         "redirect_uri",
-        window.location.origin + "/shopify/oauth/callback",
+        `${window.location.origin}/shopify/oauth/callback`,
       );
       shopifyInstallUrl.searchParams.set(
         "state",
-        organizationSlug + "_org_" + Date.now(),
+        `${organizationSlug}_org_${Date.now()}`,
       );
 
       // Redirect to Shopify's OAuth authorization page
       window.location.href = shopifyInstallUrl.toString();
-    } catch (error) {
+    } catch (_error) {
       setErrorMessage("Failed to start connection process. Please try again.");
       setIsConnecting(false);
     }

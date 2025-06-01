@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "a01646b3-e937-4466-852f-a0a790049118",
+  "id": "63dc7b1a-d730-4bb1-8898-3802fde9e4f2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "access_tokens": {
@@ -26,6 +26,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "organization_slug": {
+          "name": "organization_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "token_type": {

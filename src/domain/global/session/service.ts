@@ -1,11 +1,11 @@
 import { Context, Data, type Effect, type Option } from "effect";
-import type { UserId } from "../user/model";
 import type { OrganizationId } from "../organization/models";
+import type { UserId } from "../user/model";
 
 // === Session Service Specific Errors ===
 
 export class SessionNotFoundError extends Data.TaggedError(
-  "SessionNotFoundError"
+  "SessionNotFoundError",
 )<{
   message: string;
   userId: UserId;
@@ -25,19 +25,19 @@ export class SessionUpdateError extends Data.TaggedError("SessionUpdateError")<{
 }> {}
 
 export class InvalidOrganizationError extends Data.TaggedError(
-  "InvalidOrganizationError"
+  "InvalidOrganizationError",
 )<{
   message: string;
-  organizationId: string;
+  organizationId: OrganizationId;
   userId: UserId;
 }> {}
 
 export class SessionPermissionError extends Data.TaggedError(
-  "SessionPermissionError"
+  "SessionPermissionError",
 )<{
   message: string;
-  userId: string;
-  organizationId: string;
+  userId: UserId;
+  organizationId: OrganizationId;
   reason: string;
 }> {}
 
@@ -53,27 +53,27 @@ export abstract class SessionRepo extends Context.Tag("@core/SessionRepo")<
   SessionRepo,
   {
     readonly getActiveOrganizationId: (
-      userId: UserId
+      userId: UserId,
     ) => Effect.Effect<Option.Option<string>, SessionLookupError>;
     readonly updateActiveOrganizationId: (
       userId: UserId,
-      organizationId: string
+      organizationId: OrganizationId,
     ) => Effect.Effect<void, SessionUpdateError | InvalidOrganizationError>;
   }
 >() {}
 
 // === Session Use Case ===
 export abstract class SessionUseCase extends Context.Tag(
-  "@core/SessionUseCase"
+  "@core/SessionUseCase",
 )<
   SessionUseCase,
   {
     readonly getActiveOrganization: (
-      userId: UserId
+      userId: UserId,
     ) => Effect.Effect<Option.Option<string>, SessionLookupError>;
     readonly switchActiveOrganization: (
       userId: UserId,
-      organizationId: string
+      organizationId: OrganizationId,
     ) => Effect.Effect<
       void,
       SessionUpdateError | InvalidOrganizationError | SessionPermissionError

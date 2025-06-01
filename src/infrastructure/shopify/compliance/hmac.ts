@@ -38,7 +38,7 @@ export const ShopifyHmacVerifierLive = Layer.effect(
           const clonedRequest = request.clone();
           const body = yield* Effect.tryPromise({
             try: () => clonedRequest.text(),
-            catch: (error) =>
+            catch: (_error) =>
               new InvalidHmacError({
                 message: "Failed to read request body",
               }),
@@ -55,7 +55,7 @@ export const ShopifyHmacVerifierLive = Layer.effect(
                 false,
                 ["sign"],
               ),
-            catch: (error) =>
+            catch: (_error) =>
               new InvalidHmacError({
                 message: "Failed to import HMAC key",
               }),
@@ -63,7 +63,7 @@ export const ShopifyHmacVerifierLive = Layer.effect(
 
           const signature = yield* Effect.tryPromise({
             try: () => crypto.subtle.sign("HMAC", key, encoder.encode(body)),
-            catch: (error) =>
+            catch: (_error) =>
               new InvalidHmacError({
                 message: "Failed to compute HMAC signature",
               }),

@@ -3,7 +3,7 @@ import {
   drizzle,
 } from "drizzle-orm/durable-sqlite";
 import { migrate } from "drizzle-orm/durable-sqlite/migrator";
-import { Context, Effect, Layer } from "effect";
+import { Context, Data, Effect, Layer } from "effect";
 import { DurableObjectState } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 // @ts-ignore
 import migrations from "../../../../../../drizzle/shopify/migrations.js";
@@ -11,13 +11,35 @@ import * as schema from "./schema";
 
 export { schema };
 
+// Define specific migration errors
+export class ShopifyMigrationError extends Data.TaggedError(
+  "ShopifyMigrationError",
+)<{
+  readonly cause?: unknown;
+  readonly message: string;
+  readonly migrationDetails?: {
+    readonly migrationsCount: number;
+    readonly lastMigration?: string;
+  };
+}> {}
+
+export class ShopifyMigrationConcurrencyError extends Data.TaggedError(
+  "ShopifyMigrationConcurrencyError",
+)<{
+  readonly cause?: unknown;
+  readonly message: string;
+}> {}
+
 // Drizzle client for Shopify OAuth Durable Object
 export class DrizzleShopifyOAuthClient extends Context.Tag(
   "@infrastructure/persistence/shopify/DrizzleClient",
 )<
   DrizzleShopifyOAuthClient,
   {
-    readonly migrate: () => Effect.Effect<void, Error>;
+    readonly migrate: () => Effect.Effect<
+      void,
+      ShopifyMigrationError | ShopifyMigrationConcurrencyError
+    >;
     readonly db: DrizzleSqliteDODatabase<typeof schema>;
   }
 >() {}
@@ -35,19 +57,48 @@ export const DrizzleShopifyOAuthClientLive = Layer.scoped(
       db,
       migrate: () =>
         Effect.gen(function* () {
-          yield* Effect.tryPromise({
+          yield* Effect.logInfo("Starting Shopify OAuth database migration", {
+            migrationsCount: migrations.length,
+          });
+
+          const migrationResult = yield* Effect.tryPromise({
             try: () =>
               doState.blockConcurrencyWhile(async () => {
                 try {
-                  await migrate(db, migrations);
-                } catch (_error) {
-                  throw new Error("Shopify OAuth migration failed");
+                  const result = await migrate(db, migrations);
+                  return result;
+                } catch (migrationError) {
+                  throw new ShopifyMigrationError({
+                    message: `Database migration failed: ${
+                      migrationError instanceof Error
+                        ? migrationError.message
+                        : String(migrationError)
+                    }`,
+                    cause: migrationError,
+                    migrationDetails: {
+                      migrationsCount: migrations.length,
+                      lastMigration:
+                        migrations[migrations.length - 1]?.name || "unknown",
+                    },
+                  });
                 }
               }),
-            catch: (_error) => {
-              return new Error("Shopify OAuth migration failed");
+            catch: (concurrencyError) => {
+              return new ShopifyMigrationConcurrencyError({
+                message: `Migration concurrency control failed: ${
+                  concurrencyError instanceof Error
+                    ? concurrencyError.message
+                    : String(concurrencyError)
+                }`,
+                cause: concurrencyError,
+              });
             },
           });
+
+          yield* Effect.logInfo(
+            "Shopify OAuth migration completed successfully",
+          );
+          return migrationResult;
         }),
     };
   }),

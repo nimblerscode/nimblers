@@ -1,5 +1,6 @@
 import { Effect, Layer, Option } from "effect";
 import type { Email } from "@/domain/global/email/model";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import {
   type NewMembership,
   type User,
@@ -9,6 +10,7 @@ import {
 import {
   MembershipAlreadyExistsError,
   MembershipCreationError,
+  type NewOrganization,
   OrganizationCreationError,
   OrganizationLookupError,
   OrganizationSlugConflictError,
@@ -16,6 +18,7 @@ import {
   UserRepo,
   UsersRetrievalError,
 } from "@/domain/global/user/service";
+import type { OrganizationId } from "@/domain/shopify/store/models";
 import { DrizzleD1Client } from "./drizzle";
 import { user as userTable } from "./schema";
 import { makeUserDrizzleAdapter } from "./UserDrizzleAdapter";
@@ -123,9 +126,7 @@ export const UserRepoLive = Layer.effect(
           return users;
         }),
 
-      createOrganization: (
-        data: import("@/domain/global/user/service").NewOrganization,
-      ) =>
+      createOrganization: (data: NewOrganization) =>
         Effect.tryPromise({
           try: () => drizzleAdapter.createOrganization(data),
           catch: (error: unknown) => {
@@ -150,7 +151,7 @@ export const UserRepoLive = Layer.effect(
           },
         }),
 
-      findOrganizationById: (organizationId: string) =>
+      findOrganizationById: (organizationId: OrganizationId) =>
         Effect.gen(function* () {
           const org = yield* Effect.tryPromise({
             try: () => drizzleAdapter.findOrganizationById(organizationId),
@@ -166,7 +167,7 @@ export const UserRepoLive = Layer.effect(
           return Option.fromNullable(org);
         }),
 
-      findOrganizationBySlug: (slug: string) =>
+      findOrganizationBySlug: (slug: OrganizationSlug) =>
         Effect.gen(function* () {
           const org = yield* Effect.tryPromise({
             try: () => drizzleAdapter.findOrganizationBySlug(slug),

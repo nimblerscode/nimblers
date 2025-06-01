@@ -32,7 +32,7 @@ export function ShopifyConnectForm() {
 
       // Redirect to the install endpoint
       window.location.href = installUrl.toString();
-    } catch (error) {
+    } catch (_error) {
       setIsConnecting(false);
       alert("Failed to connect to Shopify. Please try again.");
     }

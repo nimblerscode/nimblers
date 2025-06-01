@@ -2,16 +2,18 @@
 
 import { VStack } from "@/app/design-system/Layout";
 import type { OrganizationWithMembershipAndName } from "@/domain/global/organization/model";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
+import type { OrganizationId } from "@/domain/shopify/store/models";
 import { EmptyOrganizationsState } from "./EmptyOrganizationsState";
 import { OrganizationsList } from "./OrganizationsList";
 
 // Transform the backend data to match the UI interface
 interface Organization {
-  id: string;
+  id: OrganizationId;
   name: string;
   role: "Owner" | "Admin" | "Editor" | "Member";
   memberCount: number;
-  slug: string;
+  slug: OrganizationSlug;
 }
 
 interface OrganizationsSectionProps {

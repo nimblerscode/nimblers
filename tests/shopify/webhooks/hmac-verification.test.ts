@@ -120,7 +120,7 @@ describe("Shopify Webhook HMAC Verification", () => {
         "X-Shopify-Webhook-Id": "webhook-123",
       };
 
-      const modifiedPayload = testPayload + " modified";
+      const modifiedPayload = `${testPayload} modified`;
 
       const result = yield* Effect.either(
         webhookVerifier.verifyWebhook(modifiedPayload, headers, testSecret),

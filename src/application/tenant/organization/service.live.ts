@@ -121,7 +121,7 @@ export const OrganizationUseCaseLive = Layer.effect(
           });
         }),
 
-      disconnectStore: (organizationId, shopDomain) =>
+      disconnectStore: (shopDomain) =>
         Effect.gen(function* () {
           const store = yield* connectedStoreRepo.getByShopDomain(shopDomain);
           if (store) {

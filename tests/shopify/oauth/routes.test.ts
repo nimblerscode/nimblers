@@ -43,9 +43,9 @@ describe("Shopify OAuth Routes", () => {
 
   const MockNonceManagerValid = Layer.succeed(NonceManager, {
     generate: () => Effect.succeed(testNonce),
-    store: (nonce: Nonce) => Effect.succeed(void 0),
-    verify: (nonce: Nonce) => Effect.succeed(true),
-    consume: (nonce: Nonce) => Effect.succeed(void 0),
+    store: (_nonce: Nonce) => Effect.succeed(void 0),
+    verify: (_nonce: Nonce) => Effect.succeed(true),
+    consume: (_nonce: Nonce) => Effect.succeed(void 0),
   });
 
   const MockAccessTokenServiceValid = Layer.succeed(AccessTokenService, {
@@ -54,15 +54,9 @@ describe("Shopify OAuth Routes", () => {
         access_token: testToken,
         scope: testScope,
       }),
-    store: (
-      organizationId: string,
-      shop: ShopDomain,
-      token: AccessToken,
-      scope: Scope,
-    ) => Effect.succeed(void 0),
-    retrieve: (organizationId: string, shop: ShopDomain) =>
-      Effect.succeed(testToken),
-    delete: (organizationId: string, shop: ShopDomain) => Effect.succeed(true),
+    store: (_shop, _token, _scope) => Effect.succeed(void 0),
+    retrieve: (_shop) => Effect.succeed(testToken),
+    delete: (_shop) => Effect.succeed(true),
   });
 
   const MockAccessTokenServiceEmpty = Layer.succeed(AccessTokenService, {
@@ -71,15 +65,9 @@ describe("Shopify OAuth Routes", () => {
         access_token: testToken,
         scope: testScope,
       }),
-    store: (
-      organizationId: string,
-      shop: ShopDomain,
-      token: AccessToken,
-      scope: Scope,
-    ) => Effect.succeed(void 0),
-    retrieve: (organizationId: string, shop: ShopDomain) =>
-      Effect.succeed(null),
-    delete: (organizationId: string, shop: ShopDomain) => Effect.succeed(true),
+    store: (_shop, _token, _scope) => Effect.succeed(void 0),
+    retrieve: (_shop) => Effect.succeed(null),
+    delete: (_shop) => Effect.succeed(true),
   });
 
   const MockShopValidatorValid = Layer.succeed(ShopValidator, {
@@ -127,19 +115,6 @@ describe("Shopify OAuth Routes", () => {
       MockNonceManagerValid,
       MockShopValidatorValid,
       MockAccessTokenServiceValid,
-      MockWebhookService,
-      MockEnvironmentConfigService,
-      MockEnvLayer,
-    ),
-  );
-
-  const BaseTestLayerWithEmptyToken = Layer.provide(
-    ShopifyOAuthUseCaseLive,
-    Layer.mergeAll(
-      MockHmacVerifierValid,
-      MockNonceManagerValid,
-      MockShopValidatorValid,
-      MockAccessTokenServiceEmpty,
       MockWebhookService,
       MockEnvironmentConfigService,
       MockEnvLayer,

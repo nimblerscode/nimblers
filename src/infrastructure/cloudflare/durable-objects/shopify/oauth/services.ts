@@ -1,18 +1,20 @@
 import { Effect, Layer } from "effect";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
+import type {
+  AccessToken,
+  AccessTokenResponse,
+  AuthorizationCode,
+  ClientId,
+  ClientSecret,
+  Nonce,
+  OnlineAccessTokenResponse,
+  Scope,
+  ShopDomain,
+} from "@/domain/shopify/oauth/models";
 import {
-  type AccessToken,
   AccessTokenError,
-  type AccessTokenResponse,
-  type AuthorizationCode,
-  type ClientId,
-  type ClientSecret,
   InvalidNonceError,
-  type Nonce,
   OAuthError,
-  type OnlineAccessTokenResponse,
-  type Scope,
-  type ShopDomain,
 } from "@/domain/shopify/oauth/models";
 import {
   AccessTokenService,
@@ -207,23 +209,29 @@ export const AccessTokenServiceDOLive = Layer.effect(
         }),
 
       store: (
-        organizationSlug: OrganizationSlug,
         shop: ShopDomain,
         token: AccessToken,
         scope: Scope,
+        organizationSlug: OrganizationSlug,
       ) =>
         Effect.gen(function* () {
+          // DEBUG: Log the data being sent to token store
+          const requestBody = {
+            shop,
+            accessToken: token,
+            scope,
+            organizationSlug,
+          };
+          yield* Effect.logInfo("=== SENDING TO TOKEN STORE ===", {
+            requestBody,
+          });
+
           const response = yield* Effect.tryPromise({
             try: () =>
               doStub.fetch("http://internal/token/store", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  organizationId: organizationSlug,
-                  shop,
-                  accessToken: token,
-                  scope,
-                }),
+                body: JSON.stringify(requestBody),
               }),
             catch: (error) =>
               new OAuthError({
@@ -232,23 +240,41 @@ export const AccessTokenServiceDOLive = Layer.effect(
               }),
           });
 
+          yield* Effect.logInfo("Token store response status", {
+            status: response.status,
+          });
+
           if (!response.ok) {
+            const errorText = yield* Effect.tryPromise({
+              try: () => response.text(),
+              catch: (error) =>
+                new OAuthError({
+                  message: "Failed to read error response",
+                  cause: error,
+                }),
+            });
+            yield* Effect.logError("Token store failed", {
+              status: response.status,
+              statusText: response.statusText,
+              errorBody: errorText,
+            });
             return yield* Effect.fail(
               new OAuthError({
-                message: `Token store failed with status ${response.status}`,
+                message: `Token store failed with status ${response.status}: ${errorText}`,
               }),
             );
           }
+
+          // Return void to match the expected type
+          return yield* Effect.void;
         }),
 
-      retrieve: (organizationSlug: OrganizationSlug, shop: ShopDomain) =>
+      retrieve: (shop: ShopDomain) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
             try: () =>
               doStub.fetch(
-                `http://internal/token?organizationId=${encodeURIComponent(
-                  organizationSlug,
-                )}&shop=${encodeURIComponent(shop)}`,
+                `http://internal/token?shop=${encodeURIComponent(shop)}`,
                 {
                   method: "GET",
                   headers: { "Content-Type": "application/json" },
@@ -282,7 +308,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
           return data.accessToken as AccessToken | null;
         }),
 
-      delete: (organizationSlug: OrganizationSlug, shop: ShopDomain) =>
+      delete: (shop: ShopDomain) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
             try: () =>
@@ -290,7 +316,6 @@ export const AccessTokenServiceDOLive = Layer.effect(
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  organizationId: organizationSlug,
                   shop,
                 }),
               }),
@@ -323,6 +348,52 @@ export const AccessTokenServiceDOLive = Layer.effect(
           });
 
           return data.deleted;
+        }),
+
+      retrieveWithOrganization: (shop: ShopDomain) =>
+        Effect.gen(function* () {
+          const response = yield* Effect.tryPromise({
+            try: () =>
+              doStub.fetch(
+                `http://internal/token/with-organization?shop=${encodeURIComponent(
+                  shop,
+                )}`,
+                {
+                  method: "GET",
+                  headers: { "Content-Type": "application/json" },
+                },
+              ),
+            catch: (error) =>
+              new OAuthError({
+                message: "Failed to retrieve access token with organization",
+                cause: error,
+              }),
+          });
+
+          if (!response.ok) {
+            return yield* Effect.fail(
+              new OAuthError({
+                message: `Token retrieve with organization failed with status ${response.status}`,
+              }),
+            );
+          }
+
+          const data = yield* Effect.tryPromise({
+            try: () =>
+              response.json() as Promise<{
+                accessToken: AccessToken;
+                scope: Scope;
+                organizationSlug: OrganizationSlug;
+              } | null>,
+            catch: (error) =>
+              new OAuthError({
+                message:
+                  "Failed to parse token retrieve with organization response",
+                cause: error,
+              }),
+          });
+
+          return data;
         }),
     };
   }),

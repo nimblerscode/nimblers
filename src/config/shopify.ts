@@ -63,10 +63,9 @@ export function GlobalShopConnectionLayerLive(env: { DB: D1Database }) {
   const d1Layer = D1BindingLive(env);
   const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
   const repoLayer = Layer.provide(GlobalShopConnectionRepoLive, drizzleLayer);
-  const orgServiceLayer = Layer.provide(OrgRepoD1LayerLive, drizzleLayer);
   const useCaseLayer = Layer.provide(
     GlobalShopConnectionUseCaseLive,
-    Layer.mergeAll(repoLayer, orgServiceLayer),
+    Layer.mergeAll(repoLayer),
   );
 
   return useCaseLayer;
@@ -172,16 +171,16 @@ export function ShopifyOAuthDOServiceLive(env: {
           const nonce = crypto.randomUUID();
           return Effect.succeed(nonce as any);
         },
-        store: (nonce: any) => {
+        store: (_nonce: any) => {
           // No-op for stateless approach - state is in the URL
           return Effect.succeed(void 0);
         },
-        verify: (nonce: any) => {
+        verify: (_nonce: any) => {
           // For stateless approach, we trust the HMAC verification
           // The nonce is just for uniqueness, not for storage validation
           return Effect.succeed(true);
         },
-        consume: (nonce: any) => {
+        consume: (_nonce: any) => {
           // No-op for stateless approach
           return Effect.succeed(void 0);
         },

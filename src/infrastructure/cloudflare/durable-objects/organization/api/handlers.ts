@@ -147,7 +147,7 @@ const api = HttpApi.make("organizationApi").add(organizationsGroup);
 // Export the API definition for client generation (TypeOnce.dev pattern)
 export { api as organizationApi };
 
-const organizationsGroupLive = (organizationSlug: string) =>
+const organizationsGroupLive = () =>
   HttpApiBuilder.group(api, "organizations", (handlers) =>
     handlers
       .handle("getOrganization", ({ path: { organizationSlug } }) => {
@@ -444,7 +444,7 @@ const organizationsGroupLive = (organizationSlug: string) =>
           // Get the organization from DO database - it should already exist
           const org = yield* repository.get(orgSlugFromPayload).pipe(
             Effect.mapError(
-              (error) =>
+              (_error) =>
                 new HttpApiError.HttpApiDecodeError({
                   message: `Organization '${orgSlugFromPayload}' not found. The organization must exist before connecting stores.`,
                   issues: [],
@@ -539,150 +539,60 @@ export function getOrgHandler(
   doState: DurableObjectState,
   organizationSlug: string,
 ) {
-  console.log("=== GET ORG HANDLER START ===", {
-    timestamp: new Date().toISOString(),
-    doStateId: doState.id.toString(),
-    doStateName: doState.id.name,
-    providedSlug: organizationSlug,
-  });
-
   // Use the provided organization slug instead of relying on doState.id.name
   if (!organizationSlug || organizationSlug.trim().length === 0) {
     const errorMessage = `Organization slug parameter is required but was empty or undefined. Provided slug: "${organizationSlug}"`;
-    console.error("Invalid organization slug parameter", {
-      doStateId: doState.id.toString(),
-      doStateName: doState.id.name,
-      providedSlug: organizationSlug,
-      slugType: typeof organizationSlug,
-      timestamp: new Date().toISOString(),
-    });
     throw new Error(errorMessage);
   }
+  const MemberServiceLayer = Layer.provide(MemberRepoLive, DrizzleDOClientLive);
+  const OrgServiceLayer = Layer.provide(
+    OrgRepoLive,
+    Layer.merge(DrizzleDOClientLive, MemberServiceLayer),
+  );
+  const ConnectedStoreLayer = Layer.provide(
+    ConnectedStoreRepoLive,
+    DrizzleDOClientLive,
+  );
+  const OrganizationUseCaseLayer = Layer.provide(
+    OrganizationUseCaseLive,
+    Layer.merge(OrgServiceLayer, ConnectedStoreLayer),
+  );
+  const DORepoLayer = Layer.succeed(DurableObjectState, doState);
+  const InvitationRepoLayer = Layer.provide(
+    InvitationLayerLive(doState.id),
+    DORepoLayer,
+  );
+  const finalLayer = Layer.provide(
+    Layer.mergeAll(
+      OrgServiceLayer,
+      InvitationRepoLayer,
+      MemberServiceLayer,
+      ConnectedStoreLayer,
+      OrganizationUseCaseLayer,
+    ),
+    DORepoLayer,
+  );
+  // Organizations group layer with all dependencies
+  const organizationsGroupLayerLive = Layer.provide(
+    organizationsGroupLive(), // Pass the organization slug
+    finalLayer,
+  );
+  // API layer with Swagger
+  const OrganizationApiLive = HttpApiBuilder.api(api).pipe(
+    Layer.provide(organizationsGroupLayerLive),
+  );
+  const SwaggerLayer = HttpApiSwagger.layer().pipe(
+    Layer.provide(OrganizationApiLive),
+  );
+  // Final handler with all layers merged
+  const { dispose, handler } = HttpApiBuilder.toWebHandler(
+    Layer.mergeAll(OrganizationApiLive, SwaggerLayer, HttpServer.layerContext),
+  );
+  // Wrap handler with additional error logging
+  const wrappedHandler = async (request: Request): Promise<Response> => {
+    const response = await handler(request);
+    return response;
+  };
 
-  console.log("Organization slug validated successfully", {
-    organizationSlug,
-    timestamp: new Date().toISOString(),
-  });
-
-  try {
-    console.log("Building layer dependencies...");
-
-    // Member repository layer
-    console.log("Creating MemberServiceLayer...");
-    const MemberServiceLayer = Layer.provide(
-      MemberRepoLive,
-      DrizzleDOClientLive,
-    );
-
-    // Organization repository layer
-    console.log("Creating OrgServiceLayer...");
-    const OrgServiceLayer = Layer.provide(
-      OrgRepoLive,
-      Layer.merge(DrizzleDOClientLive, MemberServiceLayer),
-    );
-
-    // Connected Store repository layer
-    console.log("Creating ConnectedStoreLayer...");
-    const ConnectedStoreLayer = Layer.provide(
-      ConnectedStoreRepoLive,
-      DrizzleDOClientLive,
-    );
-
-    // Organization Use Case layer
-    console.log("Creating OrganizationUseCaseLayer...");
-    const OrganizationUseCaseLayer = Layer.provide(
-      OrganizationUseCaseLive,
-      Layer.merge(OrgServiceLayer, ConnectedStoreLayer),
-    );
-
-    console.log("Creating DORepoLayer...");
-    const DORepoLayer = Layer.succeed(DurableObjectState, doState);
-
-    console.log("Creating InvitationRepoLayer...");
-    const InvitationRepoLayer = Layer.provide(
-      InvitationLayerLive(doState.id),
-      DORepoLayer,
-    );
-
-    console.log("Merging all layers into finalLayer...");
-    const finalLayer = Layer.provide(
-      Layer.mergeAll(
-        OrgServiceLayer,
-        InvitationRepoLayer,
-        MemberServiceLayer,
-        ConnectedStoreLayer,
-        OrganizationUseCaseLayer,
-      ),
-      DORepoLayer,
-    );
-
-    console.log("Creating organizationsGroupLayerLive...");
-    // Organizations group layer with all dependencies
-    const organizationsGroupLayerLive = Layer.provide(
-      organizationsGroupLive(organizationSlug), // Pass the organization slug
-      finalLayer,
-    );
-
-    console.log("Creating OrganizationApiLive...");
-    // API layer with Swagger
-    const OrganizationApiLive = HttpApiBuilder.api(api).pipe(
-      Layer.provide(organizationsGroupLayerLive),
-    );
-
-    console.log("Creating SwaggerLayer...");
-    const SwaggerLayer = HttpApiSwagger.layer().pipe(
-      Layer.provide(OrganizationApiLive),
-    );
-
-    console.log("Creating final web handler...");
-    // Final handler with all layers merged
-    const { dispose, handler } = HttpApiBuilder.toWebHandler(
-      Layer.mergeAll(
-        OrganizationApiLive,
-        SwaggerLayer,
-        HttpServer.layerContext,
-      ),
-    );
-
-    console.log("Handler created successfully, creating wrapper...");
-    // Wrap handler with additional error logging
-    const wrappedHandler = async (request: Request): Promise<Response> => {
-      console.log("=== WRAPPED HANDLER CALLED ===", {
-        method: request.method,
-        url: request.url,
-        timestamp: new Date().toISOString(),
-      });
-
-      try {
-        const response = await handler(request);
-        console.log("Handler response received", {
-          status: response.status,
-          timestamp: new Date().toISOString(),
-        });
-        return response;
-      } catch (error) {
-        console.error("Error in wrapped handler", {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          timestamp: new Date().toISOString(),
-        });
-        throw error;
-      }
-    };
-
-    console.log("=== GET ORG HANDLER SUCCESS ===", {
-      timestamp: new Date().toISOString(),
-      organizationSlug,
-    });
-
-    return { dispose, handler: wrappedHandler };
-  } catch (error) {
-    console.error("=== ERROR IN GET ORG HANDLER ===", {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      timestamp: new Date().toISOString(),
-      organizationSlug,
-    });
-    throw error;
-  }
+  return { dispose, handler: wrappedHandler };
 }

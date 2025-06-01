@@ -45,7 +45,7 @@ export const NonceRepoLive = Layer.effect(
                 .from(nonces)
                 .where(eq(nonces.nonce, nonce))
                 .limit(1),
-            catch: (error) =>
+            catch: (_error) =>
               new InvalidNonceError({
                 message: "Failed to verify nonce",
               }),
@@ -70,7 +70,7 @@ export const NonceRepoLive = Layer.effect(
                 .update(nonces)
                 .set({ consumed: true })
                 .where(eq(nonces.nonce, nonce)),
-            catch: (error) =>
+            catch: (_error) =>
               new InvalidNonceError({
                 message: "Failed to consume nonce",
               }),

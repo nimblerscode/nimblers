@@ -19,33 +19,31 @@ describe("Shopify OAuth Nonce Management", () => {
 
       return {
         generate: () => Effect.sync(() => crypto.randomUUID() as Nonce),
-        store: (organizationId: string, nonce: Nonce) =>
+        store: (nonce: Nonce) =>
           Effect.gen(function* () {
             yield* Ref.update(
               storedNonces,
-              (stored) => new Set([...stored, `${organizationId}:${nonce}`]),
+              (stored) => new Set([...stored, nonce]),
             );
           }),
-        verify: (organizationId: string, nonce: Nonce) =>
+        verify: (nonce: Nonce) =>
           Effect.gen(function* () {
             const stored = yield* Ref.get(storedNonces);
             const consumed = yield* Ref.get(consumedNonces);
-            const key = `${organizationId}:${nonce}`;
-            return stored.has(key) && !consumed.has(key);
+            return stored.has(nonce) && !consumed.has(nonce);
           }),
-        consume: (organizationId: string, nonce: Nonce) =>
+        consume: (nonce: Nonce) =>
           Effect.gen(function* () {
             const stored = yield* Ref.get(storedNonces);
             const consumed = yield* Ref.get(consumedNonces);
-            const key = `${organizationId}:${nonce}`;
 
-            if (!stored.has(key)) {
+            if (!stored.has(nonce)) {
               yield* Effect.fail(
                 new InvalidNonceError({ message: "Nonce not found" }),
               );
             }
 
-            if (consumed.has(key)) {
+            if (consumed.has(nonce)) {
               yield* Effect.fail(
                 new InvalidNonceError({ message: "Nonce already consumed" }),
               );
@@ -53,7 +51,7 @@ describe("Shopify OAuth Nonce Management", () => {
 
             yield* Ref.update(
               consumedNonces,
-              (consumedSet) => new Set([...consumedSet, key]),
+              (consumedSet) => new Set([...consumedSet, nonce]),
             );
           }),
       };
@@ -63,26 +61,26 @@ describe("Shopify OAuth Nonce Management", () => {
   // Create failing managers for error testing
   const FailingStorageNonceManager = Layer.succeed(NonceManager, {
     generate: () => Effect.succeed("test-nonce" as Nonce),
-    store: (organizationId: string, nonce: Nonce) =>
+    store: (_nonce: Nonce) =>
       Effect.fail(
         new OAuthError({
           message: "Storage failed",
         }),
       ),
-    verify: (organizationId: string, nonce: Nonce) => Effect.succeed(false),
-    consume: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
+    verify: (_nonce: Nonce) => Effect.succeed(false),
+    consume: (_nonce: Nonce) => Effect.succeed(void 0),
   });
 
   const FailingVerificationNonceManager = Layer.succeed(NonceManager, {
     generate: () => Effect.succeed("test-nonce" as Nonce),
-    store: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
-    verify: (organizationId: string, nonce: Nonce) =>
+    store: (_nonce: Nonce) => Effect.succeed(void 0),
+    verify: (_nonce: Nonce) =>
       Effect.fail(
         new InvalidNonceError({
           message: "Verification failed",
         }),
       ),
-    consume: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
+    consume: (_nonce: Nonce) => Effect.succeed(void 0),
   });
 
   describe("Nonce Generation", () => {
@@ -137,10 +135,10 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
 
         const nonce = yield* nonceManager.generate();
-        yield* nonceManager.store(testOrganizationId, nonce);
+        yield* nonceManager.store(nonce);
 
         // Verify nonce is stored by checking if it can be verified
-        const isValid = yield* nonceManager.verify(testOrganizationId, nonce);
+        const isValid = yield* nonceManager.verify(nonce);
         expect(isValid).toBe(true);
       }).pipe(Effect.provide(MockNonceManagerValid)),
     );
@@ -157,16 +155,16 @@ describe("Shopify OAuth Nonce Management", () => {
 
         // Store all nonces
         yield* Effect.all([
-          nonceManager.store(testOrganizationId, nonces[0]),
-          nonceManager.store(testOrganizationId, nonces[1]),
-          nonceManager.store(testOrganizationId, nonces[2]),
+          nonceManager.store(nonces[0]),
+          nonceManager.store(nonces[1]),
+          nonceManager.store(nonces[2]),
         ]);
 
         // Verify all are stored
         const verifications = yield* Effect.all([
-          nonceManager.verify(testOrganizationId, nonces[0]),
-          nonceManager.verify(testOrganizationId, nonces[1]),
-          nonceManager.verify(testOrganizationId, nonces[2]),
+          nonceManager.verify(nonces[0]),
+          nonceManager.verify(nonces[1]),
+          nonceManager.verify(nonces[2]),
         ]);
 
         expect(verifications).toEqual([true, true, true]);
@@ -178,9 +176,7 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
         const nonce = yield* nonceManager.generate();
 
-        const result = yield* Effect.either(
-          nonceManager.store(testOrganizationId, nonce),
-        );
+        const result = yield* Effect.either(nonceManager.store(nonce));
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
@@ -196,9 +192,9 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
 
         const nonce = yield* nonceManager.generate();
-        yield* nonceManager.store(testOrganizationId, nonce);
+        yield* nonceManager.store(nonce);
 
-        const isValid = yield* nonceManager.verify(testOrganizationId, nonce);
+        const isValid = yield* nonceManager.verify(nonce);
         expect(isValid).toBe(true);
       }).pipe(Effect.provide(MockNonceManagerValid)),
     );
@@ -208,10 +204,7 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
 
         const nonExistentNonce = "non-existent-nonce" as Nonce;
-        const isValid = yield* nonceManager.verify(
-          testOrganizationId,
-          nonExistentNonce,
-        );
+        const isValid = yield* nonceManager.verify(nonExistentNonce);
         expect(isValid).toBe(false);
       }).pipe(Effect.provide(MockNonceManagerValid)),
     );
@@ -221,23 +214,17 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
 
         const nonce = yield* nonceManager.generate();
-        yield* nonceManager.store(testOrganizationId, nonce);
+        yield* nonceManager.store(nonce);
 
         // Verify nonce is valid before consumption
-        const isValidBefore = yield* nonceManager.verify(
-          testOrganizationId,
-          nonce,
-        );
+        const isValidBefore = yield* nonceManager.verify(nonce);
         expect(isValidBefore).toBe(true);
 
         // Consume the nonce
-        yield* nonceManager.consume(testOrganizationId, nonce);
+        yield* nonceManager.consume(nonce);
 
         // Verify nonce is no longer valid after consumption
-        const isValidAfter = yield* nonceManager.verify(
-          testOrganizationId,
-          nonce,
-        );
+        const isValidAfter = yield* nonceManager.verify(nonce);
         expect(isValidAfter).toBe(false);
       }).pipe(Effect.provide(MockNonceManagerValid)),
     );
@@ -247,9 +234,7 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
         const nonce = "test-nonce" as Nonce;
 
-        const result = yield* Effect.either(
-          nonceManager.verify(testOrganizationId, nonce),
-        );
+        const result = yield* Effect.either(nonceManager.verify(nonce));
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
@@ -265,23 +250,17 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
 
         const nonce = yield* nonceManager.generate();
-        yield* nonceManager.store(testOrganizationId, nonce);
+        yield* nonceManager.store(nonce);
 
         // Verify nonce exists before consumption
-        const isValidBefore = yield* nonceManager.verify(
-          testOrganizationId,
-          nonce,
-        );
+        const isValidBefore = yield* nonceManager.verify(nonce);
         expect(isValidBefore).toBe(true);
 
         // Consume the nonce (should not throw)
-        yield* nonceManager.consume(testOrganizationId, nonce);
+        yield* nonceManager.consume(nonce);
 
         // Verify nonce is consumed and no longer valid
-        const isValidAfter = yield* nonceManager.verify(
-          testOrganizationId,
-          nonce,
-        );
+        const isValidAfter = yield* nonceManager.verify(nonce);
         expect(isValidAfter).toBe(false);
       }).pipe(Effect.provide(MockNonceManagerValid)),
     );
@@ -293,7 +272,7 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonExistentNonce = "non-existent-nonce" as Nonce;
 
         const result = yield* Effect.either(
-          nonceManager.consume(testOrganizationId, nonExistentNonce),
+          nonceManager.consume(nonExistentNonce),
         );
 
         expect(result._tag).toBe("Left");
@@ -308,15 +287,13 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
 
         const nonce = yield* nonceManager.generate();
-        yield* nonceManager.store(testOrganizationId, nonce);
+        yield* nonceManager.store(nonce);
 
         // First consumption should succeed
-        yield* nonceManager.consume(testOrganizationId, nonce);
+        yield* nonceManager.consume(nonce);
 
         // Second consumption should fail
-        const result = yield* Effect.either(
-          nonceManager.consume(testOrganizationId, nonce),
-        );
+        const result = yield* Effect.either(nonceManager.consume(nonce));
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
@@ -332,29 +309,21 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
 
         const nonce = yield* nonceManager.generate();
-        yield* nonceManager.store(testOrganizationId, nonce);
+        yield* nonceManager.store(nonce);
 
         // First verification should succeed
-        const firstVerify = yield* nonceManager.verify(
-          testOrganizationId,
-          nonce,
-        );
+        const firstVerify = yield* nonceManager.verify(nonce);
         expect(firstVerify).toBe(true);
 
         // Consumption should succeed
-        yield* nonceManager.consume(testOrganizationId, nonce);
+        yield* nonceManager.consume(nonce);
 
         // Subsequent verification should fail
-        const secondVerify = yield* nonceManager.verify(
-          testOrganizationId,
-          nonce,
-        );
+        const secondVerify = yield* nonceManager.verify(nonce);
         expect(secondVerify).toBe(false);
 
         // Subsequent consumption should fail
-        const secondConsume = yield* Effect.either(
-          nonceManager.consume(testOrganizationId, nonce),
-        );
+        const secondConsume = yield* Effect.either(nonceManager.consume(nonce));
         expect(secondConsume._tag).toBe("Left");
       }).pipe(Effect.provide(MockNonceManagerValid)),
     );
@@ -364,13 +333,13 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonceManager = yield* NonceManager;
 
         const nonce = yield* nonceManager.generate();
-        yield* nonceManager.store(testOrganizationId, nonce);
+        yield* nonceManager.store(nonce);
 
         // Attempt concurrent consumption
         const consumptions = [
-          Effect.either(nonceManager.consume(testOrganizationId, nonce)),
-          Effect.either(nonceManager.consume(testOrganizationId, nonce)),
-          Effect.either(nonceManager.consume(testOrganizationId, nonce)),
+          Effect.either(nonceManager.consume(nonce)),
+          Effect.either(nonceManager.consume(nonce)),
+          Effect.either(nonceManager.consume(nonce)),
         ];
 
         const results = yield* Effect.all(consumptions, {
@@ -401,21 +370,19 @@ describe("Shopify OAuth Nonce Management", () => {
 
         // Store all nonces
         yield* Effect.all(
-          nonces.map((nonce) => nonceManager.store(testOrganizationId, nonce)),
+          nonces.map((nonce) => nonceManager.store(nonce)),
           { concurrency: 10 },
         );
 
         // Verify all nonces
         const verifications = yield* Effect.all(
-          nonces.map((nonce) => nonceManager.verify(testOrganizationId, nonce)),
+          nonces.map((nonce) => nonceManager.verify(nonce)),
           { concurrency: 10 },
         );
 
         // Consume all nonces
         yield* Effect.all(
-          nonces.map((nonce) =>
-            nonceManager.consume(testOrganizationId, nonce),
-          ),
+          nonces.map((nonce) => nonceManager.consume(nonce)),
           { concurrency: 10 },
         );
 
@@ -439,10 +406,10 @@ describe("Shopify OAuth Nonce Management", () => {
         const emptyNonce = "" as Nonce;
 
         const storeResult = yield* Effect.either(
-          nonceManager.store(testOrganizationId, emptyNonce),
+          nonceManager.store(emptyNonce),
         );
         const verifyResult = yield* Effect.either(
-          nonceManager.verify(testOrganizationId, emptyNonce),
+          nonceManager.verify(emptyNonce),
         );
 
         // Empty nonce operations should either fail or return false
@@ -457,7 +424,7 @@ describe("Shopify OAuth Nonce Management", () => {
         Effect.provide(
           Layer.succeed(NonceManager, {
             generate: () => Effect.succeed("" as Nonce),
-            store: (organizationId: string, nonce: Nonce) => {
+            store: (nonce: Nonce) => {
               // Empty nonce should be rejected or stored with failure
               if (nonce === "") {
                 return Effect.fail(
@@ -466,15 +433,14 @@ describe("Shopify OAuth Nonce Management", () => {
               }
               return Effect.succeed(void 0);
             },
-            verify: (organizationId: string, nonce: Nonce) => {
+            verify: (nonce: Nonce) => {
               // Empty nonces should always fail verification
               if (nonce === "") {
                 return Effect.succeed(false);
               }
               return Effect.succeed(true);
             },
-            consume: (organizationId: string, nonce: Nonce) =>
-              Effect.succeed(void 0),
+            consume: (_nonce: Nonce) => Effect.succeed(void 0),
           }),
         ),
       ),
@@ -486,23 +452,15 @@ describe("Shopify OAuth Nonce Management", () => {
 
         const longNonce = "a".repeat(1000) as Nonce;
 
-        const storeResult = yield* Effect.either(
-          nonceManager.store(testOrganizationId, longNonce),
-        );
+        const storeResult = yield* Effect.either(nonceManager.store(longNonce));
 
         if (storeResult._tag === "Right") {
-          const verifyResult = yield* nonceManager.verify(
-            testOrganizationId,
-            longNonce,
-          );
+          const verifyResult = yield* nonceManager.verify(longNonce);
           expect(verifyResult).toBe(true);
 
-          yield* nonceManager.consume(testOrganizationId, longNonce);
+          yield* nonceManager.consume(longNonce);
 
-          const afterConsume = yield* nonceManager.verify(
-            testOrganizationId,
-            longNonce,
-          );
+          const afterConsume = yield* nonceManager.verify(longNonce);
           expect(afterConsume).toBe(false);
         }
       }).pipe(Effect.provide(MockNonceManagerValid)),

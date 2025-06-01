@@ -53,7 +53,6 @@ export function Wrapper({
     } | null;
   };
 }) {
-  console.log("shopifyData", shopifyData);
   return (
     <MainLayout
       user={user}

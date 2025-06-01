@@ -4,8 +4,8 @@ import { renderInvitationEmailHTML } from "@/app/email-templates";
 import { sendEmail as sendEmailEffect } from "@/application/global/email/sendEmail";
 import { EmailService } from "@/domain/global/email/service";
 import { EnvironmentConfigService } from "@/domain/global/environment/service";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { UserId } from "@/domain/global/user/model";
-
 import {
   DuplicatePendingInvitation,
   type GetInvitationError,
@@ -43,10 +43,10 @@ export class InvitationDOService extends Context.Tag(
     ) => Effect.Effect<void, GetInvitationError | InvalidToken>;
     readonly create: (
       input: NewInvitation,
-      organizationSlug: string,
+      organizationSlug: OrganizationSlug,
     ) => Effect.Effect<Invitation, InvitationError | OrgDbError>;
     readonly list: (
-      organizationSlug: string,
+      organizationSlug: OrganizationSlug,
     ) => Effect.Effect<Invitation[], InvitationError | OrgDbError>;
   }
 >() {}
@@ -117,7 +117,7 @@ export const InvitationUseCaseLive = (doId: DurableObjectId) =>
 
             const token = yield* inviteToken
               .sign({
-                doId: doId.name || "default",
+                doId: doId.name as OrganizationSlug,
                 invitationId: createdInvitation.id,
               })
               .pipe(

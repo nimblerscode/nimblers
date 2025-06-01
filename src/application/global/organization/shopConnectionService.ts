@@ -9,14 +9,12 @@ import {
 import {
   GlobalShopConnectionRepo,
   GlobalShopConnectionUseCase,
-  OrgD1Service,
 } from "@/domain/global/organization/service";
 
 export const GlobalShopConnectionUseCaseLive = Layer.effect(
   GlobalShopConnectionUseCase,
   Effect.gen(function* () {
     const repo = yield* GlobalShopConnectionRepo;
-    const orgService = yield* OrgD1Service;
 
     return {
       connectShop: (connection: NewShopConnection) =>

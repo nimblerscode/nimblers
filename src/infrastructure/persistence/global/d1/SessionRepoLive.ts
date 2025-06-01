@@ -7,6 +7,7 @@ import {
   SessionUpdateError,
 } from "@/domain/global/session/service";
 import type { UserId } from "@/domain/global/user/model";
+import type { OrganizationId } from "@/domain/shopify/store/models";
 import { DrizzleD1Client } from "./drizzle";
 import { session } from "./schema";
 
@@ -39,7 +40,10 @@ export const SessionRepoLive = Layer.effect(
           return activeOrgId ? Option.some(activeOrgId) : Option.none();
         }),
 
-      updateActiveOrganizationId: (userId: UserId, organizationId: string) =>
+      updateActiveOrganizationId: (
+        userId: UserId,
+        organizationId: OrganizationId,
+      ) =>
         Effect.gen(function* () {
           // Basic validation - ensure organizationId is not empty
           if (!organizationId || organizationId.trim() === "") {

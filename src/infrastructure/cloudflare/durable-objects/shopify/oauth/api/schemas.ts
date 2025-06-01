@@ -16,7 +16,6 @@ const NonceGenerateResponseSchema = Schema.Struct({
 });
 
 const NonceRequestSchema = Schema.Struct({
-  organizationId: OrganizationSlug,
   nonce: Nonce,
 });
 
@@ -30,10 +29,10 @@ const NonceSuccessResponseSchema = Schema.Struct({
 
 // Token schemas
 const TokenStoreRequestSchema = Schema.Struct({
-  organizationId: OrganizationSlug,
   shop: ShopDomain,
   accessToken: AccessToken,
   scope: Scope,
+  organizationSlug: OrganizationSlug,
 });
 
 const TokenRetrieveResponseSchema = Schema.Struct({
@@ -42,7 +41,6 @@ const TokenRetrieveResponseSchema = Schema.Struct({
 });
 
 const TokenDeleteRequestSchema = Schema.Struct({
-  organizationId: OrganizationSlug,
   shop: ShopDomain,
 });
 

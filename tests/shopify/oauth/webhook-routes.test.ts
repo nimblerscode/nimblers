@@ -43,7 +43,7 @@ describe("Shopify Webhook Routes", () => {
 
           // Simulate calling the OAuth use case disconnect method
           try {
-            const result = await Effect.runPromise(
+            await Effect.runPromise(
               mockOAuthUseCase.disconnect(shopDomain as ShopDomain),
             );
 
@@ -231,7 +231,7 @@ describe("Shopify Webhook Routes", () => {
           }
 
           try {
-            const result = await Effect.runPromise(
+            const _result = await Effect.runPromise(
               mockOAuthUseCase.disconnect(shopDomain as ShopDomain),
             );
 

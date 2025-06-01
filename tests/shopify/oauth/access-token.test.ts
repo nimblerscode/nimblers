@@ -13,7 +13,6 @@ import {
 import { AccessTokenService } from "../../../src/domain/shopify/oauth/service";
 
 describe("Shopify OAuth Access Token Service", () => {
-  const testOrganizationId = "test-org-123";
   const testShop = "test-shop.myshopify.com" as ShopDomain;
   const testCode = "valid_code" as AuthorizationCode;
   const testClientId = "test_client_id" as ClientId;
@@ -23,7 +22,7 @@ describe("Shopify OAuth Access Token Service", () => {
 
   // Mock service for testing
   const MockAccessTokenService = Layer.succeed(AccessTokenService, {
-    exchangeCodeForToken: (shop, code, clientId, clientSecret) =>
+    exchangeCodeForToken: (_shop, code, _clientId, _clientSecret) =>
       Effect.gen(function* () {
         if (code === testCode) {
           return {
@@ -35,9 +34,9 @@ describe("Shopify OAuth Access Token Service", () => {
           new AccessTokenError({ message: "Invalid code" }),
         );
       }),
-    store: (organizationId, shop, token, scope) => Effect.succeed(void 0),
-    retrieve: (organizationId, shop) => Effect.succeed(testToken),
-    delete: (organizationId, shop) => Effect.succeed(true),
+    store: (_shop, _token, _scope) => Effect.succeed(void 0),
+    retrieve: (_shop) => Effect.succeed(testToken),
+    delete: (_shop) => Effect.succeed(true),
   });
 
   describe("Token Exchange", () => {
@@ -85,17 +84,9 @@ describe("Shopify OAuth Access Token Service", () => {
       Effect.gen(function* () {
         const accessTokenService = yield* AccessTokenService;
 
-        yield* accessTokenService.store(
-          testOrganizationId,
-          testShop,
-          testToken,
-          testScope,
-        );
+        yield* accessTokenService.store(testShop, testToken, testScope);
 
-        const retrievedToken = yield* accessTokenService.retrieve(
-          testOrganizationId,
-          testShop,
-        );
+        const retrievedToken = yield* accessTokenService.retrieve(testShop);
         expect(retrievedToken).toBe(testToken);
       }).pipe(Effect.provide(MockAccessTokenService)),
     );
@@ -106,10 +97,7 @@ describe("Shopify OAuth Access Token Service", () => {
       Effect.gen(function* () {
         const accessTokenService = yield* AccessTokenService;
 
-        const retrievedToken = yield* accessTokenService.retrieve(
-          testOrganizationId,
-          testShop,
-        );
+        const retrievedToken = yield* accessTokenService.retrieve(testShop);
         expect(retrievedToken).toBe(testToken);
       }).pipe(Effect.provide(MockAccessTokenService)),
     );

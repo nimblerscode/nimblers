@@ -105,7 +105,7 @@ export const routes = [
       return await Effect.runPromise(
         program.pipe(
           Effect.provide(Layer.mergeAll(layer, ShopifyValidationLayerLive)),
-          Effect.catchAll((error: unknown) => {
+          Effect.catchAll((_error: unknown) => {
             // Extract organization for fallback redirect
             const fallbackOrgSlug = state?.split(
               "_org_",

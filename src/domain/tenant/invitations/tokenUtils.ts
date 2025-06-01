@@ -2,6 +2,7 @@
 import { env } from "cloudflare:workers";
 import { Context, Effect, Layer, Schema } from "effect";
 import { jwtVerify, SignJWT } from "jose";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { InvitationId } from "./models";
 
 // Create a TextEncoder for the secret
@@ -21,12 +22,12 @@ export class InviteToken extends Context.Tag("core/token")<
   {
     sign: (claims: {
       invitationId: InvitationId;
-      doId: string;
+      doId: OrganizationSlug;
     }) => Effect.Effect<string, ErrorToken>;
     verify: (
       token: string,
     ) => Effect.Effect<
-      { doId: string; invitationId: InvitationId },
+      { doId: OrganizationSlug; invitationId: InvitationId },
       ErrorToken
     >;
   }
@@ -60,7 +61,7 @@ export const InviteTokenLive = Layer.effect(
         Effect.tryPromise({
           try: async () => {
             const { payload } = await jwtVerify<{
-              doId: string;
+              doId: OrganizationSlug;
               invitationId: InvitationId;
             }>(token, secretKey);
             return {

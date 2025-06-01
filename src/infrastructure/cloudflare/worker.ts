@@ -16,7 +16,7 @@ const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
 
     // Get allowed origins from environment configuration
     const getAllowedOrigins = Effect.gen(function* () {
-      const envConfig = yield* Effect.provide(
+      const _envConfig = yield* Effect.provide(
         Effect.succeed({}),
         EnvironmentConfigServiceLive,
       );

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
 
 describe("Organization API Integration Tests", () => {
-  const testEnv = {
+  const _testEnv = {
     CLOUDFLARE_ACCOUNT_ID: "test_account_id",
     CLOUDFLARE_API_TOKEN: "test_api_token",
   };
@@ -251,7 +251,7 @@ describe("Organization API Integration Tests", () => {
         INACTIVE: ["ACTIVE"],
       };
 
-      for (const [fromStatus, allowedToStatuses] of Object.entries(
+      for (const [_fromStatus, allowedToStatuses] of Object.entries(
         statusTransitions,
       )) {
         expect(Array.isArray(allowedToStatuses)).toBe(true);
@@ -401,7 +401,7 @@ describe("Organization API Integration Tests", () => {
 
     it("should handle organization member and invitation relationships", () => {
       const orgSlug = "test-company";
-      const organization = createOrganizationData(orgSlug);
+      const _organization = createOrganizationData(orgSlug);
 
       // Create multiple members with different roles
       const members = [

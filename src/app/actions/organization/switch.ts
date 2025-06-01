@@ -7,6 +7,7 @@ import { SessionUseCaseLive } from "@/application/global/session/service";
 import { DatabaseLive } from "@/config/layers";
 import { SessionUseCase } from "@/domain/global/session/service";
 import { UserIdSchema } from "@/domain/global/user/model";
+import type { OrganizationId } from "@/domain/shopify/store/models";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { SessionRepoLive } from "@/infrastructure/persistence/global/d1/SessionRepoLive";
 
@@ -34,7 +35,7 @@ const validateSessionAndGetUserId = Effect.gen(function* () {
   }
 
   // TypeScript knows ctx.session.userId is defined here due to the guard above
-  return UserIdSchema.make(ctx.session!.userId);
+  return UserIdSchema.make(ctx.session?.userId as string);
 });
 
 export async function getActiveOrganization(): Promise<string | null> {
@@ -60,7 +61,7 @@ export async function getActiveOrganization(): Promise<string | null> {
 }
 
 export async function switchActiveOrganization(
-  organizationId: string,
+  organizationId: OrganizationId,
 ): Promise<SwitchOrganizationResult> {
   const program = Effect.gen(function* () {
     const userId = yield* validateSessionAndGetUserId;

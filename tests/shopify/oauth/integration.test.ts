@@ -260,7 +260,7 @@ describe("Shopify OAuth Integration Tests", () => {
     it("should handle replay attack prevention with nonces", async () => {
       const shop = "nonce-test.myshopify.com";
       const timestamp = Math.floor(Date.now() / 1000).toString();
-      const nonce = "unique_nonce_" + Math.random().toString(36).substring(7);
+      const nonce = `unique_nonce_${Math.random().toString(36).substring(7)}`;
 
       // First callback with nonce
       const callbackParams1 = {

@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect";
 import { SessionRepo, SessionUseCase } from "@/domain/global/session/service";
 import type { UserId } from "@/domain/global/user/model";
+import type { OrganizationId } from "@/domain/shopify/store/models";
 
 export const SessionUseCaseLive = Layer.effect(
   SessionUseCase,
@@ -16,7 +17,10 @@ export const SessionUseCaseLive = Layer.effect(
         }).pipe(Effect.withSpan("SessionUseCase.getActiveOrganization"));
       },
 
-      switchActiveOrganization: (userId: UserId, organizationId: string) => {
+      switchActiveOrganization: (
+        userId: UserId,
+        organizationId: OrganizationId,
+      ) => {
         return Effect.gen(function* () {
           yield* sessionRepo.updateActiveOrganizationId(userId, organizationId);
         }).pipe(Effect.withSpan("SessionUseCase.switchActiveOrganization"));

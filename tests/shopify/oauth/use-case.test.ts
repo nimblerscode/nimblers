@@ -55,16 +55,16 @@ describe("Shopify OAuth Use Case", () => {
 
   const MockNonceManagerValid = Layer.succeed(NonceManager, {
     generate: () => Effect.succeed(testNonce),
-    store: (nonce: Nonce) => Effect.succeed(void 0),
-    verify: (nonce: Nonce) => Effect.succeed(true),
-    consume: (nonce: Nonce) => Effect.succeed(void 0),
+    store: (_nonce: Nonce) => Effect.succeed(void 0),
+    verify: (_nonce: Nonce) => Effect.succeed(true),
+    consume: (_nonce: Nonce) => Effect.succeed(void 0),
   });
 
   const MockNonceManagerInvalid = Layer.succeed(NonceManager, {
     generate: () => Effect.succeed(testNonce),
-    store: (nonce: Nonce) => Effect.succeed(void 0),
-    verify: (nonce: Nonce) => Effect.succeed(false),
-    consume: (nonce: Nonce) => Effect.succeed(void 0),
+    store: (_nonce: Nonce) => Effect.succeed(void 0),
+    verify: (_nonce: Nonce) => Effect.succeed(false),
+    consume: (_nonce: Nonce) => Effect.succeed(void 0),
   });
 
   const MockAccessTokenServiceValid = Layer.succeed(AccessTokenService, {
@@ -73,15 +73,10 @@ describe("Shopify OAuth Use Case", () => {
         access_token: testToken,
         scope: testScope,
       }),
-    store: (
-      organizationId: string,
-      shop: ShopDomain,
-      token: AccessToken,
-      scope: Scope,
-    ) => Effect.succeed(void 0),
-    retrieve: (organizationId: string, shop: ShopDomain) =>
-      Effect.succeed(testToken),
-    delete: (organizationId: string, shop: ShopDomain) => Effect.succeed(true),
+    store: (_shop: ShopDomain, _token: AccessToken, _scope: Scope) =>
+      Effect.succeed(void 0),
+    retrieve: (_shop: ShopDomain) => Effect.succeed(testToken),
+    delete: (_shop: ShopDomain) => Effect.succeed(true),
   });
 
   const MockAccessTokenServiceEmpty = Layer.succeed(AccessTokenService, {
@@ -90,15 +85,10 @@ describe("Shopify OAuth Use Case", () => {
         access_token: testToken,
         scope: testScope,
       }),
-    store: (
-      organizationId: string,
-      shop: ShopDomain,
-      token: AccessToken,
-      scope: Scope,
-    ) => Effect.succeed(void 0),
-    retrieve: (organizationId: string, shop: ShopDomain) =>
-      Effect.succeed(null),
-    delete: (organizationId: string, shop: ShopDomain) => Effect.succeed(true),
+    store: (_shop: ShopDomain, _token: AccessToken, _scope: Scope) =>
+      Effect.succeed(void 0),
+    retrieve: (_shop: ShopDomain) => Effect.succeed(null),
+    delete: (_shop: ShopDomain) => Effect.succeed(true),
   });
 
   const MockShopValidatorValid = Layer.succeed(ShopValidator, {
@@ -238,16 +228,10 @@ describe("Shopify OAuth Use Case", () => {
               message: "Token exchange failed",
             }),
           ),
-        store: (
-          organizationId: string,
-          shop: ShopDomain,
-          token: AccessToken,
-          scope: Scope,
-        ) => Effect.succeed(void 0),
-        retrieve: (organizationId: string, shop: ShopDomain) =>
-          Effect.succeed(null),
-        delete: (organizationId: string, shop: ShopDomain) =>
-          Effect.succeed(true),
+        store: (_shop: ShopDomain, _token: AccessToken, _scope: Scope) =>
+          Effect.succeed(void 0),
+        retrieve: (_shop: ShopDomain) => Effect.succeed(null),
+        delete: (_shop: ShopDomain) => Effect.succeed(true),
       }),
       MockShopValidatorValid,
       MockWebhookServiceValid,
@@ -267,20 +251,15 @@ describe("Shopify OAuth Use Case", () => {
             access_token: testToken,
             scope: testScope,
           }),
-        store: (
-          organizationId: string,
-          shop: ShopDomain,
-          token: AccessToken,
-          scope: Scope,
-        ) => Effect.succeed(void 0),
-        retrieve: (organizationId: string, shop: ShopDomain) =>
+        store: (_shop: ShopDomain, _token: AccessToken, _scope: Scope) =>
+          Effect.succeed(void 0),
+        retrieve: (_shop: ShopDomain) =>
           Effect.fail(
             new OAuthError({
               message: "Database error",
             }),
           ),
-        delete: (organizationId: string, shop: ShopDomain) =>
-          Effect.succeed(true),
+        delete: (_shop: ShopDomain) => Effect.succeed(true),
       }),
       MockShopValidatorValid,
       MockWebhookServiceValid,
@@ -316,7 +295,9 @@ describe("Shopify OAuth Use Case", () => {
             `https://${testShop}/admin/oauth/authorize`,
           );
           expect(location).toContain(`client_id=${testEnv.SHOPIFY_CLIENT_ID}`);
-          expect(location).toContain(`state=${testNonce}`);
+          expect(location).toContain(
+            `state=${testOrganizationSlug}_org_${testNonce}`,
+          );
         }).pipe(Effect.provide(BaseTestLayer)),
     );
 
@@ -788,7 +769,7 @@ describe("Shopify OAuth Use Case", () => {
   });
 
   describe("Integration - OAuth Callback with Webhook Registration", () => {
-    const IntegrationTestLayer = Layer.provide(
+    const _IntegrationTestLayer = Layer.provide(
       ShopifyOAuthUseCaseLive,
       Layer.mergeAll(
         MockHmacVerifierValid,

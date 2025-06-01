@@ -1,5 +1,6 @@
 import { and, eq, gt, lt, sql } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type {
   AccessToken,
   Scope,
@@ -77,6 +78,7 @@ export const makeShopifyOAuthDrizzleAdapter = (
     shop: ShopDomain,
     accessToken: AccessToken,
     scope: Scope,
+    organizationSlug: OrganizationSlug,
     tokenData?: {
       tokenType?: string;
       expiresIn?: number;
@@ -88,6 +90,7 @@ export const makeShopifyOAuthDrizzleAdapter = (
       shop,
       accessToken,
       scope,
+      organizationSlug,
       tokenType: tokenData?.tokenType || "bearer",
       expiresIn: tokenData?.expiresIn ?? null,
       associatedUserScope: tokenData?.associatedUserScope ?? null,
@@ -102,6 +105,7 @@ export const makeShopifyOAuthDrizzleAdapter = (
         set: {
           accessToken: sql`excluded.access_token`,
           scope: sql`excluded.scope`,
+          organizationSlug: sql`excluded.organization_slug`,
           tokenType: sql`excluded.token_type`,
           expiresIn: sql`excluded.expires_in`,
           associatedUserScope: sql`excluded.associated_user_scope`,

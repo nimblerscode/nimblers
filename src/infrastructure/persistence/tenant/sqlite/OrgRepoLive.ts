@@ -52,7 +52,6 @@ export const OrgRepoLive = Layer.effect(
           const result = yield* Effect.tryPromise({
             try: () => drizzleAdapter.createOrg(data, creatorUserId),
             catch: (error) => {
-              console.error("drizzleAdapter.createOrg failed:", error);
               return mapToOrgDbError(error);
             },
           });
@@ -76,7 +75,6 @@ export const OrgRepoLive = Layer.effect(
 
           yield* createdMemberEffect.pipe(
             Effect.mapError((error) => {
-              console.error("Member creation failed:", error);
               return mapToOrgDbError(error);
             }),
             Effect.tap(() =>

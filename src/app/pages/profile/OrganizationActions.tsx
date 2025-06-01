@@ -4,9 +4,10 @@ import { MoreHorizontal, Settings, Star } from "lucide-react";
 import { Button } from "@/app/design-system/Button";
 import { Icon } from "@/app/design-system/Icon";
 import { HStack } from "@/app/design-system/Layout";
+import type { OrganizationId } from "@/domain/shopify/store/models";
 
 interface OrganizationActionsProps {
-  organizationId: string;
+  organizationId: OrganizationId;
   isStarred?: boolean;
 }
 

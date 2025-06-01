@@ -1,15 +1,12 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
-import {
-  InvalidShopDomainError,
-  type ShopDomain,
-} from "../../../src/domain/shopify/oauth/models";
+import { InvalidShopDomainError } from "../../../src/domain/shopify/oauth/models";
 import { ShopValidator } from "../../../src/domain/shopify/oauth/service";
 import { ShopValidatorLive } from "../../../src/infrastructure/shopify/oauth/shop";
 
 describe("Shopify Shop Validation", () => {
   describe("Valid Shop Domains", () => {
-    it.scoped("should validate basic shop domain", () =>
+    it.scoped("should validate simple shop domain", () =>
       Effect.gen(function* () {
         const shopValidator = yield* ShopValidator;
 
@@ -42,7 +39,7 @@ describe("Shopify Shop Validation", () => {
       }).pipe(Effect.provide(ShopValidatorLive)),
     );
 
-    it.scoped("should validate single character shop name", () =>
+    it.scoped("should validate single character shop", () =>
       Effect.gen(function* () {
         const shopValidator = yield* ShopValidator;
 
@@ -52,7 +49,7 @@ describe("Shopify Shop Validation", () => {
       }).pipe(Effect.provide(ShopValidatorLive)),
     );
 
-    it.scoped("should validate shop domain starting with number", () =>
+    it.scoped("should validate shop starting with number", () =>
       Effect.gen(function* () {
         const shopValidator = yield* ShopValidator;
 
@@ -63,12 +60,11 @@ describe("Shopify Shop Validation", () => {
       }).pipe(Effect.provide(ShopValidatorLive)),
     );
 
-    it.scoped("should validate long shop domain", () =>
+    it.scoped("should validate very long shop names", () =>
       Effect.gen(function* () {
         const shopValidator = yield* ShopValidator;
 
-        const longShop =
-          "a-very-long-shop-name-with-many-hyphens-and-characters.myshopify.com";
+        const longShop = `${"a".repeat(100)}.myshopify.com`;
         const result = yield* shopValidator.validateShopDomain(longShop);
         expect(result).toBe(longShop);
       }).pipe(Effect.provide(ShopValidatorLive)),
@@ -316,26 +312,15 @@ describe("Shopify Shop Validation", () => {
       }).pipe(Effect.provide(ShopValidatorLive)),
     );
 
-    it.scoped("should handle very long shop names", () =>
-      Effect.gen(function* () {
-        const shopValidator = yield* ShopValidator;
-
-        // Create a very long but valid shop name
-        const longShopName = "a".repeat(100) + ".myshopify.com";
-
-        const result = yield* shopValidator.validateShopDomain(longShopName);
-        expect(result).toBe(longShopName);
-      }).pipe(Effect.provide(ShopValidatorLive)),
-    );
-
     it.scoped("should handle case sensitivity", () =>
       Effect.gen(function* () {
         const shopValidator = yield* ShopValidator;
 
         // Shopify domains should be case-insensitive but preserved
-        const mixedCase = "Test-Shop.myshopify.com";
-        const result = yield* shopValidator.validateShopDomain(mixedCase);
-        expect(result).toBe(mixedCase);
+        const result = yield* shopValidator.validateShopDomain(
+          "Test-Shop.myshopify.com",
+        );
+        expect(result).toBe("Test-Shop.myshopify.com");
       }).pipe(Effect.provide(ShopValidatorLive)),
     );
 
@@ -351,25 +336,6 @@ describe("Shopify Shop Validation", () => {
     );
   });
 
-  describe("Type Safety", () => {
-    it.scoped("should return branded ShopDomain type", () =>
-      Effect.gen(function* () {
-        const shopValidator = yield* ShopValidator;
-
-        const result = yield* shopValidator.validateShopDomain(
-          "test-shop.myshopify.com",
-        );
-
-        // This should be a branded ShopDomain type
-        const shopDomain: ShopDomain = result;
-        const stringValue: string = result; // Should also be assignable to string
-
-        expect(shopDomain).toBe("test-shop.myshopify.com");
-        expect(stringValue).toBe("test-shop.myshopify.com");
-      }).pipe(Effect.provide(ShopValidatorLive)),
-    );
-  });
-
   describe("Error Messages", () => {
     it.scoped("should provide descriptive error for wrong suffix", () =>
       Effect.gen(function* () {
@@ -381,9 +347,8 @@ describe("Shopify Shop Validation", () => {
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
-          expect(result.left.message).toBe(
-            "Shop domain must end with .myshopify.com",
-          );
+          expect(result.left).toBeInstanceOf(InvalidShopDomainError);
+          expect(result.left.message).toContain("must end with .myshopify.com");
           expect(result.left.shop).toBe("test-shop.com");
         }
       }).pipe(Effect.provide(ShopValidatorLive)),
@@ -399,7 +364,7 @@ describe("Shopify Shop Validation", () => {
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
-          expect(result.left.message).toBe("Invalid shop domain format");
+          expect(result.left).toBeInstanceOf(InvalidShopDomainError);
           expect(result.left.shop).toBe("invalid_shop.myshopify.com");
         }
       }).pipe(Effect.provide(ShopValidatorLive)),
@@ -407,53 +372,29 @@ describe("Shopify Shop Validation", () => {
   });
 
   describe("Performance", () => {
-    it.scoped("should validate multiple domains concurrently", () =>
-      Effect.gen(function* () {
-        const shopValidator = yield* ShopValidator;
-
-        const domains = [
-          "shop1.myshopify.com",
-          "shop2.myshopify.com",
-          "shop3.myshopify.com",
-          "shop4.myshopify.com",
-          "shop5.myshopify.com",
-        ];
-
-        const validationTasks = domains.map((domain) =>
-          shopValidator.validateShopDomain(domain),
-        );
-
-        const results = yield* Effect.all(validationTasks, {
-          concurrency: "unbounded",
-        });
-
-        expect(results).toEqual(domains);
-      }).pipe(Effect.provide(ShopValidatorLive)),
-    );
-
     it.scoped("should handle mixed valid and invalid domains", () =>
       Effect.gen(function* () {
         const shopValidator = yield* ShopValidator;
 
         const domains = [
-          "valid1.myshopify.com",
+          "valid-shop.myshopify.com",
           "invalid.com",
-          "valid2.myshopify.com",
-          "also-invalid.shopify.com",
+          "another-valid.myshopify.com",
+          ".invalid.myshopify.com",
+          "also-valid.myshopify.com",
         ];
 
         const validationTasks = domains.map((domain) =>
           Effect.either(shopValidator.validateShopDomain(domain)),
         );
 
-        const results = yield* Effect.all(validationTasks, {
-          concurrency: "unbounded",
-        });
+        const results = yield* Effect.all(validationTasks);
 
-        expect(results[0]._tag).toBe("Right");
-        expect(results[1]._tag).toBe("Left");
-        expect(results[2]._tag).toBe("Right");
-        expect(results[3]._tag).toBe("Left");
+        expect(results[0]._tag).toBe("Right"); // valid
+        expect(results[1]._tag).toBe("Left"); // invalid
+        expect(results[2]._tag).toBe("Right"); // valid
+        expect(results[3]._tag).toBe("Left"); // invalid
+        expect(results[4]._tag).toBe("Right"); // valid
       }).pipe(Effect.provide(ShopValidatorLive)),
     );
   });

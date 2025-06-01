@@ -67,19 +67,23 @@ export abstract class AccessTokenService extends Context.Tag(
       AccessTokenError
     >;
     readonly store: (
-      organizationSlug: OrganizationSlug,
       shop: ShopDomain,
       token: AccessToken,
       scope: Scope,
+      organizationSlug: OrganizationSlug,
     ) => Effect.Effect<void, OAuthError>;
     readonly retrieve: (
-      organizationSlug: OrganizationSlug,
       shop: ShopDomain,
     ) => Effect.Effect<AccessToken | null, OAuthError>;
-    readonly delete: (
-      organizationSlug: OrganizationSlug,
-      shop: ShopDomain,
-    ) => Effect.Effect<boolean, OAuthError>;
+    readonly delete: (shop: ShopDomain) => Effect.Effect<void, OAuthError>;
+    readonly retrieveWithOrganization: (shop: ShopDomain) => Effect.Effect<
+      {
+        accessToken: AccessToken;
+        scope: Scope;
+        organizationSlug: OrganizationSlug;
+      } | null,
+      OAuthError
+    >;
   }
 >() {}
 
@@ -104,7 +108,7 @@ export abstract class ShopValidator extends Context.Tag(
   ShopValidator,
   {
     readonly validateShopDomain: (
-      shop: ShopDomain,
+      shop: string,
     ) => Effect.Effect<ShopDomain, InvalidShopDomainError>;
   }
 >() {}

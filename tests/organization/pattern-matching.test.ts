@@ -234,7 +234,7 @@ describe("Pattern Matching in Organization Client", () => {
               const matched = patternMatchURL(input);
               const parsed = new URL(matched);
               return `http://internal${parsed.pathname}${parsed.search}`;
-            } catch (error) {
+            } catch (_error) {
               return yield* Effect.fail(new Error(`Invalid URL: ${input}`));
             }
           });

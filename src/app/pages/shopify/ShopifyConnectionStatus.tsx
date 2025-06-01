@@ -32,7 +32,7 @@ export function ShopifyConnectionStatus({
       } else {
         throw new Error("Failed to disconnect");
       }
-    } catch (error) {
+    } catch (_error) {
       alert("Failed to disconnect from Shopify. Please try again.");
     }
   };

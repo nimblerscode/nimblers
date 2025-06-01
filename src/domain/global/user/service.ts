@@ -1,11 +1,13 @@
 import { Context, Data, type Effect, type Option } from "effect";
+import type { OrganizationId } from "@/domain/shopify/store/models";
 import type { Email } from "../email/model";
+import type { OrganizationSlug } from "../organization/models";
 import type { NewMembership, User, UserId, UserNotFoundError } from "./model";
 
 // === Organization Types ===
 export interface NewOrganization {
-  id: string;
-  slug: string;
+  id: OrganizationId;
+  slug: OrganizationSlug;
   status?: string;
 }
 
@@ -29,8 +31,8 @@ export class MembershipCreationError extends Data.TaggedError(
   "MembershipCreationError",
 )<{
   message: string;
-  userId: string;
-  organizationId: string;
+  userId: UserId;
+  organizationId: OrganizationId;
   cause?: unknown;
 }> {}
 
@@ -38,8 +40,8 @@ export class MembershipAlreadyExistsError extends Data.TaggedError(
   "MembershipAlreadyExistsError",
 )<{
   message: string;
-  userId: string;
-  organizationId: string;
+  userId: UserId;
+  organizationId: OrganizationId;
 }> {}
 
 export class UsersRetrievalError extends Data.TaggedError(
@@ -54,7 +56,7 @@ export class OrganizationCreationError extends Data.TaggedError(
   "OrganizationCreationError",
 )<{
   message: string;
-  slug: string;
+  slug: OrganizationSlug;
   cause?: unknown;
 }> {}
 
@@ -62,14 +64,16 @@ export class OrganizationSlugConflictError extends Data.TaggedError(
   "OrganizationSlugConflictError",
 )<{
   message: string;
-  slug: string;
+  slug: OrganizationSlug;
 }> {}
 
 export class OrganizationLookupError extends Data.TaggedError(
   "OrganizationLookupError",
 )<{
   message: string;
-  identifier: { type: "id"; value: string } | { type: "slug"; value: string };
+  identifier:
+    | { type: "id"; value: OrganizationId }
+    | { type: "slug"; value: OrganizationSlug };
   cause?: unknown;
 }> {}
 
@@ -99,10 +103,10 @@ export abstract class UserRepo extends Context.Tag("@core/user/UserRepo")<
       OrganizationCreationError | OrganizationSlugConflictError
     >;
     readonly findOrganizationById: (
-      organizationId: string,
+      organizationId: OrganizationId,
     ) => Effect.Effect<Option.Option<Organization>, OrganizationLookupError>;
     readonly findOrganizationBySlug: (
-      slug: string,
+      slug: OrganizationSlug,
     ) => Effect.Effect<Option.Option<Organization>, OrganizationLookupError>;
   }
 >() {}

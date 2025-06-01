@@ -9,7 +9,7 @@ import {
 } from "@effect/platform";
 import { Effect, Layer, Schema } from "effect";
 import { OrganizationSlug } from "@/domain/global/organization/models";
-import { ShopDomain } from "@/domain/shopify/oauth/models";
+import { AccessToken, Scope, ShopDomain } from "@/domain/shopify/oauth/models";
 import {
   AccessTokenService,
   NonceManager,
@@ -48,9 +48,7 @@ const storeAccessToken = HttpApiEndpoint.post(
   .addSuccess(ShopifyOAuthApiSchemas.storeToken.response);
 
 const retrieveAccessToken = HttpApiEndpoint.get("retrieveAccessToken", "/token")
-  .setUrlParams(
-    Schema.Struct({ organizationId: OrganizationSlug, shop: ShopDomain }),
-  )
+  .setUrlParams(Schema.Struct({ shop: ShopDomain }))
   .addSuccess(ShopifyOAuthApiSchemas.retrieveToken.response);
 
 const deleteAccessToken = HttpApiEndpoint.post(
@@ -67,6 +65,19 @@ const exchangeCodeForToken = HttpApiEndpoint.post(
   .setPayload(ShopifyOAuthApiSchemas.exchangeToken.request)
   .addSuccess(ShopifyOAuthApiSchemas.exchangeToken.response);
 
+const retrieveAccessTokenWithOrganization = HttpApiEndpoint.get(
+  "retrieveAccessTokenWithOrganization",
+  "/token/with-organization",
+)
+  .setUrlParams(Schema.Struct({ shop: ShopDomain }))
+  .addSuccess(
+    Schema.Struct({
+      accessToken: Schema.NullOr(AccessToken),
+      scope: Schema.optional(Scope),
+      organizationSlug: Schema.optional(OrganizationSlug),
+    }),
+  );
+
 // Group endpoints
 const shopifyOAuthGroup = HttpApiGroup.make("shopifyOAuth")
   .add(generateNonce)
@@ -76,7 +87,8 @@ const shopifyOAuthGroup = HttpApiGroup.make("shopifyOAuth")
   .add(storeAccessToken)
   .add(retrieveAccessToken)
   .add(deleteAccessToken)
-  .add(exchangeCodeForToken);
+  .add(exchangeCodeForToken)
+  .add(retrieveAccessTokenWithOrganization);
 
 // Create API
 const api = HttpApi.make("shopifyOAuthApi").add(shopifyOAuthGroup);
@@ -149,30 +161,41 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
         )
         .handle("storeAccessToken", ({ payload }) =>
           Effect.gen(function* () {
-            // Extract organizationId from payload
+            // DEBUG: Log incoming payload for debugging
+            yield* Effect.logInfo("=== TOKEN STORE DEBUG ===");
+            yield* Effect.logInfo("Received payload", { payload });
+            yield* Effect.logInfo("Payload keys", {
+              keys: Object.keys(payload),
+            });
+
+            // Store the access token with organization context
             yield* accessTokenService.store(
-              payload.organizationId,
               payload.shop,
               payload.accessToken,
               payload.scope,
+              payload.organizationSlug, // Include organization context
             );
             return { success: true };
           }).pipe(
-            Effect.mapError(
-              (error) =>
-                new HttpApiError.HttpApiDecodeError({
-                  message:
-                    error instanceof Error ? error.message : String(error),
-                  issues: [],
-                }),
-            ),
+            Effect.mapError((error) => {
+              Effect.logError("=== TOKEN STORE ERROR ===", { error }).pipe(
+                Effect.ignore,
+              );
+              Effect.logError("Error details", {
+                message: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : "No stack",
+              }).pipe(Effect.ignore);
+              return new HttpApiError.HttpApiDecodeError({
+                message: error instanceof Error ? error.message : String(error),
+                issues: [],
+              });
+            }),
           ),
         )
         .handle("retrieveAccessToken", ({ urlParams }) =>
           Effect.gen(function* () {
             // Extract organizationId from URL params
             const accessToken = yield* accessTokenService.retrieve(
-              urlParams.organizationId,
               urlParams.shop,
             );
             return {
@@ -193,11 +216,8 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
         .handle("deleteAccessToken", ({ payload }) =>
           Effect.gen(function* () {
             // Extract organizationId from payload
-            const deleted = yield* accessTokenService.delete(
-              payload.organizationId,
-              payload.shop,
-            );
-            return { success: true, deleted };
+            yield* accessTokenService.delete(payload.shop);
+            return { success: true, deleted: true };
           }).pipe(
             Effect.mapError(
               (error) =>
@@ -218,6 +238,30 @@ const shopifyOAuthGroupLive = HttpApiBuilder.group(
               payload.clientSecret,
             );
             return response;
+          }).pipe(
+            Effect.mapError(
+              (error) =>
+                new HttpApiError.HttpApiDecodeError({
+                  message:
+                    error instanceof Error ? error.message : String(error),
+                  issues: [],
+                }),
+            ),
+          ),
+        )
+        .handle("retrieveAccessTokenWithOrganization", ({ urlParams }) =>
+          Effect.gen(function* () {
+            // Extract organizationId from URL params
+            const accessToken = yield* accessTokenService.retrieve(
+              urlParams.shop,
+            );
+            return {
+              accessToken,
+              scope: accessToken
+                ? ("read_products,write_products" as Scope)
+                : undefined,
+              organizationSlug: undefined,
+            };
           }).pipe(
             Effect.mapError(
               (error) =>

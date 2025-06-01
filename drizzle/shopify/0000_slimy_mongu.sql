@@ -2,6 +2,7 @@ CREATE TABLE `access_tokens` (
 	`shop` text PRIMARY KEY NOT NULL,
 	`access_token` text NOT NULL,
 	`scope` text NOT NULL,
+	`organization_slug` text,
 	`token_type` text DEFAULT 'bearer',
 	`expires_in` integer,
 	`associated_user_scope` text,

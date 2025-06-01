@@ -1,5 +1,8 @@
 import { Context, type Effect } from "effect";
-import type { OrganizationSlug } from "@/domain/global/organization/models";
+import type {
+  OrganizationSlug,
+  ShopDomain,
+} from "@/domain/global/organization/models";
 import type { UserId } from "@/domain/global/user/model";
 import type {
   ConnectedStore,
@@ -139,8 +142,7 @@ export abstract class OrganizationUseCase extends Context.Tag(
       storeData: Omit<NewConnectedStore, "organizationId">,
     ) => Effect.Effect<ConnectedStore, OrgDbError>;
     readonly disconnectStore: (
-      organizationId: OrganizationId,
-      shopDomain: string,
+      shopDomain: ShopDomain,
     ) => Effect.Effect<void, OrgDbError>;
     readonly getConnectedStores: (
       organizationId: OrganizationId,

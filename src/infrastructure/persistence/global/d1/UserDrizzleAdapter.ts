@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { Email } from "@/domain/global/email/model";
+import type { OrganizationId } from "@/domain/global/organization/models";
 import type { NewMembership, User, UserId } from "@/domain/global/user/model";
 import type { user as userTable } from "./schema";
 import * as schema from "./schema";
@@ -71,7 +72,7 @@ export const makeUserDrizzleAdapter = (
       .returning();
     return results[0];
   },
-  findOrganizationById: async (organizationId: string) => {
+  findOrganizationById: async (organizationId: OrganizationId) => {
     const results = await db
       .select()
       .from(schema.organization)

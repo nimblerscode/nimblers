@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 import { Effect, pipe } from "effect";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InvitationDOLive } from "@/config/layers";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { Invitation } from "@/domain/tenant/invitations/models";
 
 // Define error types
@@ -51,7 +52,9 @@ const convertToSerializableInvitation = (
   expiresAt: safeToISOString(invitation.expiresAt),
 });
 
-export async function getPendingInvitations(organizationSlug: string): Promise<{
+export async function getPendingInvitations(
+  organizationSlug: OrganizationSlug,
+): Promise<{
   pendingInvitations: SerializableInvitation[];
 }> {
   const program = pipe(
