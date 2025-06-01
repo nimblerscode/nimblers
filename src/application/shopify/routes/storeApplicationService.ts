@@ -1,18 +1,18 @@
 import { Context, Effect, Layer } from "effect";
-import { ShopifyStoreService } from "@/domain/shopify/store/service";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { ShopDomain } from "@/domain/shopify/oauth/models";
+import { ShopifyStoreService } from "@/domain/shopify/store/service";
 import type { ShopifyValidationError } from "@/domain/shopify/validation/models";
 
 // === Store Application Service ===
 export abstract class ShopifyStoreApplicationService extends Context.Tag(
-  "@application/shopify/StoreApplication"
+  "@application/shopify/StoreApplication",
 )<
   ShopifyStoreApplicationService,
   {
     readonly disconnectStore: (
       organizationSlug: OrganizationSlug,
-      shopDomain: ShopDomain
+      shopDomain: ShopDomain,
     ) => Effect.Effect<Response, ShopifyValidationError>;
   }
 >() {}
@@ -25,12 +25,12 @@ export const ShopifyStoreApplicationServiceLive = Layer.effect(
     return {
       disconnectStore: (
         organizationSlug: OrganizationSlug,
-        shopDomain: ShopDomain
+        shopDomain: ShopDomain,
       ) =>
         Effect.gen(function* () {
           const result = yield* storeService.disconnectStore(
             organizationSlug,
-            shopDomain
+            shopDomain,
           );
 
           return Response.json({
@@ -45,12 +45,12 @@ export const ShopifyStoreApplicationServiceLive = Layer.effect(
                   error: "Failed to disconnect",
                   details: String(error),
                 },
-                { status: 500 }
-              )
-            )
+                { status: 500 },
+              ),
+            ),
           ),
-          Effect.withSpan("ShopifyStoreApplication.disconnectStore")
+          Effect.withSpan("ShopifyStoreApplication.disconnectStore"),
         ),
     };
-  })
+  }),
 );

@@ -3,12 +3,12 @@
 import type { SerializableInvitation } from "@/app/actions/invitations/list";
 import type { getUserOrganizations } from "@/app/actions/organization/get";
 import { Container, VStack } from "@/app/design-system";
+import type { ShopDomain } from "@/domain/global/organization/models";
 import type { User } from "@/domain/global/user/model";
 import type { Organization } from "@/domain/tenant/organization/model";
 import { MainLayout } from "../../layout/MainLayout";
 import { Header } from "./Header";
 import { OrganizationDashboard } from "./OrganizationDashboard";
-import type { ShopDomain } from "@/domain/global/organization/models";
 
 interface ConnectedStore {
   id: string;

@@ -1,4 +1,5 @@
 import { Effect, Layer } from "effect";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { OrganizationProvisionPayload } from "@/domain/tenant/organization/provision/model";
 import { OrganizationProvision } from "@/domain/tenant/organization/provision/service";
 import {
@@ -7,7 +8,6 @@ import {
   OrganizationUseCase,
   OrgService,
 } from "@/domain/tenant/organization/service";
-import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 export const OrganizationProvisionLive = Layer.effect(
   OrganizationProvision,
@@ -27,13 +27,13 @@ export const OrganizationProvisionLive = Layer.effect(
           // Use the service to create the organization
           const result = yield* organizationDOService.createOrganization(
             organization,
-            creatorId
+            creatorId,
           );
 
           return result;
         }),
     };
-  })
+  }),
 );
 
 export const OrganizationUseCaseLive = Layer.effect(
@@ -50,21 +50,21 @@ export const OrganizationUseCaseLive = Layer.effect(
               data: JSON.stringify(data, null, 2),
               creatorUserId,
               timestamp: new Date().toISOString(),
-            })
+            }),
           );
 
           yield* Effect.log("OrgService available, calling create method").pipe(
             Effect.annotateLogs({
               orgServiceType: typeof orgService,
               availableMethods: Object.keys(orgService),
-            })
+            }),
           );
 
           yield* Effect.log("Calling orgService.create").pipe(
             Effect.annotateLogs({
               data: JSON.stringify(data, null, 2),
               creatorUserId,
-            })
+            }),
           );
 
           const result = yield* orgService.create(data, creatorUserId).pipe(
@@ -73,8 +73,8 @@ export const OrganizationUseCaseLive = Layer.effect(
                 Effect.annotateLogs({
                   result: JSON.stringify(res, null, 2),
                   timestamp: new Date().toISOString(),
-                })
-              )
+                }),
+              ),
             ),
             Effect.tapError((error) =>
               Effect.logError("OrgService.create failed").pipe(
@@ -82,18 +82,18 @@ export const OrganizationUseCaseLive = Layer.effect(
                   error: error instanceof Error ? error.message : String(error),
                   stack: error instanceof Error ? error.stack : undefined,
                   timestamp: new Date().toISOString(),
-                })
-              )
-            )
+                }),
+              ),
+            ),
           );
 
           yield* Effect.log(
-            "=== ORGANIZATION USE CASE CREATE SUCCESS ==="
+            "=== ORGANIZATION USE CASE CREATE SUCCESS ===",
           ).pipe(
             Effect.annotateLogs({
               finalResult: JSON.stringify(result, null, 2),
               timestamp: new Date().toISOString(),
-            })
+            }),
           );
 
           return { org: result, memberCreateData: {} as any }; // Return expected format
@@ -108,7 +108,7 @@ export const OrganizationUseCaseLive = Layer.effect(
         Effect.gen(function* () {
           const org = yield* orgService.get(slug);
           const connectedStores = yield* connectedStoreRepo.getByOrganizationId(
-            org.id
+            org.id,
           );
           return { ...org, connectedStores }; // Use connectedStores instead of stores
         }),
@@ -134,5 +134,5 @@ export const OrganizationUseCaseLive = Layer.effect(
           return yield* connectedStoreRepo.getByOrganizationId(organizationId);
         }),
     };
-  })
+  }),
 );

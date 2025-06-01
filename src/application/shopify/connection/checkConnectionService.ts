@@ -1,7 +1,7 @@
 import { Context, Effect, Layer } from "effect";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import { GlobalShopConnectionUseCase } from "@/domain/global/organization/service";
 import type { ShopDomain } from "@/domain/shopify/oauth/models";
-import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 export interface ShopConnectionCheckResult {
   canConnect: boolean;
@@ -12,13 +12,13 @@ export interface ShopConnectionCheckResult {
 
 // === Shop Connection Check Service ===
 export abstract class ShopConnectionCheckService extends Context.Tag(
-  "@application/shopify/ShopConnectionCheckService"
+  "@application/shopify/ShopConnectionCheckService",
 )<
   ShopConnectionCheckService,
   {
     readonly checkShopConnection: (
       shopDomain: ShopDomain,
-      organizationId: OrganizationSlug
+      organizationId: OrganizationSlug,
     ) => Effect.Effect<ShopConnectionCheckResult, never>;
   }
 >() {}
@@ -32,7 +32,7 @@ export const ShopConnectionCheckServiceLive = Layer.effect(
     return {
       checkShopConnection: (
         shopDomain: ShopDomain,
-        organizationSlug: OrganizationSlug
+        organizationSlug: OrganizationSlug,
       ) =>
         Effect.gen(function* () {
           // Check if shop is already connected to any organization
@@ -72,10 +72,10 @@ export const ShopConnectionCheckServiceLive = Layer.effect(
               isConnected: false,
               message:
                 "Unable to verify shop connection status, proceeding with connection attempt",
-            })
+            }),
           ),
-          Effect.withSpan("ShopConnectionCheckService.checkShopConnection")
+          Effect.withSpan("ShopConnectionCheckService.checkShopConnection"),
         ),
     };
-  })
+  }),
 );

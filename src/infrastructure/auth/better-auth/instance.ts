@@ -15,7 +15,7 @@ type EmailServiceInterface = Context.Tag.Service<typeof EmailServiceTag>;
 
 const makeAuth = (
   db: DrizzleD1Database<typeof schema>,
-  emailServiceImpl: EmailServiceInterface
+  emailServiceImpl: EmailServiceInterface,
 ) =>
   betterAuth({
     databaseHooks: {
@@ -75,14 +75,14 @@ const makeAuth = (
         });
 
         const runnableEffect = verificationEmailEffect.pipe(
-          Effect.provideService(EmailService, emailServiceImpl)
+          Effect.provideService(EmailService, emailServiceImpl),
         );
 
         const result = await Effect.runPromiseExit(runnableEffect);
 
         if (Exit.isFailure(result)) {
           const errorToThrow = Exit.causeOption(result).pipe(
-            Option.getOrElse(() => new Error("Unknown error sending email"))
+            Option.getOrElse(() => new Error("Unknown error sending email")),
           );
           throw errorToThrow;
         }

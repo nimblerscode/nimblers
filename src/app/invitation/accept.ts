@@ -2,8 +2,11 @@
 
 import { env } from "cloudflare:workers";
 import { Effect } from "effect";
+import { requestInfo } from "rwsdk/worker";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InvitationDOLive } from "@/config/layers";
+import { UserIdSchema } from "@/domain/global/user/model";
+import type { AppContext } from "@/infrastructure/cloudflare/worker";
 
 type ActionState = {
   loading?: boolean;
@@ -21,8 +24,16 @@ export async function handleAcceptInvitation(
     return { error: "Invitation token is required" };
   }
 
+  const ctx = requestInfo.ctx as AppContext;
+
+  if (!ctx.session?.userId) {
+    return { error: "User must be authenticated to accept invitation" };
+  }
+
+  const userId = UserIdSchema.make(ctx.session.userId);
+
   const invitationProgram = InvitationDOService.pipe(
-    Effect.flatMap((service) => service.accept(token)),
+    Effect.flatMap((service) => service.accept(token, userId)),
   );
 
   const fullLayer = InvitationDOLive({

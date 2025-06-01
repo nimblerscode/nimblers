@@ -23,7 +23,7 @@ describe("Shopify OAuth Nonce Management", () => {
           Effect.gen(function* () {
             yield* Ref.update(
               storedNonces,
-              (stored) => new Set([...stored, `${organizationId}:${nonce}`])
+              (stored) => new Set([...stored, `${organizationId}:${nonce}`]),
             );
           }),
         verify: (organizationId: string, nonce: Nonce) =>
@@ -41,23 +41,23 @@ describe("Shopify OAuth Nonce Management", () => {
 
             if (!stored.has(key)) {
               yield* Effect.fail(
-                new InvalidNonceError({ message: "Nonce not found" })
+                new InvalidNonceError({ message: "Nonce not found" }),
               );
             }
 
             if (consumed.has(key)) {
               yield* Effect.fail(
-                new InvalidNonceError({ message: "Nonce already consumed" })
+                new InvalidNonceError({ message: "Nonce already consumed" }),
               );
             }
 
             yield* Ref.update(
               consumedNonces,
-              (consumedSet) => new Set([...consumedSet, key])
+              (consumedSet) => new Set([...consumedSet, key]),
             );
           }),
       };
-    })
+    }),
   );
 
   // Create failing managers for error testing
@@ -67,7 +67,7 @@ describe("Shopify OAuth Nonce Management", () => {
       Effect.fail(
         new OAuthError({
           message: "Storage failed",
-        })
+        }),
       ),
     verify: (organizationId: string, nonce: Nonce) => Effect.succeed(false),
     consume: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
@@ -80,7 +80,7 @@ describe("Shopify OAuth Nonce Management", () => {
       Effect.fail(
         new InvalidNonceError({
           message: "Verification failed",
-        })
+        }),
       ),
     consume: (organizationId: string, nonce: Nonce) => Effect.succeed(void 0),
   });
@@ -102,7 +102,7 @@ describe("Shopify OAuth Nonce Management", () => {
           /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         expect(uuidRegex.test(nonce1)).toBe(true);
         expect(uuidRegex.test(nonce2)).toBe(true);
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should generate nonces consistently", () =>
@@ -127,7 +127,7 @@ describe("Shopify OAuth Nonce Management", () => {
           expect(typeof nonce).toBe("string");
           expect(nonce.length).toBeGreaterThan(0);
         });
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
   });
 
@@ -142,7 +142,7 @@ describe("Shopify OAuth Nonce Management", () => {
         // Verify nonce is stored by checking if it can be verified
         const isValid = yield* nonceManager.verify(testOrganizationId, nonce);
         expect(isValid).toBe(true);
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should handle multiple nonce storage", () =>
@@ -170,7 +170,7 @@ describe("Shopify OAuth Nonce Management", () => {
         ]);
 
         expect(verifications).toEqual([true, true, true]);
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should handle storage errors gracefully", () =>
@@ -179,14 +179,14 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonce = yield* nonceManager.generate();
 
         const result = yield* Effect.either(
-          nonceManager.store(testOrganizationId, nonce)
+          nonceManager.store(testOrganizationId, nonce),
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(OAuthError);
         }
-      }).pipe(Effect.provide(FailingStorageNonceManager))
+      }).pipe(Effect.provide(FailingStorageNonceManager)),
     );
   });
 
@@ -200,7 +200,7 @@ describe("Shopify OAuth Nonce Management", () => {
 
         const isValid = yield* nonceManager.verify(testOrganizationId, nonce);
         expect(isValid).toBe(true);
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should reject non-existent nonce", () =>
@@ -210,10 +210,10 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonExistentNonce = "non-existent-nonce" as Nonce;
         const isValid = yield* nonceManager.verify(
           testOrganizationId,
-          nonExistentNonce
+          nonExistentNonce,
         );
         expect(isValid).toBe(false);
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should reject consumed nonce", () =>
@@ -226,7 +226,7 @@ describe("Shopify OAuth Nonce Management", () => {
         // Verify nonce is valid before consumption
         const isValidBefore = yield* nonceManager.verify(
           testOrganizationId,
-          nonce
+          nonce,
         );
         expect(isValidBefore).toBe(true);
 
@@ -236,10 +236,10 @@ describe("Shopify OAuth Nonce Management", () => {
         // Verify nonce is no longer valid after consumption
         const isValidAfter = yield* nonceManager.verify(
           testOrganizationId,
-          nonce
+          nonce,
         );
         expect(isValidAfter).toBe(false);
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should handle verification errors", () =>
@@ -248,14 +248,14 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonce = "test-nonce" as Nonce;
 
         const result = yield* Effect.either(
-          nonceManager.verify(testOrganizationId, nonce)
+          nonceManager.verify(testOrganizationId, nonce),
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidNonceError);
         }
-      }).pipe(Effect.provide(FailingVerificationNonceManager))
+      }).pipe(Effect.provide(FailingVerificationNonceManager)),
     );
   });
 
@@ -270,7 +270,7 @@ describe("Shopify OAuth Nonce Management", () => {
         // Verify nonce exists before consumption
         const isValidBefore = yield* nonceManager.verify(
           testOrganizationId,
-          nonce
+          nonce,
         );
         expect(isValidBefore).toBe(true);
 
@@ -280,10 +280,10 @@ describe("Shopify OAuth Nonce Management", () => {
         // Verify nonce is consumed and no longer valid
         const isValidAfter = yield* nonceManager.verify(
           testOrganizationId,
-          nonce
+          nonce,
         );
         expect(isValidAfter).toBe(false);
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should fail to consume non-existent nonce", () =>
@@ -293,14 +293,14 @@ describe("Shopify OAuth Nonce Management", () => {
         const nonExistentNonce = "non-existent-nonce" as Nonce;
 
         const result = yield* Effect.either(
-          nonceManager.consume(testOrganizationId, nonExistentNonce)
+          nonceManager.consume(testOrganizationId, nonExistentNonce),
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidNonceError);
         }
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should fail to consume already consumed nonce", () =>
@@ -315,14 +315,14 @@ describe("Shopify OAuth Nonce Management", () => {
 
         // Second consumption should fail
         const result = yield* Effect.either(
-          nonceManager.consume(testOrganizationId, nonce)
+          nonceManager.consume(testOrganizationId, nonce),
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(InvalidNonceError);
         }
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
   });
 
@@ -337,7 +337,7 @@ describe("Shopify OAuth Nonce Management", () => {
         // First verification should succeed
         const firstVerify = yield* nonceManager.verify(
           testOrganizationId,
-          nonce
+          nonce,
         );
         expect(firstVerify).toBe(true);
 
@@ -347,16 +347,16 @@ describe("Shopify OAuth Nonce Management", () => {
         // Subsequent verification should fail
         const secondVerify = yield* nonceManager.verify(
           testOrganizationId,
-          nonce
+          nonce,
         );
         expect(secondVerify).toBe(false);
 
         // Subsequent consumption should fail
         const secondConsume = yield* Effect.either(
-          nonceManager.consume(testOrganizationId, nonce)
+          nonceManager.consume(testOrganizationId, nonce),
         );
         expect(secondConsume._tag).toBe("Left");
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
 
     it.scoped("should handle concurrent nonce operations", () =>
@@ -383,7 +383,7 @@ describe("Shopify OAuth Nonce Management", () => {
 
         expect(successes).toBe(1);
         expect(failures).toBe(2);
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
   });
 
@@ -396,27 +396,27 @@ describe("Shopify OAuth Nonce Management", () => {
 
         // Generate 50 nonces
         const nonces = yield* Effect.all(
-          Array.from({ length: 50 }, () => nonceManager.generate())
+          Array.from({ length: 50 }, () => nonceManager.generate()),
         );
 
         // Store all nonces
         yield* Effect.all(
           nonces.map((nonce) => nonceManager.store(testOrganizationId, nonce)),
-          { concurrency: 10 }
+          { concurrency: 10 },
         );
 
         // Verify all nonces
         const verifications = yield* Effect.all(
           nonces.map((nonce) => nonceManager.verify(testOrganizationId, nonce)),
-          { concurrency: 10 }
+          { concurrency: 10 },
         );
 
         // Consume all nonces
         yield* Effect.all(
           nonces.map((nonce) =>
-            nonceManager.consume(testOrganizationId, nonce)
+            nonceManager.consume(testOrganizationId, nonce),
           ),
-          { concurrency: 10 }
+          { concurrency: 10 },
         );
 
         const endTime = performance.now();
@@ -427,7 +427,7 @@ describe("Shopify OAuth Nonce Management", () => {
 
         // Performance should be reasonable (adjust threshold as needed)
         expect(duration).toBeLessThan(5000); // Less than 5 seconds for 50 nonces
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
   });
 
@@ -439,16 +439,16 @@ describe("Shopify OAuth Nonce Management", () => {
         const emptyNonce = "" as Nonce;
 
         const storeResult = yield* Effect.either(
-          nonceManager.store(testOrganizationId, emptyNonce)
+          nonceManager.store(testOrganizationId, emptyNonce),
         );
         const verifyResult = yield* Effect.either(
-          nonceManager.verify(testOrganizationId, emptyNonce)
+          nonceManager.verify(testOrganizationId, emptyNonce),
         );
 
         // Empty nonce operations should either fail or return false
         if (storeResult._tag === "Right") {
           expect(verifyResult._tag === "Right" && verifyResult.right).toBe(
-            false
+            false,
           );
         } else {
           expect(storeResult._tag).toBe("Left");
@@ -461,7 +461,7 @@ describe("Shopify OAuth Nonce Management", () => {
               // Empty nonce should be rejected or stored with failure
               if (nonce === "") {
                 return Effect.fail(
-                  new OAuthError({ message: "Empty nonce not allowed" })
+                  new OAuthError({ message: "Empty nonce not allowed" }),
                 );
               }
               return Effect.succeed(void 0);
@@ -475,9 +475,9 @@ describe("Shopify OAuth Nonce Management", () => {
             },
             consume: (organizationId: string, nonce: Nonce) =>
               Effect.succeed(void 0),
-          })
-        )
-      )
+          }),
+        ),
+      ),
     );
 
     it.scoped("should handle very long nonces", () =>
@@ -487,13 +487,13 @@ describe("Shopify OAuth Nonce Management", () => {
         const longNonce = "a".repeat(1000) as Nonce;
 
         const storeResult = yield* Effect.either(
-          nonceManager.store(testOrganizationId, longNonce)
+          nonceManager.store(testOrganizationId, longNonce),
         );
 
         if (storeResult._tag === "Right") {
           const verifyResult = yield* nonceManager.verify(
             testOrganizationId,
-            longNonce
+            longNonce,
           );
           expect(verifyResult).toBe(true);
 
@@ -501,11 +501,11 @@ describe("Shopify OAuth Nonce Management", () => {
 
           const afterConsume = yield* nonceManager.verify(
             testOrganizationId,
-            longNonce
+            longNonce,
           );
           expect(afterConsume).toBe(false);
         }
-      }).pipe(Effect.provide(MockNonceManagerValid))
+      }).pipe(Effect.provide(MockNonceManagerValid)),
     );
   });
 });

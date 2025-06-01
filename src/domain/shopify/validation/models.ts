@@ -2,7 +2,7 @@ import { Data, Schema as S } from "effect";
 
 // === Request Validation Errors ===
 export class MissingOrganizationError extends Data.TaggedError(
-  "MissingOrganizationError"
+  "MissingOrganizationError",
 )<{ message?: string }> {
   constructor(options: { message?: string } = {}) {
     super({
@@ -12,7 +12,7 @@ export class MissingOrganizationError extends Data.TaggedError(
 }
 
 export class MissingShopParameterError extends Data.TaggedError(
-  "MissingShopParameterError"
+  "MissingShopParameterError",
 )<{ message?: string }> {
   constructor(options: { message?: string } = {}) {
     super({
@@ -22,7 +22,7 @@ export class MissingShopParameterError extends Data.TaggedError(
 }
 
 export class EffectExecutionError extends Data.TaggedError(
-  "EffectExecutionError"
+  "EffectExecutionError",
 )<{
   message?: string;
   cause?: unknown;
@@ -36,7 +36,7 @@ export class EffectExecutionError extends Data.TaggedError(
 }
 
 export class InvalidStateParameterError extends Data.TaggedError(
-  "InvalidStateParameterError"
+  "InvalidStateParameterError",
 )<{ message?: string; state?: string }> {
   constructor(options: { message?: string; state?: string } = {}) {
     super({

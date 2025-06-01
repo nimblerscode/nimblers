@@ -1,6 +1,6 @@
 import { Data, Schema as S } from "effect";
-import { type Email, EmailSchema } from "../email/model";
 import { OrganizationIdSchema } from "@/domain/tenant/organization/model";
+import { type Email, EmailSchema } from "../email/model";
 
 export const UserIdSchema = S.String.pipe(S.brand("UserId"));
 export type UserId = S.Schema.Type<typeof UserIdSchema>;
@@ -45,7 +45,7 @@ export class UserNotFoundError extends Data.TaggedError("UserNotFoundError")<{
 }> {}
 
 export class UserAlreadyExistsError extends Data.TaggedError(
-  "UserAlreadyExistsError"
+  "UserAlreadyExistsError",
 )<{
   message: string;
   email: Email;

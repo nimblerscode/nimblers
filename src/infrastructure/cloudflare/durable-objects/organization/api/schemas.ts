@@ -1,4 +1,8 @@
 import { Schema } from "effect";
+import {
+  OrganizationSlug,
+  ShopDomain,
+} from "@/domain/global/organization/models";
 import { UserIdSchema } from "@/domain/global/user/model";
 import {
   InvitationSchema,
@@ -9,10 +13,6 @@ import {
   NewOrganizationSchema,
   OrganizationSchema,
 } from "@/domain/tenant/organization/model";
-import {
-  OrganizationSlug,
-  ShopDomain,
-} from "@/domain/global/organization/models";
 
 /**
  * Shared API schemas for Organization Durable Object
@@ -130,13 +130,13 @@ export const OrganizationApiSchemas = {
         status: Schema.Union(
           Schema.Literal("active"),
           Schema.Literal("disconnected"),
-          Schema.Literal("error")
+          Schema.Literal("error"),
         ),
         connectedAt: Schema.Date,
         lastSyncAt: Schema.NullOr(Schema.Date),
         metadata: Schema.NullOr(Schema.String),
         createdAt: Schema.Date,
-      })
+      }),
     ),
   },
 } as const;

@@ -10,4 +10,8 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  args: {
+    request: new Request("http://localhost:3000/login") as Request,
+  },
+};

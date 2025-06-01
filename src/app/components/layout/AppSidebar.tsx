@@ -12,20 +12,12 @@ import {
   useSidebar,
   VStack,
 } from "@/app/design-system";
-import { Home, LogOut, User } from "@/app/design-system/icons";
+import { Home, LogOut, User as UserIcon } from "@/app/design-system/icons";
 import { authClient } from "@/app/lib/authClient";
+import type { User } from "@/domain/global/user/model";
 
 interface AppSidebarProps {
-  user?: {
-    id: any;
-    email: any;
-    name: string | null;
-    image: string | null;
-    role: null;
-    emailVerified: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  };
+  user?: User;
   organizations?: Awaited<ReturnType<typeof getUserOrganizations>>;
   activeOrganizationId?: string | null;
   pendingInvitations?: number;
@@ -107,7 +99,7 @@ export function AppSidebar({
       {/* Profile Section */}
       <SidebarGroup title="Account">
         <SidebarItem
-          icon={User}
+          icon={UserIcon}
           label="Profile"
           href="/profile"
           active={isActive("/profile")}

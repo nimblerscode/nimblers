@@ -1,4 +1,7 @@
-import type { OrganizationSlug, ShopDomain } from "@/domain/global/organization/models";
+import type {
+  OrganizationSlug,
+  ShopDomain,
+} from "@/domain/global/organization/models";
 import { ShopifyConnectCardClient } from "./ShopifyConnectCardClient";
 
 interface ConnectedStore {
@@ -26,7 +29,9 @@ export function ShopifyConnectCard({
   oauthMessage,
 }: ShopifyConnectCardProps) {
   // Find active stores
-  const activeStores = connectedStores.filter((store) => store.status === "active");
+  const activeStores = connectedStores.filter(
+    (store) => store.status === "active",
+  );
   const hasActiveConnection = activeStores.length > 0;
   const primaryStore = activeStores[0];
 

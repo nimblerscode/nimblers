@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { OrganizationSlug } from "@/domain/global/organization/models";
 import {
   AccessToken,
   AuthorizationCode,
@@ -8,7 +9,6 @@ import {
   Scope,
   ShopDomain,
 } from "@/domain/shopify/oauth/models";
-import { OrganizationSlug } from "@/domain/global/organization/models";
 
 // Nonce schemas
 const NonceGenerateResponseSchema = Schema.Struct({

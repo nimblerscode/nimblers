@@ -35,5 +35,5 @@ export const EnvironmentConfigServiceLive = Layer.succeed(
     getOrganizationUrl: (slug: string) => {
       return `https://nimblers.co/organization/${slug}`;
     },
-  }
+  },
 );

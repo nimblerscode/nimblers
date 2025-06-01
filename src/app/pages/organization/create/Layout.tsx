@@ -15,8 +15,8 @@ export async function Layout({ ctx, request }: RequestInfo) {
 
   const user = {
     ...appCtx.user,
-    id: appCtx.user.id as any,
-    email: appCtx.user.email as any,
+    id: appCtx.user.id,
+    email: appCtx.user.email,
     name: appCtx.user.name || null,
     image: appCtx.user.image || null,
     role: null,

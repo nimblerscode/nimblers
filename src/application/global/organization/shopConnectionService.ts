@@ -1,16 +1,16 @@
 import { Effect, Layer } from "effect";
 import {
-  GlobalShopConnectionRepo,
-  GlobalShopConnectionUseCase,
-  OrgD1Service,
-} from "@/domain/global/organization/service";
-import {
   type NewShopConnection,
   type OrganizationSlug,
   ShopAlreadyConnectedError,
   ShopConnectionError,
   type ShopDomain,
 } from "@/domain/global/organization/models";
+import {
+  GlobalShopConnectionRepo,
+  GlobalShopConnectionUseCase,
+  OrgD1Service,
+} from "@/domain/global/organization/service";
 
 export const GlobalShopConnectionUseCaseLive = Layer.effect(
   GlobalShopConnectionUseCase,
@@ -31,8 +31,8 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
                     message: `Failed to check existing connection: ${error.message}`,
                     shopDomain: connection.shopDomain,
                     cause: error,
-                  })
-              )
+                  }),
+              ),
             );
 
           if (existingConnection) {
@@ -51,7 +51,7 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
                 message: `Shop '${connection.shopDomain}' is already connected to organization '${existingConnection.organizationSlug}'`,
                 shopDomain: connection.shopDomain,
                 connectedToOrganization: existingConnection.organizationSlug,
-              })
+              }),
             );
           }
 
@@ -63,8 +63,8 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
                   message: `Failed to create shop connection: ${error.message}`,
                   shopDomain: connection.shopDomain,
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
 
           return newConnection;
@@ -79,8 +79,8 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
                   message: `Failed to disconnect shop: ${error.message}`,
                   shopDomain,
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
 
           return result;
@@ -95,8 +95,8 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
                   message: `Failed to check shop connection: ${error.message}`,
                   shopDomain,
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
 
           return connection;
@@ -115,12 +115,12 @@ export const GlobalShopConnectionUseCaseLive = Layer.effect(
                     }`,
                     shopDomain: "" as ShopDomain, // Not applicable here
                     cause: error,
-                  })
-              )
+                  }),
+              ),
             );
 
           return shops;
         }),
     };
-  })
+  }),
 );

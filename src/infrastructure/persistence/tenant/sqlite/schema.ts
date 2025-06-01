@@ -37,7 +37,7 @@ export const connectedStore = sqliteTable(
   (table) => ({
     // Organization-scoped unique constraint: same org cannot connect to same shop multiple times
     uniqueOrgShop: unique().on(table.organizationId, table.shopDomain),
-  })
+  }),
 );
 
 // Member table (aligned with better-auth)

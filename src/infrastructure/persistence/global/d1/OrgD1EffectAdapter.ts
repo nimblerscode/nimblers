@@ -5,15 +5,15 @@ import type {
 } from "@/domain/global/organization/model";
 import { OrgDbError } from "@/domain/global/organization/model";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
-import type { makeOrgD1DrizzleAdapter } from "./OrgD1DrizzleAdapter";
 import type { UserId } from "@/domain/global/user/model";
+import type { makeOrgD1DrizzleAdapter } from "./OrgD1DrizzleAdapter";
 
 const mapToOrgDbError = (error: unknown): OrgDbError => {
   return new OrgDbError({ cause: error });
 };
 
 export const makeOrgD1EffectAdapter = (
-  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>
+  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>,
 ) => ({
   create: (organizationData: NewOrganizationD1) =>
     Effect.gen(function* () {
@@ -23,7 +23,7 @@ export const makeOrgD1EffectAdapter = (
       });
       if (!orgResult) {
         return yield* Effect.fail(
-          mapToOrgDbError("Insert returned no results")
+          mapToOrgDbError("Insert returned no results"),
         );
       }
       return orgResult;
@@ -65,7 +65,7 @@ export const makeOrgD1EffectAdapter = (
     });
   },
   getOrganizationsForUser: (
-    userId: UserId
+    userId: UserId,
   ): Effect.Effect<OrganizationWithMembership[], OrgDbError> =>
     Effect.gen(function* () {
       const organizations = yield* Effect.tryPromise({

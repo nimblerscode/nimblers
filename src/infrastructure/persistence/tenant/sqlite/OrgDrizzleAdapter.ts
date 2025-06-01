@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DrizzleSqliteDODatabase } from "drizzle-orm/durable-sqlite";
-import { v4 as uuidv4 } from "uuid";
 import { Schema } from "effect";
+import { v4 as uuidv4 } from "uuid";
 import type {
   NewOrganization,
   Organization,
@@ -15,11 +15,11 @@ export class OrganizationNotFoundError extends Schema.TaggedError<OrganizationNo
   {
     slug: Schema.String,
     message: Schema.optional(Schema.String),
-  }
+  },
 ) {}
 
 export const makeOrgDrizzleAdapter = (
-  db: DrizzleSqliteDODatabase<typeof schema>
+  db: DrizzleSqliteDODatabase<typeof schema>,
 ) => ({
   getOrgBySlug: async (slug: string) => {
     const orgResults = await db

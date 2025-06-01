@@ -47,7 +47,7 @@ export class ShopConnectionError extends S.TaggedError<ShopConnectionError>()(
     message: S.String,
     shopDomain: ShopDomain,
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}
 
 export class ShopAlreadyConnectedError extends S.TaggedError<ShopAlreadyConnectedError>()(
@@ -57,5 +57,5 @@ export class ShopAlreadyConnectedError extends S.TaggedError<ShopAlreadyConnecte
     shopDomain: ShopDomain,
     connectedToOrganization: OrganizationSlug, // Fix: Use OrganizationSlug consistently
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}

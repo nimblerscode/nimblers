@@ -1,12 +1,12 @@
 import { Context } from "effect";
-import { OrganizationSlug } from "../organization/models";
+import type { OrganizationSlug } from "../organization/models";
 
 // Environment types
 export type Environment = "development" | "staging" | "production";
 
 // Environment configuration interface
 export abstract class EnvironmentConfigService extends Context.Tag(
-  "@core/environment/ConfigService"
+  "@core/environment/ConfigService",
 )<
   EnvironmentConfigService,
   {

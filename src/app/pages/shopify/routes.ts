@@ -1,3 +1,7 @@
+import { env } from "cloudflare:workers";
+import { Effect, Layer, Option } from "effect";
+import { route } from "rwsdk/router";
+import type { RequestInfo } from "rwsdk/worker";
 import { organizationMiddleware } from "@/app/middleware/organizationMiddleware";
 import { ShopifyOAuthApplicationService } from "@/application/shopify/routes/oauthApplicationService";
 import { ShopifyStoreApplicationService } from "@/application/shopify/routes/storeApplicationService";
@@ -17,10 +21,6 @@ import {
   D1BindingLive,
   DrizzleD1ClientLive,
 } from "@/infrastructure/persistence/global/d1/drizzle";
-import { env } from "cloudflare:workers";
-import { Effect, Layer, Option } from "effect";
-import { route } from "rwsdk/router";
-import type { RequestInfo } from "rwsdk/worker";
 import { ShopifyDashboard } from "./ShopifyDashboard";
 
 // === Routes ===
@@ -42,7 +42,7 @@ export const routes = [
       const oauthService = yield* ShopifyOAuthApplicationService;
       return yield* oauthService.handleInstallRequest(
         organizationSlug,
-        request
+        request,
       );
     });
 
@@ -61,8 +61,8 @@ export const routes = [
     return await Effect.runPromise(
       program.pipe(
         Effect.provide(layer),
-        Effect.provide(ShopifyValidationLayerLive)
-      )
+        Effect.provide(ShopifyValidationLayerLive),
+      ),
     );
   }),
 
@@ -78,7 +78,7 @@ export const routes = [
       const { state: validState } =
         yield* validationService.validateRequiredOAuthParams(
           Option.some(shop),
-          Option.some(state)
+          Option.some(state),
         );
 
       // Step 2: Extract organization from state
@@ -108,7 +108,7 @@ export const routes = [
           Effect.catchAll((error: unknown) => {
             // Extract organization for fallback redirect
             const fallbackOrgSlug = state?.split(
-              "_org_"
+              "_org_",
             )[0] as OrganizationSlug;
 
             return Effect.succeed(
@@ -117,15 +117,15 @@ export const routes = [
                 headers: {
                   Location: fallbackOrgSlug
                     ? `/organization/${fallbackOrgSlug}?error=${encodeURIComponent(
-                        "OAuth authorization failed"
+                        "OAuth authorization failed",
                       )}`
                     : "/",
                   "Cache-Control": "no-cache",
                 },
-              })
+              }),
             );
-          })
-        )
+          }),
+        ),
       );
     } catch (_error) {
       const fallbackOrgSlug = state?.split("_org_")[0] as OrganizationSlug;
@@ -134,7 +134,7 @@ export const routes = [
         headers: {
           Location: fallbackOrgSlug
             ? `/organization/${fallbackOrgSlug}?error=${encodeURIComponent(
-                "OAuth authorization failed"
+                "OAuth authorization failed",
               )}`
             : "/",
           "Cache-Control": "no-cache",
@@ -176,7 +176,7 @@ export const routes = [
       const layer = Layer.mergeAll(
         storeApplicationLayer,
         ShopifyValidationLayerLive,
-        drizzleLayer
+        drizzleLayer,
       );
 
       const run = program
@@ -190,10 +190,10 @@ export const routes = [
                   error: "Failed to disconnect",
                   details: String(error),
                 },
-                { status: 500 }
-              )
-            )
-          )
+                { status: 500 },
+              ),
+            ),
+          ),
         )
         .pipe(Effect.provide(storeConnectionLayer));
 
@@ -204,7 +204,7 @@ export const routes = [
           success: false,
           error: "Failed to disconnect",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }),
@@ -218,7 +218,7 @@ export const routes = [
     const program = Effect.gen(function* () {
       // Extract shop domain from headers (Shopify standard)
       const shopDomain = request.headers.get(
-        "x-shopify-shop-domain"
+        "x-shopify-shop-domain",
       ) as ShopDomain;
 
       if (!shopDomain) {
@@ -227,7 +227,7 @@ export const routes = [
             success: false,
             message: "Missing shop domain header",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -259,7 +259,7 @@ export const routes = [
         // Step 2: Disconnect from the organization
         disconnectResult = yield* storeService.disconnectStore(
           organizationSlug,
-          shopDomain
+          shopDomain,
         );
 
         yield* Effect.log("🔌 Disconnect result", {
@@ -293,7 +293,7 @@ export const routes = [
               });
               return false;
             });
-          })
+          }),
         );
 
       if (globalCleanupResult) {
@@ -333,7 +333,7 @@ export const routes = [
         }),
         GlobalShopConnectionLayerLive({
           DB: env.DB,
-        })
+        }),
       ).pipe(Layer.provide(drizzleLayer));
 
       return await Effect.runPromise(
@@ -347,11 +347,11 @@ export const routes = [
                   message: "Failed to process uninstall",
                   error: String(error),
                 },
-                { status: 500 }
-              )
-            )
-          )
-        )
+                { status: 500 },
+              ),
+            ),
+          ),
+        ),
       );
     } catch (_error) {
       return Response.json(
@@ -359,7 +359,7 @@ export const routes = [
           success: false,
           message: "Failed to process uninstall",
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
   }),

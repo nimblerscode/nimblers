@@ -18,9 +18,7 @@ export function MembersList({
           title={member.name ?? member.email}
           subtitle={member.role ?? "Member"}
           avatarProps={{ name: member.name ?? member.email }}
-          extraInfo={
-            `Joined ${new Date(member.createdAt).toLocaleDateString()}`
-          }
+          extraInfo={`Joined ${new Date(member.createdAt).toLocaleDateString()}`}
           actions={actions}
         />
       ))}

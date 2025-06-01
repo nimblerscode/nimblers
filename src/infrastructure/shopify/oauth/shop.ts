@@ -17,7 +17,7 @@ export const ShopValidatorLive = Layer.effect(
               new InvalidShopDomainError({
                 message: "Shop domain must end with .myshopify.com",
                 shop,
-              })
+              }),
             );
           }
 
@@ -28,12 +28,12 @@ export const ShopValidatorLive = Layer.effect(
                 new InvalidShopDomainError({
                   message: "Invalid shop domain format",
                   shop: shop,
-                })
-            )
+                }),
+            ),
           );
 
           return validatedShop;
         }).pipe(Effect.withSpan("ShopValidator.validateShopDomain")),
     };
-  })
+  }),
 );

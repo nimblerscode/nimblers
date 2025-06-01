@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { Effect, Layer } from "effect";
 import {
+  InvalidNonceError,
   type Nonce,
   OAuthError,
-  InvalidNonceError,
 } from "@/domain/shopify/oauth/models";
 import { NonceManager } from "@/domain/shopify/oauth/service";
 import { DrizzleDOClient } from "../drizzle";
@@ -80,5 +80,5 @@ export const NonceRepoLive = Layer.effect(
           // rather than checking affected rows in this simplified implementation
         }),
     };
-  })
+  }),
 );

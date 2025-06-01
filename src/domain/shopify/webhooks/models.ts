@@ -80,7 +80,7 @@ export class WebhookVerificationError extends S.TaggedError<WebhookVerificationE
   {
     message: S.String,
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}
 
 export class WebhookProcessingError extends S.TaggedError<WebhookProcessingError>()(
@@ -88,5 +88,5 @@ export class WebhookProcessingError extends S.TaggedError<WebhookProcessingError
   {
     message: S.String,
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}

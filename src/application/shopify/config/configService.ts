@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
-import { ShopifyConfigService } from "@/domain/shopify/config/service";
 import type { ShopifyConfig } from "@/domain/shopify/config/models";
+import { ShopifyConfigService } from "@/domain/shopify/config/service";
 
 export const ShopifyConfigServiceLive = Layer.effect(
   ShopifyConfigService,
@@ -29,15 +29,15 @@ export const ShopifyConfigServiceLive = Layer.effect(
           Effect.catchAll((error) =>
             Effect.gen(function* () {
               yield* Effect.log(
-                `Shopify config retrieval error: ${String(error)}`
+                `Shopify config retrieval error: ${String(error)}`,
               );
               // Graceful fallback
               return { clientId: env.SHOPIFY_CLIENT_ID || "" };
-            })
-          )
+            }),
+          ),
         ),
     };
-  })
+  }),
 );
 
 // Re-export types for convenience

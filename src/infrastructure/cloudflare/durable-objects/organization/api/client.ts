@@ -47,13 +47,13 @@ export const createOrganizationDOClient = (stub: DurableObjectStub) =>
         Match.when(Match.string, (str) => str),
         Match.when(
           (input): input is URL => input instanceof URL,
-          (url) => url.toString()
+          (url) => url.toString(),
         ),
         Match.when(
           (input): input is Request => input instanceof Request,
-          (request) => request.url
+          (request) => request.url,
         ),
-        Match.exhaustive // Ensures all cases are handled at compile time
+        Match.exhaustive, // Ensures all cases are handled at compile time
       );
 
       // Rewrite the URL to use the internal DO protocol
@@ -69,7 +69,7 @@ export const createOrganizationDOClient = (stub: DurableObjectStub) =>
       baseUrl: "http://internal",
     }).pipe(
       // Provide our custom DO fetcher
-      Effect.provide(Layer.succeed(FetchHttpClient.Fetch, doFetcher))
+      Effect.provide(Layer.succeed(FetchHttpClient.Fetch, doFetcher)),
     );
   });
 

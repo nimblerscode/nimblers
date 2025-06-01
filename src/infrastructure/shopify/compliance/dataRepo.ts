@@ -25,13 +25,13 @@ export const ComplianceDataRepoLive = Layer.effect(
               new ShopifyWebhookError({
                 message: "Failed to retrieve customer data",
                 cause: error,
-              })
-          )
+              }),
+          ),
         ),
 
       deleteCustomerData: (payload: CustomerRedactPayload) =>
         Effect.log(
-          `Customer data deletion requested for customer ${payload.customer.id} in shop ${payload.shop_id}`
+          `Customer data deletion requested for customer ${payload.customer.id} in shop ${payload.shop_id}`,
         ).pipe(
           Effect.withSpan("ComplianceDataRepo.deleteCustomerData"),
           Effect.mapError(
@@ -39,13 +39,13 @@ export const ComplianceDataRepoLive = Layer.effect(
               new ShopifyWebhookError({
                 message: "Failed to delete customer data",
                 cause: error,
-              })
-          )
+              }),
+          ),
         ),
 
       deleteShopData: (payload: ShopRedactPayload) =>
         Effect.log(
-          `Shop data deletion requested for shop ${payload.shop_id} (${payload.shop_domain})`
+          `Shop data deletion requested for shop ${payload.shop_id} (${payload.shop_domain})`,
         ).pipe(
           Effect.withSpan("ComplianceDataRepo.deleteShopData"),
           Effect.mapError(
@@ -53,9 +53,9 @@ export const ComplianceDataRepoLive = Layer.effect(
               new ShopifyWebhookError({
                 message: "Failed to delete shop data",
                 cause: error,
-              })
-          )
+              }),
+          ),
         ),
     };
-  })
+  }),
 );

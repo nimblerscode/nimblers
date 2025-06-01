@@ -1,17 +1,17 @@
 import type { env } from "cloudflare:workers";
 import { FetchHttpClient } from "@effect/platform";
 import { Context, Effect, Layer } from "effect";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { UserId } from "@/domain/global/user/model";
 import type { NewOrganization } from "@/domain/tenant/organization/model";
 import { OrgDbError } from "@/domain/tenant/organization/model";
 import { OrganizationProvisionError } from "@/domain/tenant/organization/provision/service";
 import { OrganizationDOService } from "@/domain/tenant/organization/service";
 import { createOrganizationDOClient } from "./organization/api/client";
-import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 // The DO namespace needed by the adapter
 export class OrganizationDONamespace extends Context.Tag(
-  "cloudflare/bindings/ORG_DO_NAMESPACE"
+  "cloudflare/bindings/ORG_DO_NAMESPACE",
 )<OrganizationDONamespace, typeof env.ORG_DO>() {}
 
 // Layer that provides the adapter
@@ -22,7 +22,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
 
     const createOrganizationDO = (
       organization: NewOrganization,
-      creatorId: UserId
+      creatorId: UserId,
     ) => {
       return Effect.gen(function* () {
         yield* Effect.log("CREATE ORGANIZATION DO START").pipe(
@@ -33,7 +33,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
             slugType: typeof organization.slug,
             slugLength: organization.slug?.length,
             timestamp: new Date().toISOString(),
-          })
+          }),
         );
 
         // Validate slug before creating DO
@@ -42,7 +42,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
             new OrganizationProvisionError({
               message: "Organization slug is required for DO creation",
               cause: new Error(`Invalid slug: ${organization.slug}`),
-            })
+            }),
           );
         }
 
@@ -50,7 +50,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
           Effect.annotateLogs({
             slug: organization.slug,
             method: "idFromName",
-          })
+          }),
         );
 
         const doId = orgDONamespace.idFromName(organization.slug);
@@ -62,7 +62,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
             doIdHasName: !!doId.name,
             originalSlug: organization.slug,
             slugMatches: doId.name === organization.slug,
-          })
+          }),
         );
 
         const stub = orgDONamespace.get(doId);
@@ -99,14 +99,14 @@ export const OrganizationDOAdapterLive = Layer.effect(
             }),
             Effect.tapError((error) =>
               Effect.logError(
-                "Error in client.organizations.createOrganization"
+                "Error in client.organizations.createOrganization",
               ).pipe(
                 Effect.annotateLogs({
                   error: error.message || String(error),
                   organizationSlug: organization.slug,
-                })
-              )
-            )
+                }),
+              ),
+            ),
           );
 
         yield* Effect.log("Organization created successfully in DO").pipe(
@@ -114,13 +114,13 @@ export const OrganizationDOAdapterLive = Layer.effect(
             orgId: org.id,
             orgSlug: org.slug,
             orgName: org.name,
-          })
+          }),
         );
 
         return org;
       }).pipe(
         // Provide the HttpClient layer needed by the client
-        Effect.provide(FetchHttpClient.layer)
+        Effect.provide(FetchHttpClient.layer),
       );
     };
 
@@ -145,13 +145,13 @@ export const OrganizationDOAdapterLive = Layer.effect(
               return new OrgDbError({
                 cause: error,
               });
-            })
+            }),
           );
 
         return org;
       }).pipe(
         // Provide the HttpClient layer needed by the client
-        Effect.provide(FetchHttpClient.layer)
+        Effect.provide(FetchHttpClient.layer),
       );
     };
 
@@ -159,7 +159,7 @@ export const OrganizationDOAdapterLive = Layer.effect(
       createOrganization: createOrganizationDO,
       getOrganization: getOrganizationDO,
     };
-  })
+  }),
 );
 
 /**

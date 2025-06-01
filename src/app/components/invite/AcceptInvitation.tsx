@@ -32,10 +32,7 @@ type ActionState = {
   error?: string;
 };
 
-export function AcceptInvitation({
-  token,
-  invitation,
-}: AcceptInvitationProps) {
+export function AcceptInvitation({ token, invitation }: AcceptInvitationProps) {
   const [state, action, isPending] = useActionState<ActionState, FormData>(
     async (_prevState, _formData) => {
       try {

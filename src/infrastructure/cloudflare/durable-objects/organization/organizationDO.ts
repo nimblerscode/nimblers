@@ -140,7 +140,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     } catch (error) {
       return new Response(
@@ -153,7 +153,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 503,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }
@@ -182,7 +182,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
   }

@@ -6,14 +6,14 @@ import type {
   OrganizationWithMembership,
 } from "@/domain/global/organization/model";
 import type {
-  OrganizationSlug,
   OrganizationId,
+  OrganizationSlug,
 } from "@/domain/global/organization/models";
-import * as schema from "./schema";
 import type { UserId } from "@/domain/global/user/model";
+import * as schema from "./schema";
 
 export const makeOrgD1DrizzleAdapter = (
-  db: DrizzleD1Database<typeof schema>
+  db: DrizzleD1Database<typeof schema>,
 ) => ({
   create: async (organizationData: NewOrganizationD1) => {
     const orgInsertData = {
@@ -80,8 +80,8 @@ export const makeOrgD1DrizzleAdapter = (
       .where(
         and(
           eq(schema.organizationMembership.userId, userId),
-          eq(schema.organizationMembership.organizationId, orgId)
-        )
+          eq(schema.organizationMembership.organizationId, orgId),
+        ),
       );
 
     if (isUserInOrg.length === 0) {
@@ -91,7 +91,7 @@ export const makeOrgD1DrizzleAdapter = (
     return orgResults[0].slug as OrganizationSlug;
   },
   getOrganizationsForUser: async (
-    userId: UserId
+    userId: UserId,
   ): Promise<OrganizationWithMembership[]> => {
     const results = await db
       .select({
@@ -104,7 +104,10 @@ export const makeOrgD1DrizzleAdapter = (
       .from(schema.organization)
       .innerJoin(
         schema.organizationMembership,
-        eq(schema.organization.id, schema.organizationMembership.organizationId)
+        eq(
+          schema.organization.id,
+          schema.organizationMembership.organizationId,
+        ),
       )
       .where(eq(schema.organizationMembership.userId, userId));
 

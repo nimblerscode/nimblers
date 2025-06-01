@@ -1,5 +1,6 @@
 import type { SerializableInvitation } from "@/app/actions/invitations/list";
 import { Grid, Heading, VStack } from "@/app/design-system";
+import type { ShopDomain } from "@/domain/global/organization/models";
 import type { User } from "@/domain/global/user/model";
 import type { Organization } from "@/domain/tenant/organization/model";
 import { css } from "../../../../../styled-system/css";
@@ -9,7 +10,6 @@ import { PendingInvitationsList } from "./members/PendingInvitationsList";
 import { Overview } from "./overview/Overview";
 import { ShopifyConnectCard } from "./overview/ShopifyConnectCard";
 import { Subscription } from "./overview/Subscription";
-import type { ShopDomain } from "@/domain/global/organization/models";
 
 interface ConnectedStore {
   id: string;

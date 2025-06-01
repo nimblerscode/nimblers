@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Option } from "effect";
 import {
+  InvalidOrganizationError,
+  SessionLookupError,
   SessionRepo,
   SessionUpdateError,
 } from "@/domain/global/session/service";
@@ -24,17 +26,32 @@ export const SessionRepoLive = Layer.effect(
                 .where(eq(session.userId, userId))
                 .limit(1),
             catch: (error) =>
-              new SessionUpdateError({
-                message: "Failed to fetch session data",
+              new SessionLookupError({
+                message: `Failed to lookup session for user: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+                userId,
                 cause: error,
               }),
           });
 
-          return result[0]?.activeOrganizationId || null;
+          const activeOrgId = result[0]?.activeOrganizationId;
+          return activeOrgId ? Option.some(activeOrgId) : Option.none();
         }),
 
       updateActiveOrganizationId: (userId: UserId, organizationId: string) =>
         Effect.gen(function* () {
+          // Basic validation - ensure organizationId is not empty
+          if (!organizationId || organizationId.trim() === "") {
+            return yield* Effect.fail(
+              new InvalidOrganizationError({
+                message: "Organization ID cannot be empty",
+                organizationId,
+                userId,
+              }),
+            );
+          }
+
           yield* Effect.tryPromise({
             try: () =>
               drizzleClient
@@ -44,11 +61,29 @@ export const SessionRepoLive = Layer.effect(
                   updatedAt: new Date(),
                 })
                 .where(eq(session.userId, userId)),
-            catch: (error) =>
-              new SessionUpdateError({
-                message: "Failed to update session",
+            catch: (error) => {
+              // Check for specific database constraint errors
+              if (
+                error instanceof Error &&
+                error.message.includes("FOREIGN KEY constraint")
+              ) {
+                return new InvalidOrganizationError({
+                  message:
+                    "Invalid organization ID - organization does not exist",
+                  organizationId,
+                  userId,
+                });
+              }
+
+              return new SessionUpdateError({
+                message: `Failed to update session: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+                userId,
+                organizationId,
                 cause: error,
-              }),
+              });
+            },
           });
         }),
     };

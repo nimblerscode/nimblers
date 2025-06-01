@@ -1,12 +1,12 @@
 import { Effect, Layer, Option } from "effect";
-import { ShopifyValidationService } from "@/domain/shopify/validation/service";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { ShopDomain } from "@/domain/shopify/oauth/models";
 import {
+  InvalidStateParameterError,
   MissingOrganizationError,
   MissingShopParameterError,
-  InvalidStateParameterError,
 } from "@/domain/shopify/validation/models";
+import { ShopifyValidationService } from "@/domain/shopify/validation/service";
 
 export const ShopifyValidationServiceLive = Layer.succeed(
   ShopifyValidationService,
@@ -36,7 +36,7 @@ export const ShopifyValidationServiceLive = Layer.succeed(
             new InvalidStateParameterError({
               message: "Invalid state parameter format - missing _org_ marker",
               state,
-            })
+            }),
           );
         }
 
@@ -46,7 +46,7 @@ export const ShopifyValidationServiceLive = Layer.succeed(
             new InvalidStateParameterError({
               message: "Organization slug not found in state parameter",
               state,
-            })
+            }),
           );
         }
 
@@ -55,7 +55,7 @@ export const ShopifyValidationServiceLive = Layer.succeed(
 
     validateRequiredOAuthParams: (
       shop: Option.Option<ShopDomain>,
-      state: Option.Option<string>
+      state: Option.Option<string>,
     ) =>
       Effect.gen(function* () {
         const shopValue = yield* Option.match(shop, {
@@ -63,7 +63,7 @@ export const ShopifyValidationServiceLive = Layer.succeed(
             Effect.fail(
               new MissingShopParameterError({
                 message: "Missing required OAuth parameters: shop is required",
-              })
+              }),
             ),
           onSome: (value) => Effect.succeed(value),
         });
@@ -73,7 +73,7 @@ export const ShopifyValidationServiceLive = Layer.succeed(
             Effect.fail(
               new MissingShopParameterError({
                 message: "Missing required OAuth parameters: state is required",
-              })
+              }),
             ),
           onSome: (value) => Effect.succeed(value),
         });
@@ -83,5 +83,5 @@ export const ShopifyValidationServiceLive = Layer.succeed(
           state: stateValue,
         };
       }),
-  }
+  },
 );

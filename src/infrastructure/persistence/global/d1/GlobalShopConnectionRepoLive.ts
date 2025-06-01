@@ -1,15 +1,15 @@
-import { Effect, Layer } from "effect";
 import { eq } from "drizzle-orm";
-import {
-  GlobalDbError,
-  GlobalShopConnectionRepo,
-} from "@/domain/global/organization/service";
+import { Effect, Layer } from "effect";
 import type {
   NewShopConnection,
   OrganizationSlug,
   ShopConnection,
   ShopDomain,
 } from "@/domain/global/organization/models";
+import {
+  GlobalDbError,
+  GlobalShopConnectionRepo,
+} from "@/domain/global/organization/service";
 import { DrizzleD1Client } from "./drizzle";
 import { shopConnection } from "./schema";
 
@@ -38,13 +38,13 @@ export const GlobalShopConnectionRepoLive = Layer.effect(
             catch: (error) =>
               new GlobalDbError(
                 `Failed to create shop connection: ${error}`,
-                error
+                error,
               ),
           });
 
           if (!result[0]) {
             return yield* Effect.fail(
-              new GlobalDbError("Insert returned no results")
+              new GlobalDbError("Insert returned no results"),
             );
           }
 
@@ -63,7 +63,7 @@ export const GlobalShopConnectionRepoLive = Layer.effect(
             catch: (error) =>
               new GlobalDbError(
                 `Failed to query shop connection: ${error}`,
-                error
+                error,
               ),
           });
 
@@ -80,7 +80,7 @@ export const GlobalShopConnectionRepoLive = Layer.effect(
             catch: (error) =>
               new GlobalDbError(
                 `Failed to delete shop connection: ${error}`,
-                error
+                error,
               ),
           });
 
@@ -98,12 +98,12 @@ export const GlobalShopConnectionRepoLive = Layer.effect(
             catch: (error) =>
               new GlobalDbError(
                 `Failed to query organization shops: ${error}`,
-                error
+                error,
               ),
           });
 
           return result as unknown as ShopConnection[];
         }),
     };
-  })
+  }),
 );

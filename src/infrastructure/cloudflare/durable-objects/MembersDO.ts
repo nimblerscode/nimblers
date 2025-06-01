@@ -1,10 +1,10 @@
 import { FetchHttpClient } from "@effect/platform";
 import { Effect, Layer } from "effect";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import { MemberDOError } from "@/domain/tenant/member/model";
 import { MemberDOService } from "@/domain/tenant/member/service";
 import { OrganizationDONamespace } from "./OrganizationDONameSpace";
 import { createOrganizationDOClient } from "./organization/api/client";
-import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 export const MembersDOServiceLive = Layer.effect(
   MemberDOService,
@@ -32,19 +32,19 @@ export const MembersDOServiceLive = Layer.effect(
               return new MemberDOError({
                 cause: error,
               });
-            })
+            }),
           );
 
         // Convert readonly array to mutable array to match service interface
         return [...members];
       }).pipe(
         // Provide the HttpClient layer needed by the client
-        Effect.provide(FetchHttpClient.layer)
+        Effect.provide(FetchHttpClient.layer),
       );
     };
 
     return {
       get,
     };
-  })
+  }),
 );

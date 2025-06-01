@@ -5,7 +5,7 @@ import { allRoutes } from "@/config/routes";
 import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
 
 export type AppContext = {
-  session?: Session & { activeOrganizationId: string };
+  session?: Session & { activeOrganizationId?: string | null };
   user?: User;
   organizationId?: string;
 };
@@ -18,7 +18,7 @@ const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
     const getAllowedOrigins = Effect.gen(function* () {
       const envConfig = yield* Effect.provide(
         Effect.succeed({}),
-        EnvironmentConfigServiceLive
+        EnvironmentConfigServiceLive,
       );
 
       return [

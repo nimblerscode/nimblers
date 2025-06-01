@@ -17,7 +17,7 @@ import migrations from "../../../../../drizzle/tenant/migrations.js";
  * Tag for the Durable Object's state, providing access to its storage.
  */
 export const DurableObjectState = Context.GenericTag<DurableObjectState>(
-  "infra/do/DurableObjectStorage"
+  "infra/do/DurableObjectStorage",
 );
 
 /**
@@ -67,7 +67,7 @@ export const DrizzleDOClientLive = Layer.scoped(
                   throw new Error(
                     `Drizzle migration failed: ${
                       error instanceof Error ? error.message : String(error)
-                    }`
+                    }`,
                   );
                 }
               }),
@@ -75,13 +75,13 @@ export const DrizzleDOClientLive = Layer.scoped(
               return new Error(
                 `Migration wrapper failed: ${
                   error instanceof Error ? error.message : String(error)
-                }`
+                }`,
               );
             },
           });
         }),
     };
-  })
+  }),
 );
 
 const schema = tenantSchema;

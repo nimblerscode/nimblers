@@ -13,7 +13,7 @@ export const WebhookServiceLive = Layer.effect(
       registerAppUninstallWebhook: (
         shop: ShopDomain,
         accessToken: AccessToken,
-        webhookUrl: string
+        webhookUrl: string,
       ) =>
         Effect.gen(function* () {
           const webhookEndpoint = `https://${shop}/admin/api/2024-04/webhooks.json`;
@@ -55,12 +55,12 @@ export const WebhookServiceLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Webhook registration failed with status ${response.status}: ${errorText}`,
-              })
+              }),
             );
           }
 
           // Successfully registered webhook - return void
         }),
     };
-  })
+  }),
 );

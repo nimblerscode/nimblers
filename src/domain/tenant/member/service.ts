@@ -1,5 +1,6 @@
 import { Context, type Effect, type Option } from "effect";
 import type { Email } from "@/domain/global/email/model";
+import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type {
   Member,
   MemberDbError,
@@ -7,7 +8,6 @@ import type {
   MemberNotFoundError,
   NewMember,
 } from "./model"; // Import the schema now
-import type { OrganizationSlug } from "@/domain/global/organization/models";
 
 // === Member Repository Port ===
 export class MemberRepo extends Context.Tag("core/member/MemberRepo")<
@@ -18,7 +18,7 @@ export class MemberRepo extends Context.Tag("core/member/MemberRepo")<
 
     // // Find membership by userId and organizationId
     readonly findMembership: (
-      email: Email
+      email: Email,
     ) => Effect.Effect<
       Option.Option<Member>,
       MemberNotFoundError | MemberDbError
@@ -32,7 +32,7 @@ export class MemberDOService extends Context.Tag("core/member/MemberDOService")<
   MemberDOService,
   {
     readonly get: (
-      slug: OrganizationSlug
+      slug: OrganizationSlug,
     ) => Effect.Effect<Member[], MemberDOError>;
   }
 >() {}

@@ -1,9 +1,9 @@
 import { Effect, Layer, pipe } from "effect";
-import {
-  ShopifyComplianceUseCase,
-  ComplianceWebhookService,
-} from "@/domain/shopify/compliance/service";
 import type { WebhookType } from "@/domain/shopify/compliance/models";
+import {
+  ComplianceWebhookService,
+  ShopifyComplianceUseCase,
+} from "@/domain/shopify/compliance/service";
 
 export const ComplianceWebhookServiceLive = Layer.effect(
   ComplianceWebhookService,
@@ -14,14 +14,14 @@ export const ComplianceWebhookServiceLive = Layer.effect(
       handleShopifyComplianceWebhook: (
         webhookType: WebhookType,
         request: Request,
-        secret: string
+        secret: string,
       ) =>
         pipe(
           Effect.gen(function* () {
             // Validate secret configuration
             if (!secret) {
               yield* Effect.log(
-                "Missing SHOPIFY_WEBHOOK_SECRET environment variable"
+                "Missing SHOPIFY_WEBHOOK_SECRET environment variable",
               );
               return new Response("Server configuration error", {
                 status: 500,
@@ -32,12 +32,12 @@ export const ComplianceWebhookServiceLive = Layer.effect(
             yield* complianceUseCase.handleWebhook(
               webhookType,
               request,
-              secret
+              secret,
             );
 
             // Log successful webhook processing
             yield* Effect.log(
-              `Shopify compliance webhook processed successfully: ${webhookType}`
+              `Shopify compliance webhook processed successfully: ${webhookType}`,
             );
 
             return new Response("OK", {
@@ -51,7 +51,7 @@ export const ComplianceWebhookServiceLive = Layer.effect(
               yield* Effect.log(
                 `Shopify compliance webhook error (${webhookType}): ${
                   error._tag || String(error)
-                }`
+                }`,
               );
 
               // Handle different error types using Effect-TS tagged errors
@@ -63,7 +63,7 @@ export const ComplianceWebhookServiceLive = Layer.effect(
                       {
                         status: 401,
                         headers: { "Content-Type": "text/plain" },
-                      }
+                      },
                     );
 
                   case "WebhookProcessingError":
@@ -86,15 +86,15 @@ export const ComplianceWebhookServiceLive = Layer.effect(
                 status: 500,
                 headers: { "Content-Type": "text/plain" },
               });
-            })
+            }),
           ),
           Effect.withSpan(
             "ComplianceWebhookService.handleShopifyComplianceWebhook",
             {
               attributes: { webhookType },
-            }
-          )
+            },
+          ),
         ),
     };
-  })
+  }),
 );

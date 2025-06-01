@@ -49,8 +49,8 @@ const meta: Meta<typeof Icon> = {
   args: {
     // Default args for stories, icon arg will be provided per story
     size: 24,
-    color: "content.primary",
-    fillColor: "none",
+    color: "gray.700" as any,
+    fillColor: "none" as any,
   },
 };
 
@@ -69,7 +69,7 @@ export const ColoredStroke: Story = {
   name: "Colored (Stroke Only)",
   args: {
     icon: CheckCircle,
-    color: "status.success.text",
+    color: "green.600" as any,
     size: 32,
   },
   render: (args) => <Icon {...args} />,
@@ -79,7 +79,7 @@ export const DifferentSizeStroke: Story = {
   name: "Different Size (Stroke Only)",
   args: {
     icon: AlertTriangle,
-    color: "status.warning.text",
+    color: "yellow.600" as any,
     size: 48,
   },
   render: (args) => <Icon {...args} />,
@@ -104,13 +104,13 @@ export const OverridingWrapperColorWithCss: Story = {
   args: {
     icon: Settings,
     size: 24,
-    color: "page.textPrimary",
-    fillColor: "colors.yellow.300",
+    color: "gray.700" as any,
+    fillColor: "yellow.300" as any,
     css: {
-      backgroundColor: "surface.tertiary",
+      backgroundColor: "gray.100",
       padding: "sm",
       borderRadius: "md",
-      color: "status.danger.text",
+      color: "red.600",
     },
   },
   render: (args) => (
@@ -130,15 +130,10 @@ export const InheritingStrokeAndFill: Story = {
     icon: Info,
     size: 24,
     color: undefined,
-    fillColor: "currentColor",
+    fillColor: "currentColor" as any,
   },
   render: (args) => (
-    <Box
-      color="status.info.text"
-      fontSize="xl"
-      padding="md"
-      backgroundColor="status.info.surface"
-    >
+    <Box color="blue.600" fontSize="xl" padding="md" backgroundColor="blue.50">
       This text and icon wrapper are info-colored. The icon <Icon {...args} />{" "}
       should inherit this for both stroke and fill.
     </Box>
@@ -148,8 +143,8 @@ export const InheritingStrokeAndFill: Story = {
 export const WithFill: Story = {
   args: {
     icon: ShoppingCart,
-    color: "interactive.primary.text",
-    fillColor: "interactive.primary.background",
+    color: "blue.600" as any,
+    fillColor: "blue.100" as any,
     size: 32,
   },
   render: (args) => <Icon {...args} />,
@@ -158,8 +153,8 @@ export const WithFill: Story = {
 export const ContrastingFillAndStroke: Story = {
   args: {
     icon: MessageSquare,
-    color: "status.danger.border",
-    fillColor: "status.danger.surface",
+    color: "red.600" as any,
+    fillColor: "red.100" as any,
     size: 48,
   },
   render: (args) => <Icon {...args} />,
@@ -168,8 +163,8 @@ export const ContrastingFillAndStroke: Story = {
 export const FillWithoutStroke: Story = {
   args: {
     icon: CheckCircle,
-    color: "transparent",
-    fillColor: "status.success.text",
+    color: "transparent" as any,
+    fillColor: "green.600" as any,
     size: 32,
   },
   render: (args) => <Icon {...args} />,
@@ -178,8 +173,8 @@ export const FillWithoutStroke: Story = {
 export const StrokeWithoutFill: Story = {
   args: {
     icon: Home,
-    color: "page.textPrimary",
-    fillColor: "transparent",
+    color: "gray.700" as any,
+    fillColor: "transparent" as any,
     size: 32,
   },
   render: (args) => <Icon {...args} />,
@@ -189,10 +184,10 @@ export const WithCustomCssAndFill: Story = {
   args: {
     icon: Home,
     size: 24,
-    color: "interactive.primary.text",
-    fillColor: "interactive.primary.background",
+    color: "blue.600" as any,
+    fillColor: "blue.100" as any,
     css: {
-      backgroundColor: "surface.secondary",
+      backgroundColor: "gray.100",
       padding: "xs",
       borderRadius: "sm",
     },

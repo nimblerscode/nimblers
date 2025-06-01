@@ -14,7 +14,7 @@ describe("ShopifyHmacVerifier", () => {
   // Create a valid HMAC signature for testing
   const createValidHmac = async (
     payload: string,
-    secret: string
+    secret: string,
   ): Promise<string> => {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -22,12 +22,12 @@ describe("ShopifyHmacVerifier", () => {
       encoder.encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     );
     const signature = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode(payload)
+      encoder.encode(payload),
     );
     return btoa(String.fromCharCode(...new Uint8Array(signature)));
   };
@@ -52,14 +52,14 @@ describe("ShopifyHmacVerifier", () => {
     Effect.gen(function* () {
       const hmacVerifier = yield* ShopifyHmacVerifier;
       const validHmac = yield* Effect.promise(() =>
-        createValidHmac(testPayload, testSecret)
+        createValidHmac(testPayload, testSecret),
       );
       const request = createMockRequest(testPayload, validHmac);
 
       const result = yield* hmacVerifier.verify(request, testSecret);
 
       expect(result).toBe(true);
-    }).pipe(Effect.provide(ShopifyHmacVerifierLive))
+    }).pipe(Effect.provide(ShopifyHmacVerifierLive)),
   );
 
   it.scoped("should reject request without HMAC header", () =>
@@ -68,7 +68,7 @@ describe("ShopifyHmacVerifier", () => {
       const request = createMockRequest(testPayload); // No HMAC header
 
       const result = yield* Effect.either(
-        hmacVerifier.verify(request, testSecret)
+        hmacVerifier.verify(request, testSecret),
       );
 
       expect(result._tag).toBe("Left");
@@ -78,7 +78,7 @@ describe("ShopifyHmacVerifier", () => {
         expect(error._tag).toBe("InvalidHmacError");
         expect(error.message).toContain("Missing X-Shopify-Hmac-Sha256 header");
       }
-    }).pipe(Effect.provide(ShopifyHmacVerifierLive))
+    }).pipe(Effect.provide(ShopifyHmacVerifierLive)),
   );
 
   it.scoped("should reject invalid HMAC signature", () =>
@@ -90,14 +90,14 @@ describe("ShopifyHmacVerifier", () => {
       const result = yield* hmacVerifier.verify(request, testSecret);
 
       expect(result).toBe(false);
-    }).pipe(Effect.provide(ShopifyHmacVerifierLive))
+    }).pipe(Effect.provide(ShopifyHmacVerifierLive)),
   );
 
   it.scoped("should reject when payload is modified", () =>
     Effect.gen(function* () {
       const hmacVerifier = yield* ShopifyHmacVerifier;
       const validHmac = yield* Effect.promise(() =>
-        createValidHmac(testPayload, testSecret)
+        createValidHmac(testPayload, testSecret),
       );
       const modifiedPayload = testPayload + " modified";
       const request = createMockRequest(modifiedPayload, validHmac);
@@ -105,14 +105,14 @@ describe("ShopifyHmacVerifier", () => {
       const result = yield* hmacVerifier.verify(request, testSecret);
 
       expect(result).toBe(false);
-    }).pipe(Effect.provide(ShopifyHmacVerifierLive))
+    }).pipe(Effect.provide(ShopifyHmacVerifierLive)),
   );
 
   it.scoped("should reject when secret is different", () =>
     Effect.gen(function* () {
       const hmacVerifier = yield* ShopifyHmacVerifier;
       const validHmac = yield* Effect.promise(() =>
-        createValidHmac(testPayload, testSecret)
+        createValidHmac(testPayload, testSecret),
       );
       const request = createMockRequest(testPayload, validHmac);
       const differentSecret = "different-secret";
@@ -120,6 +120,6 @@ describe("ShopifyHmacVerifier", () => {
       const result = yield* hmacVerifier.verify(request, differentSecret);
 
       expect(result).toBe(false);
-    }).pipe(Effect.provide(ShopifyHmacVerifierLive))
+    }).pipe(Effect.provide(ShopifyHmacVerifierLive)),
   );
 });

@@ -1,23 +1,23 @@
 import { Context, Effect, Layer } from "effect";
-import { ShopifyOAuthUseCase } from "@/domain/shopify/oauth/service";
 import { ConnectStoreApplicationService } from "@/application/shopify/connection/connectStoreService";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { ShopDomain } from "@/domain/shopify/oauth/models";
+import { ShopifyOAuthUseCase } from "@/domain/shopify/oauth/service";
 import type { ShopifyValidationError } from "@/domain/shopify/validation/models";
 
 // === OAuth Application Service ===
 export abstract class ShopifyOAuthApplicationService extends Context.Tag(
-  "@application/shopify/OAuthApplication"
+  "@application/shopify/OAuthApplication",
 )<
   ShopifyOAuthApplicationService,
   {
     readonly handleInstallRequest: (
       organizationSlug: OrganizationSlug,
-      request: Request
+      request: Request,
     ) => Effect.Effect<Response, ShopifyValidationError>;
     readonly handleCallback: (
       organizationSlug: OrganizationSlug,
-      request: Request
+      request: Request,
     ) => Effect.Effect<Response, ShopifyValidationError>;
   }
 >() {}
@@ -31,23 +31,23 @@ export const ShopifyOAuthApplicationServiceLive = Layer.effect(
     return {
       handleInstallRequest: (
         organizationSlug: OrganizationSlug,
-        request: Request
+        request: Request,
       ) =>
         Effect.gen(function* () {
           return yield* oauthUseCase.handleInstallRequest(
             organizationSlug,
-            request
+            request,
           );
         }).pipe(
           Effect.catchAll((error) =>
             Effect.succeed(
               Response.json(
                 { error: "Install request failed", details: String(error) },
-                { status: 500 }
-              )
-            )
+                { status: 500 },
+              ),
+            ),
           ),
-          Effect.withSpan("ShopifyOAuthApplication.handleInstallRequest")
+          Effect.withSpan("ShopifyOAuthApplication.handleInstallRequest"),
         ),
 
       handleCallback: (organizationSlug: OrganizationSlug, request: Request) =>
@@ -58,7 +58,7 @@ export const ShopifyOAuthApplicationServiceLive = Layer.effect(
           // Step 1: Complete OAuth flow
           const oauthResult = yield* oauthUseCase.handleCallback(
             organizationSlug,
-            request
+            request,
           );
 
           // Step 2: Connect store (wait for completion to ensure store is connected before redirect)
@@ -72,7 +72,7 @@ export const ShopifyOAuthApplicationServiceLive = Layer.effect(
                   success: result.success,
                   message: result.message,
                   storeId: result.storeId,
-                })
+                }),
               ),
               Effect.catchAll((error) => {
                 // Log error but don't fail the OAuth flow
@@ -89,7 +89,7 @@ export const ShopifyOAuthApplicationServiceLive = Layer.effect(
                     error: "CONNECTION_FAILED",
                   };
                 });
-              })
+              }),
             );
 
           // Log final connection status
@@ -112,16 +112,16 @@ export const ShopifyOAuthApplicationServiceLive = Layer.effect(
                 headers: {
                   Location: orgSlug
                     ? `/organization/${orgSlug}?error=${encodeURIComponent(
-                        "OAuth authorization failed"
+                        "OAuth authorization failed",
                       )}`
                     : "/",
                   "Cache-Control": "no-cache",
                 },
-              })
+              }),
             );
           }),
-          Effect.withSpan("ShopifyOAuthApplication.handleCallback")
+          Effect.withSpan("ShopifyOAuthApplication.handleCallback"),
         ),
     };
-  })
+  }),
 );

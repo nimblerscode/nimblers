@@ -20,10 +20,10 @@ interface InvitationLandingPageProps {
     expiresAt: Date;
   };
   userState:
-  | "user_not_exists"
-  | "user_exists_not_logged_in"
-  | "user_logged_in_email_mismatch"
-  | "user_logged_in_email_match";
+    | "user_not_exists"
+    | "user_exists_not_logged_in"
+    | "user_logged_in_email_mismatch"
+    | "user_logged_in_email_match";
   currentUser?: any;
 }
 

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+import type {
+  ShopifyWebhookHeaders,
+  WebhookVerificationError,
+} from "../../../src/domain/shopify/webhooks/models";
 import { ShopifyWebhookVerifier } from "../../../src/domain/shopify/webhooks/service";
-import type { ShopifyWebhookHeaders } from "../../../src/domain/shopify/webhooks/models";
 import { ShopifyWebhookVerifierLive } from "../../../src/infrastructure/shopify/webhooks/verifier";
-import { WebhookVerificationError } from "../../../src/domain/shopify/webhooks/models";
 
 describe("Shopify Webhook HMAC Verification", () => {
   const testSecret = "test-webhook-secret";
@@ -16,7 +18,7 @@ describe("Shopify Webhook HMAC Verification", () => {
   // Helper function to create a valid HMAC signature
   const createValidHmac = async (
     payload: string,
-    secret: string
+    secret: string,
   ): Promise<string> => {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
@@ -24,12 +26,12 @@ describe("Shopify Webhook HMAC Verification", () => {
       encoder.encode(secret),
       { name: "HMAC", hash: "SHA-256" },
       false,
-      ["sign"]
+      ["sign"],
     );
     const signature = await crypto.subtle.sign(
       "HMAC",
       key,
-      encoder.encode(payload)
+      encoder.encode(payload),
     );
     return btoa(String.fromCharCode(...new Uint8Array(signature)));
   };
@@ -38,7 +40,7 @@ describe("Shopify Webhook HMAC Verification", () => {
     Effect.gen(function* () {
       const webhookVerifier = yield* ShopifyWebhookVerifier;
       const validHmac = yield* Effect.promise(() =>
-        createValidHmac(testPayload, testSecret)
+        createValidHmac(testPayload, testSecret),
       );
 
       const headers: ShopifyWebhookHeaders = {
@@ -51,11 +53,11 @@ describe("Shopify Webhook HMAC Verification", () => {
       const result = yield* webhookVerifier.verifyWebhook(
         testPayload,
         headers,
-        testSecret
+        testSecret,
       );
 
       expect(result).toBe(true);
-    }).pipe(Effect.provide(ShopifyWebhookVerifierLive))
+    }).pipe(Effect.provide(ShopifyWebhookVerifierLive)),
   );
 
   it.scoped("should reject request without HMAC header", () =>
@@ -70,7 +72,7 @@ describe("Shopify Webhook HMAC Verification", () => {
       } as any;
 
       const result = yield* Effect.either(
-        webhookVerifier.verifyWebhook(testPayload, headers, testSecret)
+        webhookVerifier.verifyWebhook(testPayload, headers, testSecret),
       );
 
       expect(result._tag).toBe("Left");
@@ -78,7 +80,7 @@ describe("Shopify Webhook HMAC Verification", () => {
         const error = result.left as WebhookVerificationError;
         expect(error.message).toContain("Missing HMAC header");
       }
-    }).pipe(Effect.provide(ShopifyWebhookVerifierLive))
+    }).pipe(Effect.provide(ShopifyWebhookVerifierLive)),
   );
 
   it.scoped("should reject invalid HMAC signature", () =>
@@ -93,7 +95,7 @@ describe("Shopify Webhook HMAC Verification", () => {
       };
 
       const result = yield* Effect.either(
-        webhookVerifier.verifyWebhook(testPayload, headers, testSecret)
+        webhookVerifier.verifyWebhook(testPayload, headers, testSecret),
       );
 
       expect(result._tag).toBe("Left");
@@ -101,14 +103,14 @@ describe("Shopify Webhook HMAC Verification", () => {
         const error = result.left as WebhookVerificationError;
         expect(error.message).toContain("HMAC verification failed");
       }
-    }).pipe(Effect.provide(ShopifyWebhookVerifierLive))
+    }).pipe(Effect.provide(ShopifyWebhookVerifierLive)),
   );
 
   it.scoped("should reject when payload is modified", () =>
     Effect.gen(function* () {
       const webhookVerifier = yield* ShopifyWebhookVerifier;
       const validHmac = yield* Effect.promise(() =>
-        createValidHmac(testPayload, testSecret)
+        createValidHmac(testPayload, testSecret),
       );
 
       const headers: ShopifyWebhookHeaders = {
@@ -121,7 +123,7 @@ describe("Shopify Webhook HMAC Verification", () => {
       const modifiedPayload = testPayload + " modified";
 
       const result = yield* Effect.either(
-        webhookVerifier.verifyWebhook(modifiedPayload, headers, testSecret)
+        webhookVerifier.verifyWebhook(modifiedPayload, headers, testSecret),
       );
 
       expect(result._tag).toBe("Left");
@@ -129,7 +131,7 @@ describe("Shopify Webhook HMAC Verification", () => {
         const error = result.left as WebhookVerificationError;
         expect(error.message).toContain("HMAC verification failed");
       }
-    }).pipe(Effect.provide(ShopifyWebhookVerifierLive))
+    }).pipe(Effect.provide(ShopifyWebhookVerifierLive)),
   );
 
   it.scoped("should reject empty webhook secret", () =>
@@ -144,7 +146,7 @@ describe("Shopify Webhook HMAC Verification", () => {
       };
 
       const result = yield* Effect.either(
-        webhookVerifier.verifyWebhook(testPayload, headers, "")
+        webhookVerifier.verifyWebhook(testPayload, headers, ""),
       );
 
       expect(result._tag).toBe("Left");
@@ -152,6 +154,6 @@ describe("Shopify Webhook HMAC Verification", () => {
         const error = result.left as WebhookVerificationError;
         expect(error.message).toContain("Webhook secret is empty");
       }
-    }).pipe(Effect.provide(ShopifyWebhookVerifierLive))
+    }).pipe(Effect.provide(ShopifyWebhookVerifierLive)),
   );
 });

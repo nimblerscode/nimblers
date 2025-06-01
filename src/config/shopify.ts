@@ -1,41 +1,41 @@
+import { FetchHttpClient } from "@effect/platform";
 import { Effect, Layer } from "effect";
+import { GlobalShopConnectionUseCaseLive } from "@/application/global/organization/shopConnectionService";
 import { ShopifyComplianceUseCaseLive } from "@/application/shopify/compliance/service";
 import { ComplianceWebhookServiceLive } from "@/application/shopify/compliance/webhookService";
-import {
-  ShopifyOAuthUseCaseLive,
-  ShopifyOAuthEnv,
-} from "@/application/shopify/oauth/service";
-import { GlobalShopConnectionUseCaseLive } from "@/application/global/organization/shopConnectionService";
-import {
-  ShopifyStoreServiceLive,
-  ShopifyStoreEnv,
-} from "@/application/shopify/store/service";
+import { ShopifyConfigServiceLive } from "@/application/shopify/config/configService";
 import { ShopConnectionCheckServiceLive } from "@/application/shopify/connection/checkConnectionService";
 import {
   ConnectStoreApplicationServiceLive,
   ConnectStoreEnv,
 } from "@/application/shopify/connection/connectStoreService";
+import {
+  ShopifyOAuthEnv,
+  ShopifyOAuthUseCaseLive,
+} from "@/application/shopify/oauth/service";
+import { ShopifyOAuthApplicationServiceLive } from "@/application/shopify/routes/oauthApplicationService";
+import { ShopifyStoreApplicationServiceLive } from "@/application/shopify/routes/storeApplicationService";
+import {
+  ShopifyStoreEnv,
+  ShopifyStoreServiceLive,
+} from "@/application/shopify/store/service";
 import { NonceManager } from "@/domain/shopify/oauth/service";
-import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
-import { ShopifyHmacVerifierLive } from "@/infrastructure/shopify/compliance/hmac";
-import { ComplianceDataRepoLive } from "@/infrastructure/shopify/compliance/dataRepo";
-import { ComplianceLoggerLive } from "@/infrastructure/shopify/compliance/logger";
-import { ShopifyOAuthHmacVerifierLive } from "@/infrastructure/shopify/oauth/hmac";
-import { ShopValidatorLive } from "@/infrastructure/shopify/oauth/shop";
-import { WebhookServiceLive } from "@/infrastructure/shopify/webhooks/WebhookService";
 import { AccessTokenServiceDOLive } from "@/infrastructure/cloudflare/durable-objects/shopify/oauth/services";
 import { ShopifyOAuthDONamespace } from "@/infrastructure/cloudflare/durable-objects/shopify/oauth/shopifyOAuthDO";
-import { GlobalShopConnectionRepoLive } from "@/infrastructure/persistence/global/d1/GlobalShopConnectionRepoLive";
+import { EnvironmentConfigServiceLive } from "@/infrastructure/environment/EnvironmentConfigService";
 import {
   D1BindingLive,
   DrizzleD1ClientLive,
 } from "@/infrastructure/persistence/global/d1/drizzle";
-import { FetchHttpClient } from "@effect/platform";
+import { GlobalShopConnectionRepoLive } from "@/infrastructure/persistence/global/d1/GlobalShopConnectionRepoLive";
 import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
+import { ComplianceDataRepoLive } from "@/infrastructure/shopify/compliance/dataRepo";
+import { ShopifyHmacVerifierLive } from "@/infrastructure/shopify/compliance/hmac";
+import { ComplianceLoggerLive } from "@/infrastructure/shopify/compliance/logger";
+import { ShopifyOAuthHmacVerifierLive } from "@/infrastructure/shopify/oauth/hmac";
+import { ShopValidatorLive } from "@/infrastructure/shopify/oauth/shop";
 import { ShopifyValidationServiceLive } from "@/infrastructure/shopify/validation/service";
-import { ShopifyConfigServiceLive } from "@/application/shopify/config/configService";
-import { ShopifyOAuthApplicationServiceLive } from "@/application/shopify/routes/oauthApplicationService";
-import { ShopifyStoreApplicationServiceLive } from "@/application/shopify/routes/storeApplicationService";
+import { WebhookServiceLive } from "@/infrastructure/shopify/webhooks/WebhookService";
 /**
  * Complete Shopify compliance layer with all dependencies
  */
@@ -44,8 +44,8 @@ export const ShopifyComplianceLayerLive = Layer.provide(
   Layer.mergeAll(
     ShopifyHmacVerifierLive,
     ComplianceDataRepoLive,
-    ComplianceLoggerLive
-  )
+    ComplianceLoggerLive,
+  ),
 );
 
 /**
@@ -53,7 +53,7 @@ export const ShopifyComplianceLayerLive = Layer.provide(
  */
 export const ComplianceWebhookLayerLive = Layer.provide(
   ComplianceWebhookServiceLive,
-  ShopifyComplianceLayerLive
+  ShopifyComplianceLayerLive,
 );
 
 /**
@@ -66,7 +66,7 @@ export function GlobalShopConnectionLayerLive(env: { DB: D1Database }) {
   const orgServiceLayer = Layer.provide(OrgRepoD1LayerLive, drizzleLayer);
   const useCaseLayer = Layer.provide(
     GlobalShopConnectionUseCaseLive,
-    Layer.mergeAll(repoLayer, orgServiceLayer)
+    Layer.mergeAll(repoLayer, orgServiceLayer),
   );
 
   return useCaseLayer;
@@ -95,7 +95,7 @@ export function StoreConnectionLayerLive(env: {
 
   const storeServiceLayer = Layer.provide(
     ShopifyStoreServiceLive,
-    Layer.mergeAll(storeEnvLayer, globalShopLayer, FetchHttpClient.layer)
+    Layer.mergeAll(storeEnvLayer, globalShopLayer, FetchHttpClient.layer),
   );
 
   return storeServiceLayer;
@@ -127,8 +127,8 @@ export function ConnectStoreApplicationLayerLive(env: {
       globalShopLayer,
       storeConnectionLayer,
       orgServiceLayer,
-      connectStoreEnvLayer
-    )
+      connectStoreEnvLayer,
+    ),
   );
 }
 
@@ -141,7 +141,7 @@ export function ShopifyStoreOperationsLayerLive(env: {
 }) {
   return Layer.mergeAll(
     GlobalShopConnectionLayerLive(env),
-    StoreConnectionLayerLive(env)
+    StoreConnectionLayerLive(env),
   );
 }
 
@@ -160,7 +160,7 @@ export function ShopifyOAuthDOServiceLive(env: {
   // Durable Object namespace layer
   const doNamespaceLayer = Layer.succeed(
     ShopifyOAuthDONamespace,
-    env.SHOPIFY_OAUTH_DO
+    env.SHOPIFY_OAUTH_DO,
   );
 
   // Use stateless nonce manager - encode organization context in state parameter
@@ -186,14 +186,14 @@ export function ShopifyOAuthDOServiceLive(env: {
           return Effect.succeed(void 0);
         },
       };
-    })
+    }),
   );
 
   // DO service layers that communicate with the Durable Object handlers
   const nonceManagerLayer = StatelessNonceManagerLive;
   const accessTokenServiceLayer = Layer.provide(
     AccessTokenServiceDOLive,
-    doNamespaceLayer
+    doNamespaceLayer,
   );
 
   // Infrastructure service layers
@@ -210,7 +210,7 @@ export function ShopifyOAuthDOServiceLive(env: {
     webhookServiceLayer,
     envLayer,
     doNamespaceLayer,
-    EnvironmentConfigServiceLive
+    EnvironmentConfigServiceLive,
   );
 
   // Use case layer
@@ -232,7 +232,7 @@ export function ShopifyOAuthApplicationLayerLive(env: {
 }) {
   const baseLayer = Layer.merge(
     ShopifyOAuthDOServiceLive(env),
-    ConnectStoreApplicationLayerLive(env)
+    ConnectStoreApplicationLayerLive(env),
   );
   return Layer.provide(ShopifyOAuthApplicationServiceLive, baseLayer);
 }

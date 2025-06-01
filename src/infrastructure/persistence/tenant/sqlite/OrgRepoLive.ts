@@ -45,7 +45,7 @@ export const OrgRepoLive = Layer.effect(
               data: JSON.stringify(data, null, 2),
               creatorUserId,
               timestamp: new Date().toISOString(),
-            })
+            }),
           );
 
           yield* Effect.log("Attempting drizzle adapter createOrg");
@@ -58,12 +58,12 @@ export const OrgRepoLive = Layer.effect(
           });
 
           yield* Effect.log(
-            "drizzleAdapter.createOrg completed successfully"
+            "drizzleAdapter.createOrg completed successfully",
           ).pipe(
             Effect.annotateLogs({
               result: JSON.stringify(result, null, 2),
               timestamp: new Date().toISOString(),
-            })
+            }),
           );
 
           yield* Effect.log("Creating initial member");
@@ -83,20 +83,20 @@ export const OrgRepoLive = Layer.effect(
               Effect.log("Member created successfully").pipe(
                 Effect.annotateLogs({
                   timestamp: new Date().toISOString(),
-                })
-              )
-            )
+                }),
+              ),
+            ),
           );
 
           yield* Effect.log("=== ORG REPO CREATE SUCCESS ===").pipe(
             Effect.annotateLogs({
               finalResult: JSON.stringify(result.org, null, 2),
               timestamp: new Date().toISOString(),
-            })
+            }),
           );
 
           return result.org;
         }),
     };
-  })
+  }),
 );

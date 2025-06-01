@@ -20,7 +20,7 @@ export async function organizationMiddleware({
       {
         status: 400,
         headers: { "Content-Type": "application/json" },
-      }
+      },
     );
   }
 }

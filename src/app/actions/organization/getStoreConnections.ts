@@ -30,21 +30,21 @@ interface ConnectedStore {
 
 // UI-friendly error types
 export class OrganizationNotFoundError extends Data.TaggedError(
-  "OrganizationNotFoundError"
+  "OrganizationNotFoundError",
 )<{
   message: string;
   retryable: boolean;
 }> {}
 
 export class DatabaseUnavailableError extends Data.TaggedError(
-  "DatabaseUnavailableError"
+  "DatabaseUnavailableError",
 )<{
   message: string;
   retryable: boolean;
 }> {}
 
 export class PermissionDeniedError extends Data.TaggedError(
-  "PermissionDeniedError"
+  "PermissionDeniedError",
 )<{
   message: string;
   retryable: boolean;
@@ -72,7 +72,7 @@ export type ConnectedStoreResult =
   | { success: false; error: StoreActionError };
 
 export async function getOrganizationConnectedStores(
-  organizationSlug: OrganizationSlug
+  organizationSlug: OrganizationSlug,
 ): Promise<ConnectedStoreResult> {
   const program = Effect.gen(function* () {
     const storeService = yield* ShopifyStoreService;
@@ -135,7 +135,7 @@ export async function getOrganizationConnectedStores(
         message: "An unexpected error occurred",
         retryable: true,
       });
-    })
+    }),
   );
 
   const d1Layer = D1BindingLive(env);
@@ -152,7 +152,7 @@ export async function getOrganizationConnectedStores(
       Effect.match({
         onFailure: (error) => ({ success: false as const, error }),
         onSuccess: (data) => ({ success: true as const, data }),
-      })
-    )
+      }),
+    ),
   );
 }

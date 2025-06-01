@@ -52,7 +52,7 @@ describe("WebhookService", () => {
           const result = yield* webhookService.registerAppUninstallWebhook(
             testShop,
             testAccessToken,
-            testWebhookUrl
+            testWebhookUrl,
           );
 
           // Should not throw and complete successfully
@@ -74,9 +74,9 @@ describe("WebhookService", () => {
                   format: "json",
                 },
               }),
-            }
+            },
           );
-        }).pipe(Effect.provide(MockWebhookServiceLayer))
+        }).pipe(Effect.provide(MockWebhookServiceLayer)),
     );
 
     it.scoped("should handle Shopify API error response", () =>
@@ -90,7 +90,7 @@ describe("WebhookService", () => {
               errors: {
                 address: ["has already been taken for this topic"],
               },
-            })
+            }),
           ),
         });
         global.fetch = mockFetch;
@@ -101,8 +101,8 @@ describe("WebhookService", () => {
           webhookService.registerAppUninstallWebhook(
             testShop,
             testAccessToken,
-            testWebhookUrl
-          )
+            testWebhookUrl,
+          ),
         );
 
         expect(result._tag).toBe("Left");
@@ -111,7 +111,7 @@ describe("WebhookService", () => {
           expect(result.left.message).toContain("Webhook registration failed");
           expect(result.left.message).toContain("422");
         }
-      }).pipe(Effect.provide(MockWebhookServiceLayer))
+      }).pipe(Effect.provide(MockWebhookServiceLayer)),
     );
 
     it.scoped("should handle network errors", () =>
@@ -126,18 +126,18 @@ describe("WebhookService", () => {
           webhookService.registerAppUninstallWebhook(
             testShop,
             testAccessToken,
-            testWebhookUrl
-          )
+            testWebhookUrl,
+          ),
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(OAuthError);
           expect(result.left.message).toContain(
-            "Failed to register app uninstall webhook"
+            "Failed to register app uninstall webhook",
           );
         }
-      }).pipe(Effect.provide(MockWebhookServiceLayer))
+      }).pipe(Effect.provide(MockWebhookServiceLayer)),
     );
 
     it.scoped("should handle invalid access token", () =>
@@ -156,8 +156,8 @@ describe("WebhookService", () => {
           webhookService.registerAppUninstallWebhook(
             testShop,
             testAccessToken,
-            testWebhookUrl
-          )
+            testWebhookUrl,
+          ),
         );
 
         expect(result._tag).toBe("Left");
@@ -165,7 +165,7 @@ describe("WebhookService", () => {
           expect(result.left).toBeInstanceOf(OAuthError);
           expect(result.left.message).toContain("401");
         }
-      }).pipe(Effect.provide(MockWebhookServiceLayer))
+      }).pipe(Effect.provide(MockWebhookServiceLayer)),
     );
 
     it.scoped("should handle error response text reading failure", () =>
@@ -184,8 +184,8 @@ describe("WebhookService", () => {
           webhookService.registerAppUninstallWebhook(
             testShop,
             testAccessToken,
-            testWebhookUrl
-          )
+            testWebhookUrl,
+          ),
         );
 
         expect(result._tag).toBe("Left");
@@ -193,7 +193,7 @@ describe("WebhookService", () => {
           expect(result.left).toBeInstanceOf(OAuthError);
           expect(result.left.message).toContain("Unknown error");
         }
-      }).pipe(Effect.provide(MockWebhookServiceLayer))
+      }).pipe(Effect.provide(MockWebhookServiceLayer)),
     );
 
     it.scoped("should use correct API version and endpoint format", () =>
@@ -206,7 +206,7 @@ describe("WebhookService", () => {
         yield* webhookService.registerAppUninstallWebhook(
           testShop,
           testAccessToken,
-          testWebhookUrl
+          testWebhookUrl,
         );
 
         const [url, options] = mockFetch.mock.calls[0];
@@ -223,7 +223,7 @@ describe("WebhookService", () => {
         expect(body.webhook.topic).toBe("app/uninstalled");
         expect(body.webhook.address).toBe(testWebhookUrl);
         expect(body.webhook.format).toBe("json");
-      }).pipe(Effect.provide(MockWebhookServiceLayer))
+      }).pipe(Effect.provide(MockWebhookServiceLayer)),
     );
   });
 });

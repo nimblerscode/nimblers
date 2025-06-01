@@ -176,7 +176,7 @@ export function CreateOrganization() {
                   onChange={(value) =>
                     setSelectedPlan(
                       PRICING_PLANS.find((plan) => plan.id === value) ||
-                      PRICING_PLANS[0],
+                        PRICING_PLANS[0],
                     )
                   }
                 >

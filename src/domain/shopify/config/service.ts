@@ -3,7 +3,7 @@ import type { ShopifyConfig } from "./models";
 
 // === Shopify Configuration Service ===
 export abstract class ShopifyConfigService extends Context.Tag(
-  "@core/shopify/ConfigService"
+  "@core/shopify/ConfigService",
 )<
   ShopifyConfigService,
   {

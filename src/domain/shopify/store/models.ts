@@ -9,9 +9,9 @@ export type OrganizationId = S.Schema.Type<typeof OrganizationId>;
 
 export const ShopDomain = S.String.pipe(
   S.pattern(
-    /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]\.myshopify\.com$|^[a-zA-Z0-9]\.myshopify\.com$/
+    /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]\.myshopify\.com$|^[a-zA-Z0-9]\.myshopify\.com$/,
   ),
-  S.brand("ShopDomain")
+  S.brand("ShopDomain"),
 );
 export type ShopDomain = S.Schema.Type<typeof ShopDomain>;
 
@@ -20,7 +20,7 @@ export const StoreConnectionStatus = S.Union(
   S.Literal("active"),
   S.Literal("disconnected"),
   S.Literal("error"),
-  S.Literal("pending")
+  S.Literal("pending"),
 );
 export type StoreConnectionStatus = S.Schema.Type<typeof StoreConnectionStatus>;
 
@@ -54,7 +54,7 @@ export class StoreNotFoundError extends S.TaggedError<StoreNotFoundError>()(
     message: S.String,
     storeId: S.optional(StoreId),
     shopDomain: S.optional(ShopDomain),
-  }
+  },
 ) {}
 
 export class StoreConnectionError extends S.TaggedError<StoreConnectionError>()(
@@ -63,7 +63,7 @@ export class StoreConnectionError extends S.TaggedError<StoreConnectionError>()(
     message: S.String,
     shopDomain: ShopDomain,
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}
 
 export class StoreAlreadyConnectedError extends S.TaggedError<StoreAlreadyConnectedError>()(
@@ -73,7 +73,7 @@ export class StoreAlreadyConnectedError extends S.TaggedError<StoreAlreadyConnec
     shopDomain: ShopDomain,
     connectedToOrganization: S.optional(OrganizationId),
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}
 
 export class StoreDbError extends S.TaggedError<StoreDbError>()(
@@ -81,7 +81,7 @@ export class StoreDbError extends S.TaggedError<StoreDbError>()(
   {
     message: S.String,
     cause: S.optional(S.Unknown),
-  }
+  },
 ) {}
 
 // === Type Exports ===

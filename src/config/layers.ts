@@ -38,7 +38,7 @@ export const SessionLayerLive = () => {
   const sessionRepoLayer = Layer.provide(SessionRepoLive, DrizzleD1ClientLive);
   const sessionUseCaseLayer = Layer.provide(
     SessionUseCaseLive,
-    sessionRepoLayer
+    sessionRepoLayer,
   );
   return sessionUseCaseLayer;
 };
@@ -66,7 +66,7 @@ export function OrganizationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 
   const OrgServiceLayer = Layer.provide(
     OrganizationDOAdapterLive,
-    doNamespaceLayer
+    doNamespaceLayer,
   );
 
   return OrgServiceLayer;
@@ -76,7 +76,7 @@ export function InvitationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
   const doNamespaceLayer = Layer.succeed(InvitationDONamespace, doEnv.ORG_DO);
   return Layer.provide(
     InvitationDOServiceLive.pipe(Layer.provide(InviteTokenLive)),
-    doNamespaceLayer
+    doNamespaceLayer,
   );
 }
 
@@ -86,13 +86,13 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation repository layer
   const InvitationRepoLayer = Layer.provide(
     InvitationRepoLive,
-    DrizzleDOClientLive
+    DrizzleDOClientLive,
   );
 
   // Email service layer
   const EmailLayer = Layer.provide(
     ResendEmailAdapterLive,
-    Layer.merge(ResendConfigLive, MemberServiceLayer)
+    Layer.merge(ResendConfigLive, MemberServiceLayer),
   );
 
   // Note: UserRepo is not available in Durable Object context
@@ -101,7 +101,11 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation use case layer with all its dependencies
   const InvitationUseCaseLayer = Layer.provide(
     InvitationUseCaseLive(doId).pipe(Layer.provide(InviteTokenLive)),
-    Layer.mergeAll(EmailLayer, MemberServiceLayer, EnvironmentConfigServiceLive)
+    Layer.mergeAll(
+      EmailLayer,
+      MemberServiceLayer,
+      EnvironmentConfigServiceLive,
+    ),
   );
 
   return InvitationUseCaseLayer.pipe(Layer.provide(InvitationRepoLayer));
@@ -112,7 +116,7 @@ export function MemberDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 
   const MemberServiceLayer = Layer.provide(
     MembersDOServiceLive,
-    doNamespaceLayer
+    doNamespaceLayer,
   );
 
   return MemberServiceLayer;
@@ -132,6 +136,6 @@ export const EmailVerificationLayerLive = (db: { DB: D1Database }) => {
   // Email verification use case layer with all dependencies
   return Layer.provide(
     EmailVerificationUseCaseLive,
-    Layer.mergeAll(UserRepoLayer, EmailLayer, EnvironmentConfigServiceLive)
+    Layer.mergeAll(UserRepoLayer, EmailLayer, EnvironmentConfigServiceLive),
   );
 };

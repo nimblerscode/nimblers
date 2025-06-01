@@ -13,7 +13,7 @@ export const ComplianceLoggerLive = Layer.effect(
         Effect.gen(function* () {
           // Log the compliance request for audit purposes
           yield* Effect.log(
-            `Shopify compliance webhook processed: ${webhookType}`
+            `Shopify compliance webhook processed: ${webhookType}`,
           );
           yield* Effect.log(`Payload: ${JSON.stringify(payload, null, 2)}`);
 
@@ -32,9 +32,9 @@ export const ComplianceLoggerLive = Layer.effect(
               new ShopifyWebhookError({
                 message: "Failed to log compliance request",
                 cause: error,
-              })
-          )
+              }),
+          ),
         ),
     };
-  })
+  }),
 );

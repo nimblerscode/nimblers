@@ -18,9 +18,7 @@ export function PendingInvitationsList({
           title={invitation.email}
           subtitle={invitation.role ?? "Member (Pending)"}
           avatarProps={{ name: invitation.email }}
-          extraInfo={
-            `Invited ${new Date(invitation.createdAt).toLocaleDateString()}`
-          }
+          extraInfo={`Invited ${new Date(invitation.createdAt).toLocaleDateString()}`}
           actions={actions}
         />
       ))}

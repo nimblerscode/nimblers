@@ -1,21 +1,19 @@
 // Connection Services
+
+// Compliance Services
+export { ComplianceWebhookServiceLive } from "./compliance/webhookService";
+// Configuration Services
 export {
+  type ShopifyConfig,
+  ShopifyConfigServiceLive,
+} from "./config/configService";
+export {
+  type ShopConnectionCheckResult,
   ShopConnectionCheckService,
   ShopConnectionCheckServiceLive,
-  type ShopConnectionCheckResult,
 } from "./connection/checkConnectionService";
-
 export {
   ConnectStoreApplicationService,
   ConnectStoreApplicationServiceLive,
   type ConnectStoreResult,
 } from "./connection/connectStoreService";
-
-// Configuration Services
-export {
-  ShopifyConfigServiceLive,
-  type ShopifyConfig,
-} from "./config/configService";
-
-// Compliance Services
-export { ComplianceWebhookServiceLive } from "./compliance/webhookService";

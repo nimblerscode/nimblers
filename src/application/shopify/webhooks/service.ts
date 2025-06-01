@@ -1,3 +1,4 @@
+import { Context, Effect, Layer, Schema as S } from "effect";
 import { ShopDomain } from "@/domain/global/organization/models";
 import {
   type AppUninstalledWebhook,
@@ -11,11 +12,10 @@ import {
   ShopifyWebhookVerifier,
 } from "@/domain/shopify/webhooks/service";
 import { ConnectedStoreRepo } from "@/domain/tenant/organization/service";
-import { Context, Effect, Layer, Schema as S } from "effect";
 
 // Environment for webhook secret
 export abstract class ShopifyWebhookEnv extends Context.Tag(
-  "@infrastructure/shopify/webhooks/Env"
+  "@infrastructure/shopify/webhooks/Env",
 )<
   ShopifyWebhookEnv,
   {
@@ -32,7 +32,7 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
 
     const processAppUninstall = (
       shopDomain: ShopDomain,
-      webhookData: AppUninstalledWebhook
+      webhookData: AppUninstalledWebhook,
     ) =>
       Effect.gen(function* () {
         // Log app uninstall details for audit purposes
@@ -44,7 +44,7 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
             planName: webhookData.plan_name,
             myshopifyDomain: webhookData.myshopify_domain,
             createdAt: webhookData.created_at,
-          })
+          }),
         );
 
         // Update connected store status to "disconnected"
@@ -56,8 +56,8 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
                 new WebhookProcessingError({
                   message: "Failed to find connected store",
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
 
         if (connectedStore) {
@@ -70,26 +70,26 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
                   new WebhookProcessingError({
                     message: "Failed to update store status",
                     cause: error,
-                  })
-              )
+                  }),
+              ),
             );
 
           yield* Effect.logInfo(
-            "Successfully marked store as disconnected"
+            "Successfully marked store as disconnected",
           ).pipe(
             Effect.annotateLogs({
               shopDomain,
               connectedStoreId: connectedStore.id,
-            })
+            }),
           );
         } else {
           yield* Effect.logWarning(
-            "No connected store found for app uninstall"
+            "No connected store found for app uninstall",
           ).pipe(
             Effect.annotateLogs({
               shopDomain,
               shopName: webhookData.name,
-            })
+            }),
           );
         }
 
@@ -109,15 +109,15 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
           // Extract headers
           const rawHeaders = Object.fromEntries(request.headers.entries());
           const headers = yield* S.decodeUnknown(ShopifyWebhookHeaders)(
-            rawHeaders
+            rawHeaders,
           ).pipe(
             Effect.mapError(
               (error) =>
                 new WebhookProcessingError({
                   message: "Invalid webhook headers",
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
 
           // Get request body
@@ -139,15 +139,15 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
                   new WebhookProcessingError({
                     message: "Webhook verification failed",
                     cause: error,
-                  })
-              )
+                  }),
+              ),
             );
 
           if (!isValid) {
             return yield* Effect.fail(
               new WebhookProcessingError({
                 message: "Invalid webhook signature",
-              })
+              }),
             );
           }
 
@@ -162,34 +162,34 @@ export const ShopifyWebhookUseCaseLive = Layer.effect(
           });
 
           const appUninstallData = yield* S.decodeUnknown(
-            AppUninstalledWebhookSchema
+            AppUninstalledWebhookSchema,
           )(webhookData).pipe(
             Effect.mapError(
               (error) =>
                 new WebhookProcessingError({
                   message: "Invalid app uninstall payload",
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
 
           // Process the app uninstall
           const shopDomainString = headers["X-Shopify-Shop-Domain"];
           const shopDomain = yield* S.decodeUnknown(ShopDomain)(
-            shopDomainString
+            shopDomainString,
           ).pipe(
             Effect.mapError(
               (error) =>
                 new WebhookProcessingError({
                   message: "Invalid shop domain",
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
           return yield* processAppUninstall(shopDomain, appUninstallData);
         }).pipe(Effect.withSpan("ShopifyWebhookUseCase.handleAppUninstalled")),
 
       processAppUninstall,
     };
-  })
+  }),
 );

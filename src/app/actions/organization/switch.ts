@@ -1,7 +1,7 @@
 "use server";
 
 import { env } from "cloudflare:workers";
-import { Effect, Layer } from "effect";
+import { Data, Effect, Layer, Option } from "effect";
 import { requestInfo } from "rwsdk/worker";
 import { SessionUseCaseLive } from "@/application/global/session/service";
 import { DatabaseLive } from "@/config/layers";
@@ -10,25 +10,40 @@ import { UserIdSchema } from "@/domain/global/user/model";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
 import { SessionRepoLive } from "@/infrastructure/persistence/global/d1/SessionRepoLive";
 
+// Define custom errors
+export class AuthenticationError extends Data.TaggedError(
+  "AuthenticationError",
+)<{
+  message: string;
+}> {}
+
 export interface SwitchOrganizationResult {
   success: boolean;
   message: string;
   error?: string;
 }
 
-export async function getActiveOrganization(): Promise<string | null> {
+// Helper function to validate session and extract userId
+const validateSessionAndGetUserId = Effect.gen(function* () {
   const ctx = requestInfo.ctx as AppContext;
 
-  if (!ctx.session || !ctx.session.userId) {
-    return null;
+  if (!ctx.session?.userId) {
+    yield* Effect.fail(
+      new AuthenticationError({ message: "User not authenticated" }),
+    );
   }
 
-  const program = SessionUseCase.pipe(
-    Effect.flatMap((sessionService) => {
-      const userId = UserIdSchema.make(ctx.session?.userId);
-      return sessionService.getActiveOrganization(userId);
-    }),
-  );
+  // TypeScript knows ctx.session.userId is defined here due to the guard above
+  return UserIdSchema.make(ctx.session!.userId);
+});
+
+export async function getActiveOrganization(): Promise<string | null> {
+  const program = Effect.gen(function* () {
+    const userId = yield* validateSessionAndGetUserId;
+    const sessionService = yield* SessionUseCase;
+    const activeOrgOption = yield* sessionService.getActiveOrganization(userId);
+    return Option.getOrNull(activeOrgOption);
+  });
 
   const sessionRepoLayer = Layer.provide(
     SessionRepoLive,
@@ -36,43 +51,27 @@ export async function getActiveOrganization(): Promise<string | null> {
   );
   const finalLayer = Layer.provide(SessionUseCaseLive, sessionRepoLayer);
 
-  try {
-    return await Effect.runPromise(
-      program.pipe(
-        Effect.provide(finalLayer),
-        Effect.catchAll((_error) => {
-          return Effect.succeed(null);
-        }),
-      ),
-    );
-  } catch (_error) {
-    return null;
-  }
+  return Effect.runPromise(
+    program.pipe(
+      Effect.provide(finalLayer),
+      Effect.catchAll((_error) => Effect.succeed(null)),
+    ),
+  );
 }
 
 export async function switchActiveOrganization(
   organizationId: string,
 ): Promise<SwitchOrganizationResult> {
-  const ctx = requestInfo.ctx as AppContext;
+  const program = Effect.gen(function* () {
+    const userId = yield* validateSessionAndGetUserId;
+    const sessionService = yield* SessionUseCase;
+    yield* sessionService.switchActiveOrganization(userId, organizationId);
 
-  if (!ctx.session || !ctx.session.userId) {
     return {
-      success: false,
-      message: "User not authenticated",
-      error: "No session found",
-    };
-  }
-
-  const program = SessionUseCase.pipe(
-    Effect.flatMap((sessionService) => {
-      const userId = UserIdSchema.make(ctx.session?.userId);
-      return sessionService.switchActiveOrganization(userId, organizationId);
-    }),
-    Effect.map(() => ({
       success: true,
       message: "Active organization updated successfully",
-    })),
-  );
+    };
+  });
 
   const sessionRepoLayer = Layer.provide(
     SessionRepoLive,
@@ -80,24 +79,16 @@ export async function switchActiveOrganization(
   );
   const finalLayer = Layer.provide(SessionUseCaseLive, sessionRepoLayer);
 
-  try {
-    return await Effect.runPromise(
-      program.pipe(
-        Effect.provide(finalLayer),
-        Effect.catchAll((error) => {
-          return Effect.succeed({
-            success: false,
-            message: "Failed to update active organization",
-            error: error instanceof Error ? error.message : String(error),
-          });
+  return Effect.runPromise(
+    program.pipe(
+      Effect.provide(finalLayer),
+      Effect.catchAll((error) =>
+        Effect.succeed({
+          success: false,
+          message: "Failed to update active organization",
+          error: error instanceof Error ? error.message : String(error),
         }),
       ),
-    );
-  } catch (error) {
-    return {
-      success: false,
-      message: "Failed to update active organization",
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+    ),
+  );
 }
