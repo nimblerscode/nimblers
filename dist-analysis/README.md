@@ -1,1 +1,0 @@
-This folder contains the built output assets for the worker "nimblers-gateway" generated at 2025-05-30T17:05:51.867Z.
