@@ -1,5 +1,6 @@
 import { FetchHttpClient } from "@effect/platform";
 import { Effect, Layer } from "effect";
+import { nanoid } from "nanoid";
 import { GlobalShopConnectionUseCaseLive } from "@/application/global/organization/shopConnectionService";
 import { ShopifyComplianceUseCaseLive } from "@/application/shopify/compliance/service";
 import { ComplianceWebhookServiceLive } from "@/application/shopify/compliance/webhookService";
@@ -44,8 +45,8 @@ export const ShopifyComplianceLayerLive = Layer.provide(
   Layer.mergeAll(
     ShopifyHmacVerifierLive,
     ComplianceDataRepoLive,
-    ComplianceLoggerLive,
-  ),
+    ComplianceLoggerLive
+  )
 );
 
 /**
@@ -53,7 +54,7 @@ export const ShopifyComplianceLayerLive = Layer.provide(
  */
 export const ComplianceWebhookLayerLive = Layer.provide(
   ComplianceWebhookServiceLive,
-  ShopifyComplianceLayerLive,
+  ShopifyComplianceLayerLive
 );
 
 /**
@@ -65,7 +66,7 @@ export function GlobalShopConnectionLayerLive(env: { DB: D1Database }) {
   const repoLayer = Layer.provide(GlobalShopConnectionRepoLive, drizzleLayer);
   const useCaseLayer = Layer.provide(
     GlobalShopConnectionUseCaseLive,
-    Layer.mergeAll(repoLayer),
+    Layer.mergeAll(repoLayer)
   );
 
   return useCaseLayer;
@@ -94,7 +95,7 @@ export function StoreConnectionLayerLive(env: {
 
   const storeServiceLayer = Layer.provide(
     ShopifyStoreServiceLive,
-    Layer.mergeAll(storeEnvLayer, globalShopLayer, FetchHttpClient.layer),
+    Layer.mergeAll(storeEnvLayer, globalShopLayer, FetchHttpClient.layer)
   );
 
   return storeServiceLayer;
@@ -126,8 +127,8 @@ export function ConnectStoreApplicationLayerLive(env: {
       globalShopLayer,
       storeConnectionLayer,
       orgServiceLayer,
-      connectStoreEnvLayer,
-    ),
+      connectStoreEnvLayer
+    )
   );
 }
 
@@ -140,7 +141,7 @@ export function ShopifyStoreOperationsLayerLive(env: {
 }) {
   return Layer.mergeAll(
     GlobalShopConnectionLayerLive(env),
-    StoreConnectionLayerLive(env),
+    StoreConnectionLayerLive(env)
   );
 }
 
@@ -159,7 +160,7 @@ export function ShopifyOAuthDOServiceLive(env: {
   // Durable Object namespace layer
   const doNamespaceLayer = Layer.succeed(
     ShopifyOAuthDONamespace,
-    env.SHOPIFY_OAUTH_DO,
+    env.SHOPIFY_OAUTH_DO
   );
 
   // Use stateless nonce manager - encode organization context in state parameter
@@ -168,7 +169,7 @@ export function ShopifyOAuthDOServiceLive(env: {
     Effect.gen(function* () {
       return {
         generate: () => {
-          const nonce = crypto.randomUUID();
+          const nonce = nanoid();
           return Effect.succeed(nonce as any);
         },
         store: (_nonce: any) => {
@@ -185,14 +186,14 @@ export function ShopifyOAuthDOServiceLive(env: {
           return Effect.succeed(void 0);
         },
       };
-    }),
+    })
   );
 
   // DO service layers that communicate with the Durable Object handlers
   const nonceManagerLayer = StatelessNonceManagerLive;
   const accessTokenServiceLayer = Layer.provide(
     AccessTokenServiceDOLive,
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 
   // Infrastructure service layers
@@ -209,7 +210,7 @@ export function ShopifyOAuthDOServiceLive(env: {
     webhookServiceLayer,
     envLayer,
     doNamespaceLayer,
-    EnvironmentConfigServiceLive,
+    EnvironmentConfigServiceLive
   );
 
   // Use case layer
@@ -231,7 +232,7 @@ export function ShopifyOAuthApplicationLayerLive(env: {
 }) {
   const baseLayer = Layer.merge(
     ShopifyOAuthDOServiceLive(env),
-    ConnectStoreApplicationLayerLive(env),
+    ConnectStoreApplicationLayerLive(env)
   );
   return Layer.provide(ShopifyOAuthApplicationServiceLive, baseLayer);
 }
@@ -243,3 +244,35 @@ export function ShopifyStoreApplicationLayerLive(env: {
   const baseLayer = ConnectStoreApplicationLayerLive(env);
   return Layer.provide(ShopifyStoreApplicationServiceLive, baseLayer);
 }
+
+/**
+ * Generates Shopify OAuth authorization URL with proper state management
+ *
+ * @param organizationSlug - Used for namespacing the Durable Object
+ * @param shop - The Shopify store domain
+ * @param clientId - Shopify app client ID
+ * @param scope - Required OAuth scopes
+ * @param redirectUri - OAuth callback URL
+ * @returns Complete authorization URL with encoded state
+ */
+export const generateShopifyOAuthUrl = (
+  organizationSlug: string,
+  shop: string,
+  clientId: string,
+  scope: string,
+  redirectUri: string
+): string => {
+  // Generate organization-scoped state parameter
+  // Format: {organizationSlug}_org_{nonce}
+  const nonce = nanoid();
+  const state = `${organizationSlug}_org_${nonce}`;
+
+  // Build authorization URL
+  const authUrl = new URL(`https://${shop}/admin/oauth/authorize`);
+  authUrl.searchParams.set("client_id", clientId);
+  authUrl.searchParams.set("scope", scope);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("state", state);
+
+  return authUrl.toString();
+};

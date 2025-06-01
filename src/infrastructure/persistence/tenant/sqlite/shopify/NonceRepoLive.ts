@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { Effect, Layer } from "effect";
+import { nanoid } from "nanoid";
 import {
   InvalidNonceError,
   type Nonce,
@@ -15,7 +16,7 @@ export const NonceRepoLive = Layer.effect(
     const drizzleClient = yield* DrizzleDOClient;
 
     return {
-      generate: () => Effect.succeed(crypto.randomUUID() as Nonce),
+      generate: () => Effect.succeed(nanoid() as Nonce),
 
       store: (nonce: Nonce) =>
         Effect.gen(function* () {
@@ -80,5 +81,5 @@ export const NonceRepoLive = Layer.effect(
           // rather than checking affected rows in this simplified implementation
         }),
     };
-  }),
+  })
 );

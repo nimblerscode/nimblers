@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { Effect, Layer, Option } from "effect";
+import { nanoid } from "nanoid";
 import type { Email } from "@/domain/global/email/model";
 import type { UserId } from "@/domain/global/user/model";
 import type {
@@ -49,7 +50,7 @@ export const InvitationRepoLive = Layer.effect(
 
           const result = yield* Effect.tryPromise({
             try: () => {
-              const id = crypto.randomUUID();
+              const id = nanoid();
               const nowDate = new Date(now);
               const expiresDate = new Date(expiresAt);
 
@@ -85,7 +86,7 @@ export const InvitationRepoLive = Layer.effect(
             return new OrgDbError({
               cause: error,
             });
-          }),
+          })
         ),
 
       findPendingByEmail: (email: Email) =>
@@ -129,7 +130,7 @@ export const InvitationRepoLive = Layer.effect(
               ...row,
               expiresAt: Number(row.expiresAt),
               createdAt: Number(row.createdAt),
-            }),
+            })
           );
         }),
 
@@ -190,5 +191,5 @@ export const InvitationRepoLive = Layer.effect(
     };
 
     return invitationRepo;
-  }),
+  })
 );

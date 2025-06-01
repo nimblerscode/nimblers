@@ -21,31 +21,31 @@ import type {
 
 // === HMAC Verification Service ===
 export abstract class ShopifyOAuthHmacVerifier extends Context.Tag(
-  "@core/shopify/oauth/HmacVerifier",
+  "@core/shopify/oauth/HmacVerifier"
 )<
   ShopifyOAuthHmacVerifier,
   {
     readonly verifyInstallRequest: (
       request: OAuthInstallRequest,
-      secret: ClientSecret,
+      secret: ClientSecret
     ) => Effect.Effect<boolean, InvalidHmacError>;
     readonly verifyCallbackRequest: (
       request: OAuthCallbackRequest,
-      secret: ClientSecret,
+      secret: ClientSecret
     ) => Effect.Effect<boolean, InvalidHmacError>;
   }
 >() {}
 
 // === Nonce Management Service ===
 export abstract class NonceManager extends Context.Tag(
-  "@core/shopify/oauth/NonceManager",
+  "@core/shopify/oauth/NonceManager"
 )<
   NonceManager,
   {
     readonly generate: () => Effect.Effect<Nonce, never>;
     readonly store: (nonce: Nonce) => Effect.Effect<void, OAuthError>;
     readonly verify: (
-      nonce: Nonce,
+      nonce: Nonce
     ) => Effect.Effect<boolean, InvalidNonceError>;
     readonly consume: (nonce: Nonce) => Effect.Effect<void, InvalidNonceError>;
   }
@@ -53,7 +53,7 @@ export abstract class NonceManager extends Context.Tag(
 
 // === Access Token Service ===
 export abstract class AccessTokenService extends Context.Tag(
-  "@core/shopify/oauth/AccessTokenService",
+  "@core/shopify/oauth/AccessTokenService"
 )<
   AccessTokenService,
   {
@@ -61,7 +61,7 @@ export abstract class AccessTokenService extends Context.Tag(
       shop: ShopDomain,
       code: AuthorizationCode,
       clientId: ClientId,
-      clientSecret: ClientSecret,
+      clientSecret: ClientSecret
     ) => Effect.Effect<
       AccessTokenResponse | OnlineAccessTokenResponse,
       AccessTokenError
@@ -70,10 +70,10 @@ export abstract class AccessTokenService extends Context.Tag(
       shop: ShopDomain,
       token: AccessToken,
       scope: Scope,
-      organizationSlug: OrganizationSlug,
+      organizationSlug: OrganizationSlug
     ) => Effect.Effect<void, OAuthError>;
     readonly retrieve: (
-      shop: ShopDomain,
+      shop: ShopDomain
     ) => Effect.Effect<AccessToken | null, OAuthError>;
     readonly delete: (shop: ShopDomain) => Effect.Effect<void, OAuthError>;
     readonly retrieveWithOrganization: (shop: ShopDomain) => Effect.Effect<
@@ -89,46 +89,46 @@ export abstract class AccessTokenService extends Context.Tag(
 
 // === Webhook Service ===
 export abstract class WebhookService extends Context.Tag(
-  "@core/shopify/oauth/WebhookService",
+  "@core/shopify/oauth/WebhookService"
 )<
   WebhookService,
   {
     readonly registerAppUninstallWebhook: (
       shop: ShopDomain,
       accessToken: AccessToken,
-      webhookUrl: string,
+      webhookUrl: string
     ) => Effect.Effect<void, OAuthError>;
   }
 >() {}
 
 // === Shop Validation Service ===
 export abstract class ShopValidator extends Context.Tag(
-  "@core/shopify/oauth/ShopValidator",
+  "@core/shopify/oauth/ShopValidator"
 )<
   ShopValidator,
   {
     readonly validateShopDomain: (
-      shop: string,
+      shop: string
     ) => Effect.Effect<ShopDomain, InvalidShopDomainError>;
   }
 >() {}
 
 // === OAuth Use Case ===
 export abstract class ShopifyOAuthUseCase extends Context.Tag(
-  "@core/shopify/oauth/UseCase",
+  "@core/shopify/oauth/UseCase"
 )<
   ShopifyOAuthUseCase,
   {
     readonly handleInstallRequest: (
       organizationSlug: OrganizationSlug,
-      request: Request,
+      request: Request
     ) => Effect.Effect<
       Response,
       OAuthError | InvalidHmacError | InvalidShopDomainError
     >;
     readonly handleCallback: (
       organizationSlug: OrganizationSlug,
-      request: Request,
+      request: Request
     ) => Effect.Effect<
       Response,
       | OAuthError
@@ -142,22 +142,22 @@ export abstract class ShopifyOAuthUseCase extends Context.Tag(
       clientId: ClientId,
       scopes: Scope[],
       redirectUri: string,
-      nonce: Nonce,
+      nonce: Nonce
     ) => Effect.Effect<string, OAuthError>;
     readonly checkConnectionStatus: (
       organizationSlug: OrganizationSlug,
-      shop: ShopDomain,
+      shop: ShopDomain
     ) => Effect.Effect<
       { connected: boolean; shop: ShopDomain; scope?: Scope },
       OAuthError
     >;
     readonly disconnect: (
       organizationSlug: OrganizationSlug,
-      shop: ShopDomain,
+      shop: ShopDomain
     ) => Effect.Effect<{ success: boolean }, OAuthError>;
     readonly registerWebhooksAfterInstall: (
       shop: ShopDomain,
-      accessToken: AccessToken,
+      accessToken: AccessToken
     ) => Effect.Effect<void, OAuthError>;
   }
 >() {}

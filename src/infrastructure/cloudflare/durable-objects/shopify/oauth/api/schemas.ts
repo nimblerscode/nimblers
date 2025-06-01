@@ -17,6 +17,7 @@ const NonceGenerateResponseSchema = Schema.Struct({
 
 const NonceRequestSchema = Schema.Struct({
   nonce: Nonce,
+  organizationSlug: OrganizationSlug,
 });
 
 const NonceVerifyResponseSchema = Schema.Struct({
@@ -42,6 +43,7 @@ const TokenRetrieveResponseSchema = Schema.Struct({
 
 const TokenDeleteRequestSchema = Schema.Struct({
   shop: ShopDomain,
+  organizationSlug: OrganizationSlug,
 });
 
 const TokenDeleteResponseSchema = Schema.Struct({

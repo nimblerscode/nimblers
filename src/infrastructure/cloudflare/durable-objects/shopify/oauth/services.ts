@@ -44,8 +44,8 @@ export const NonceManagerDOLive = Layer.effect(
           if (!response.ok) {
             return yield* Effect.die(
               new Error(
-                `Nonce generation failed with status ${response.status}`,
-              ),
+                `Nonce generation failed with status ${response.status}`
+              )
             );
           }
 
@@ -56,7 +56,7 @@ export const NonceManagerDOLive = Layer.effect(
 
           return data.nonce as Nonce;
         }).pipe(
-          Effect.orDie, // Convert all errors to defects since domain expects never
+          Effect.orDie // Convert all errors to defects since domain expects never
         ),
 
       store: (nonce: Nonce) =>
@@ -81,7 +81,7 @@ export const NonceManagerDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Nonce store failed with status ${response.status}`,
-              }),
+              })
             );
           }
         }),
@@ -107,7 +107,7 @@ export const NonceManagerDOLive = Layer.effect(
             return yield* Effect.fail(
               new InvalidNonceError({
                 message: `Nonce verification failed with status ${response.status}`,
-              }),
+              })
             );
           }
 
@@ -143,12 +143,12 @@ export const NonceManagerDOLive = Layer.effect(
             return yield* Effect.fail(
               new InvalidNonceError({
                 message: `Nonce consumption failed with status ${response.status}`,
-              }),
+              })
             );
           }
         }),
     };
-  }),
+  })
 );
 
 export const AccessTokenServiceDOLive = Layer.effect(
@@ -163,7 +163,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
         shop: ShopDomain,
         code: AuthorizationCode,
         clientId: ClientId,
-        clientSecret: ClientSecret,
+        clientSecret: ClientSecret
       ) =>
         Effect.gen(function* () {
           const response = yield* Effect.tryPromise({
@@ -189,7 +189,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new AccessTokenError({
                 message: `Token exchange failed with status ${response.status}`,
-              }),
+              })
             );
           }
 
@@ -212,7 +212,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
         shop: ShopDomain,
         token: AccessToken,
         scope: Scope,
-        organizationSlug: OrganizationSlug,
+        organizationSlug: OrganizationSlug
       ) =>
         Effect.gen(function* () {
           // DEBUG: Log the data being sent to token store
@@ -261,7 +261,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Token store failed with status ${response.status}: ${errorText}`,
-              }),
+              })
             );
           }
 
@@ -278,7 +278,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
                 {
                   method: "GET",
                   headers: { "Content-Type": "application/json" },
-                },
+                }
               ),
             catch: (error) =>
               new OAuthError({
@@ -291,7 +291,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Token retrieve failed with status ${response.status}`,
-              }),
+              })
             );
           }
 
@@ -330,7 +330,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Token delete failed with status ${response.status}`,
-              }),
+              })
             );
           }
 
@@ -356,12 +356,12 @@ export const AccessTokenServiceDOLive = Layer.effect(
             try: () =>
               doStub.fetch(
                 `http://internal/token/with-organization?shop=${encodeURIComponent(
-                  shop,
+                  shop
                 )}`,
                 {
                   method: "GET",
                   headers: { "Content-Type": "application/json" },
-                },
+                }
               ),
             catch: (error) =>
               new OAuthError({
@@ -374,7 +374,7 @@ export const AccessTokenServiceDOLive = Layer.effect(
             return yield* Effect.fail(
               new OAuthError({
                 message: `Token retrieve with organization failed with status ${response.status}`,
-              }),
+              })
             );
           }
 
@@ -396,5 +396,5 @@ export const AccessTokenServiceDOLive = Layer.effect(
           return data;
         }),
     };
-  }),
+  })
 );

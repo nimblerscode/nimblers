@@ -1,6 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
-import type { OrganizationId } from "../../../src/domain/global/organization/models";
+import type { OrganizationSlug } from "../../../src/domain/global/organization/models";
 import type {
   AccessToken,
   AuthorizationCode,
@@ -20,29 +20,29 @@ describe("Shopify OAuth API Schema Integration", () => {
   const testClientId = "test_client_id" as ClientId;
   const testClientSecret = "test_client_secret" as ClientSecret;
   const testNonce = "test_nonce_12345" as Nonce;
-  const testOrganizationId = "org_12345" as OrganizationId;
+  const testOrganizationSlug = "test-org" as OrganizationSlug;
 
   describe("Schema Validation", () => {
     describe("Nonce Schemas", () => {
       it.scoped("should validate nonce request schema", () =>
         Effect.gen(function* () {
           const validRequest = {
-            organizationId: testOrganizationId,
+            organizationSlug: testOrganizationSlug,
             nonce: testNonce,
           };
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.storeNonce.request)(
-              validRequest,
-            ),
+              validRequest
+            )
           );
 
           expect(result._tag).toBe("Right");
           if (result._tag === "Right") {
             expect(result.right.nonce).toBe(testNonce);
-            expect(result.right.organizationId).toBe(testOrganizationId);
+            expect(result.right.organizationSlug).toBe(testOrganizationSlug);
           }
-        }),
+        })
       );
 
       it.scoped("should reject invalid nonce request", () =>
@@ -51,12 +51,12 @@ describe("Shopify OAuth API Schema Integration", () => {
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.storeNonce.request)(
-              invalidRequest,
-            ),
+              invalidRequest
+            )
           );
 
           expect(result._tag).toBe("Left");
-        }),
+        })
       );
 
       it.scoped("should validate nonce generate response schema", () =>
@@ -65,15 +65,15 @@ describe("Shopify OAuth API Schema Integration", () => {
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.generateNonce.response)(
-              validResponse,
-            ),
+              validResponse
+            )
           );
 
           expect(result._tag).toBe("Right");
           if (result._tag === "Right") {
             expect(result.right.nonce).toBe("generated_nonce_123");
           }
-        }),
+        })
       );
 
       it.scoped("should validate nonce verify response schema", () =>
@@ -82,15 +82,15 @@ describe("Shopify OAuth API Schema Integration", () => {
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.verifyNonce.response)(
-              validResponse,
-            ),
+              validResponse
+            )
           );
 
           expect(result._tag).toBe("Right");
           if (result._tag === "Right") {
             expect(result.right.valid).toBe(true);
           }
-        }),
+        })
       );
     });
 
@@ -98,7 +98,7 @@ describe("Shopify OAuth API Schema Integration", () => {
       it.scoped("should validate token store request schema", () =>
         Effect.gen(function* () {
           const validRequest = {
-            organizationId: testOrganizationId,
+            organizationSlug: testOrganizationSlug,
             shop: testShop,
             accessToken: testAccessToken,
             scope: testScope,
@@ -106,35 +106,35 @@ describe("Shopify OAuth API Schema Integration", () => {
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.storeToken.request)(
-              validRequest,
-            ),
+              validRequest
+            )
           );
 
           expect(result._tag).toBe("Right");
           if (result._tag === "Right") {
-            expect(result.right.organizationId).toBe(testOrganizationId);
+            expect(result.right.organizationSlug).toBe(testOrganizationSlug);
             expect(result.right.shop).toBe(testShop);
             expect(result.right.accessToken).toBe(testAccessToken);
             expect(result.right.scope).toBe(testScope);
           }
-        }),
+        })
       );
 
       it.scoped("should reject incomplete token store request", () =>
         Effect.gen(function* () {
           const invalidRequest = {
             shop: testShop,
-            // Missing organizationId, accessToken and scope
+            // Missing organizationSlug, accessToken and scope
           };
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.storeToken.request)(
-              invalidRequest,
-            ),
+              invalidRequest
+            )
           );
 
           expect(result._tag).toBe("Left");
-        }),
+        })
       );
 
       it.scoped("should validate token retrieve response schema", () =>
@@ -146,8 +146,8 @@ describe("Shopify OAuth API Schema Integration", () => {
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.retrieveToken.response)(
-              validResponse,
-            ),
+              validResponse
+            )
           );
 
           expect(result._tag).toBe("Right");
@@ -155,7 +155,7 @@ describe("Shopify OAuth API Schema Integration", () => {
             expect(result.right.accessToken).toBe(testAccessToken);
             expect(result.right.scope).toBe(testScope);
           }
-        }),
+        })
       );
 
       it.scoped("should validate token retrieve response with null token", () =>
@@ -167,8 +167,8 @@ describe("Shopify OAuth API Schema Integration", () => {
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.retrieveToken.response)(
-              validResponse,
-            ),
+              validResponse
+            )
           );
 
           expect(result._tag).toBe("Right");
@@ -176,28 +176,28 @@ describe("Shopify OAuth API Schema Integration", () => {
             expect(result.right.accessToken).toBe(null);
             expect(result.right.scope).toBeUndefined();
           }
-        }),
+        })
       );
 
       it.scoped("should validate token delete request schema", () =>
         Effect.gen(function* () {
           const validRequest = {
-            organizationId: testOrganizationId,
+            organizationSlug: testOrganizationSlug,
             shop: testShop,
           };
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.deleteToken.request)(
-              validRequest,
-            ),
+              validRequest
+            )
           );
 
           expect(result._tag).toBe("Right");
           if (result._tag === "Right") {
-            expect(result.right.organizationId).toBe(testOrganizationId);
+            expect(result.right.organizationSlug).toBe(testOrganizationSlug);
             expect(result.right.shop).toBe(testShop);
           }
-        }),
+        })
       );
 
       it.scoped("should validate token delete response schema", () =>
@@ -206,8 +206,8 @@ describe("Shopify OAuth API Schema Integration", () => {
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.deleteToken.response)(
-              validResponse,
-            ),
+              validResponse
+            )
           );
 
           expect(result._tag).toBe("Right");
@@ -215,7 +215,7 @@ describe("Shopify OAuth API Schema Integration", () => {
             expect(result.right.success).toBe(true);
             expect(result.right.deleted).toBe(true);
           }
-        }),
+        })
       );
 
       it.scoped("should validate token exchange request schema", () =>
@@ -229,8 +229,8 @@ describe("Shopify OAuth API Schema Integration", () => {
 
           const result = yield* Effect.either(
             Schema.decodeUnknown(ShopifyOAuthApiSchemas.exchangeToken.request)(
-              validRequest,
-            ),
+              validRequest
+            )
           );
 
           expect(result._tag).toBe("Right");
@@ -240,7 +240,7 @@ describe("Shopify OAuth API Schema Integration", () => {
             expect(result.right.clientId).toBe(testClientId);
             expect(result.right.clientSecret).toBe(testClientSecret);
           }
-        }),
+        })
       );
     });
   });
@@ -305,40 +305,40 @@ describe("Shopify OAuth API Schema Integration", () => {
         const nonceGenerated = { nonce: "flow_nonce_123" };
         const nonceGenerateResult = yield* Effect.either(
           Schema.decodeUnknown(ShopifyOAuthApiSchemas.generateNonce.response)(
-            nonceGenerated,
-          ),
+            nonceGenerated
+          )
         );
         expect(nonceGenerateResult._tag).toBe("Right");
 
         // 2. Store nonce request
         const nonceStoreRequest = {
-          organizationId: testOrganizationId,
+          organizationSlug: testOrganizationSlug,
           nonce: "flow_nonce_123" as Nonce,
         };
         const nonceStoreResult = yield* Effect.either(
           Schema.decodeUnknown(ShopifyOAuthApiSchemas.storeNonce.request)(
-            nonceStoreRequest,
-          ),
+            nonceStoreRequest
+          )
         );
         expect(nonceStoreResult._tag).toBe("Right");
 
         // 3. Verify nonce request/response
         const nonceVerifyRequest = {
-          organizationId: testOrganizationId,
+          organizationSlug: testOrganizationSlug,
           nonce: "flow_nonce_123" as Nonce,
         };
         const nonceVerifyResult = yield* Effect.either(
           Schema.decodeUnknown(ShopifyOAuthApiSchemas.verifyNonce.request)(
-            nonceVerifyRequest,
-          ),
+            nonceVerifyRequest
+          )
         );
         expect(nonceVerifyResult._tag).toBe("Right");
 
         const nonceVerifyResponse = { valid: true };
         const nonceVerifyResponseResult = yield* Effect.either(
           Schema.decodeUnknown(ShopifyOAuthApiSchemas.verifyNonce.response)(
-            nonceVerifyResponse,
-          ),
+            nonceVerifyResponse
+          )
         );
         expect(nonceVerifyResponseResult._tag).toBe("Right");
 
@@ -351,22 +351,22 @@ describe("Shopify OAuth API Schema Integration", () => {
         };
         const tokenExchangeResult = yield* Effect.either(
           Schema.decodeUnknown(ShopifyOAuthApiSchemas.exchangeToken.request)(
-            tokenExchangeRequest,
-          ),
+            tokenExchangeRequest
+          )
         );
         expect(tokenExchangeResult._tag).toBe("Right");
 
         // 5. Store access token
         const tokenStoreRequest = {
-          organizationId: testOrganizationId,
+          organizationSlug: testOrganizationSlug,
           shop: testShop,
           accessToken: testAccessToken,
           scope: testScope,
         };
         const tokenStoreResult = yield* Effect.either(
           Schema.decodeUnknown(ShopifyOAuthApiSchemas.storeToken.request)(
-            tokenStoreRequest,
-          ),
+            tokenStoreRequest
+          )
         );
         expect(tokenStoreResult._tag).toBe("Right");
 
@@ -377,11 +377,11 @@ describe("Shopify OAuth API Schema Integration", () => {
         };
         const tokenRetrieveResult = yield* Effect.either(
           Schema.decodeUnknown(ShopifyOAuthApiSchemas.retrieveToken.response)(
-            tokenRetrieveResponse,
-          ),
+            tokenRetrieveResponse
+          )
         );
         expect(tokenRetrieveResult._tag).toBe("Right");
-      }),
+      })
     );
   });
 });
