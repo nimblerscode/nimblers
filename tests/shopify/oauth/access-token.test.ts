@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
+import type { OrganizationSlug } from "../../../src/domain/global/organization/models";
 import {
   type AccessToken,
   AccessTokenError,
@@ -19,6 +20,7 @@ describe("Shopify OAuth Access Token Service", () => {
   const testClientSecret = "test_client_secret" as ClientSecret;
   const testToken = "shpat_test_token_12345" as AccessToken;
   const testScope = "read_products,write_products" as Scope;
+  const testOrganizationSlug = "test-org-123" as OrganizationSlug;
 
   // Mock service for testing
   const MockAccessTokenService = Layer.succeed(AccessTokenService, {
@@ -31,12 +33,18 @@ describe("Shopify OAuth Access Token Service", () => {
           } as AccessTokenResponse;
         }
         return yield* Effect.fail(
-          new AccessTokenError({ message: "Invalid code" }),
+          new AccessTokenError({ message: "Invalid code" })
         );
       }),
-    store: (_shop, _token, _scope) => Effect.succeed(void 0),
+    store: (_shop, _token, _scope, _organizationSlug) => Effect.succeed(void 0),
     retrieve: (_shop) => Effect.succeed(testToken),
-    delete: (_shop) => Effect.succeed(true),
+    retrieveWithOrganization: (_shop) =>
+      Effect.succeed({
+        accessToken: testToken,
+        scope: testScope,
+        organizationSlug: testOrganizationSlug,
+      }),
+    delete: (_shop) => Effect.succeed(void 0),
   });
 
   describe("Token Exchange", () => {
@@ -48,12 +56,12 @@ describe("Shopify OAuth Access Token Service", () => {
           testShop,
           testCode,
           testClientId,
-          testClientSecret,
+          testClientSecret
         );
 
         expect(response.access_token).toBe(testToken);
         expect(response.scope).toBe(testScope);
-      }).pipe(Effect.provide(MockAccessTokenService)),
+      }).pipe(Effect.provide(MockAccessTokenService))
     );
 
     it.scoped("should reject invalid authorization code", () =>
@@ -67,15 +75,15 @@ describe("Shopify OAuth Access Token Service", () => {
             testShop,
             invalidCode,
             testClientId,
-            testClientSecret,
-          ),
+            testClientSecret
+          )
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(AccessTokenError);
         }
-      }).pipe(Effect.provide(MockAccessTokenService)),
+      }).pipe(Effect.provide(MockAccessTokenService))
     );
   });
 
@@ -84,11 +92,16 @@ describe("Shopify OAuth Access Token Service", () => {
       Effect.gen(function* () {
         const accessTokenService = yield* AccessTokenService;
 
-        yield* accessTokenService.store(testShop, testToken, testScope);
+        yield* accessTokenService.store(
+          testShop,
+          testToken,
+          testScope,
+          testOrganizationSlug
+        );
 
         const retrievedToken = yield* accessTokenService.retrieve(testShop);
         expect(retrievedToken).toBe(testToken);
-      }).pipe(Effect.provide(MockAccessTokenService)),
+      }).pipe(Effect.provide(MockAccessTokenService))
     );
   });
 
@@ -99,7 +112,7 @@ describe("Shopify OAuth Access Token Service", () => {
 
         const retrievedToken = yield* accessTokenService.retrieve(testShop);
         expect(retrievedToken).toBe(testToken);
-      }).pipe(Effect.provide(MockAccessTokenService)),
+      }).pipe(Effect.provide(MockAccessTokenService))
     );
   });
 });
