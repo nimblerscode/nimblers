@@ -3,6 +3,7 @@
 import { env } from "cloudflare:workers";
 import { Data, Effect, Layer } from "effect";
 import { StoreConnectionLayerLive } from "@/config/shopify";
+import { Tracing } from "@/tracing";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import {
   StoreConnectionError,
@@ -28,34 +29,27 @@ interface ConnectedStore {
   createdAt: string;
 }
 
-// UI-friendly error types
-export class OrganizationNotFoundError extends Data.TaggedError(
-  "OrganizationNotFoundError",
+// Error types for better error handling
+class OrganizationNotFoundError extends Data.TaggedError(
+  "OrganizationNotFoundError"
 )<{
   message: string;
   retryable: boolean;
 }> {}
 
-export class DatabaseUnavailableError extends Data.TaggedError(
-  "DatabaseUnavailableError",
+class DatabaseUnavailableError extends Data.TaggedError(
+  "DatabaseUnavailableError"
 )<{
   message: string;
   retryable: boolean;
 }> {}
 
-export class PermissionDeniedError extends Data.TaggedError(
-  "PermissionDeniedError",
-)<{
+class NetworkError extends Data.TaggedError("NetworkError")<{
   message: string;
   retryable: boolean;
 }> {}
 
-export class NetworkError extends Data.TaggedError("NetworkError")<{
-  message: string;
-  retryable: boolean;
-}> {}
-
-export class UnknownStoreError extends Data.TaggedError("UnknownStoreError")<{
+class UnknownStoreError extends Data.TaggedError("UnknownStoreError")<{
   message: string;
   retryable: boolean;
 }> {}
@@ -63,27 +57,34 @@ export class UnknownStoreError extends Data.TaggedError("UnknownStoreError")<{
 type StoreActionError =
   | OrganizationNotFoundError
   | DatabaseUnavailableError
-  | PermissionDeniedError
   | NetworkError
   | UnknownStoreError;
 
-export type ConnectedStoreResult =
+type ConnectedStoreResult =
   | { success: true; data: ConnectedStore[] }
   | { success: false; error: StoreActionError };
 
 export async function getOrganizationConnectedStores(
-  organizationSlug: OrganizationSlug,
+  organizationSlug: OrganizationSlug
 ): Promise<ConnectedStoreResult> {
   const program = Effect.gen(function* () {
     const storeService = yield* ShopifyStoreService;
 
-    const stores = yield* storeService.getConnectedStores(organizationSlug);
+    const stores = yield* storeService
+      .getConnectedStores(organizationSlug)
+      .pipe(
+        Effect.withSpan("get-connected-stores", {
+          attributes: {
+            "organization.slug": organizationSlug,
+            "action.type": "get-connected-stores",
+          },
+        })
+      );
 
-    // Return the full store data with proper format
     return stores.map((store) => ({
       id: store.id,
       organizationId: store.organizationId,
-      type: "shopify" as const,
+      type: store.type,
       shopDomain: store.shopDomain,
       scope: store.scope,
       status: store.status,
@@ -93,7 +94,12 @@ export async function getOrganizationConnectedStores(
       createdAt: store.createdAt.toISOString(),
     }));
   }).pipe(
-    // Map all errors to our UI-friendly error types
+    Effect.withSpan("get-organization-connected-stores-action", {
+      attributes: {
+        "action.type": "get-organization-connected-stores",
+        "organization.slug": organizationSlug,
+      },
+    }),
     Effect.mapError((error): StoreActionError => {
       if (error instanceof StoreNotFoundError) {
         return new OrganizationNotFoundError({
@@ -135,7 +141,7 @@ export async function getOrganizationConnectedStores(
         message: "An unexpected error occurred",
         retryable: true,
       });
-    }),
+    })
   );
 
   const d1Layer = D1BindingLive(env);
@@ -149,10 +155,11 @@ export async function getOrganizationConnectedStores(
   return Effect.runPromise(
     program.pipe(
       Effect.provide(layer),
+      Effect.provide(Tracing), // Add tracing layer
       Effect.match({
         onFailure: (error) => ({ success: false as const, error }),
         onSuccess: (data) => ({ success: true as const, data }),
-      }),
-    ),
+      })
+    )
   );
 }

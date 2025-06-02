@@ -25,22 +25,23 @@ import {
 } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
 import { OrgRepoLive } from "@/infrastructure/persistence/tenant/sqlite/OrgRepoLive";
+import { Tracing } from "@/tracing";
 import { OrganizationApiSchemas } from "./schemas";
 
 const idParam = HttpApiSchema.param("id", Schema.NumberFromString);
 
 class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
-  {},
+  {}
 ) {}
 
 const _getOrganizations = HttpApiEndpoint.get(
   "getOrganizations",
-  "/organizations",
+  "/organizations"
 ).addSuccess(Schema.Array(OrganizationApiSchemas.getOrganization.response));
 
 const getOrganization = HttpApiEndpoint.get(
-  "getOrganization",
+  "getOrganization"
 )`/organization/:organizationSlug`
   .addSuccess(OrganizationApiSchemas.getOrganization.response)
   .addError(HttpApiError.NotFound)
@@ -48,28 +49,28 @@ const getOrganization = HttpApiEndpoint.get(
 
 const createOrganization = HttpApiEndpoint.post(
   "createOrganization",
-  "/organization",
+  "/organization"
 )
   .setPayload(OrganizationApiSchemas.createOrganization.request)
   .addSuccess(OrganizationApiSchemas.createOrganization.response);
 
 const _deleteOrganization = HttpApiEndpoint.del(
-  "deleteOrganization",
+  "deleteOrganization"
 )`/organizations/${idParam}`;
 
 const _updateOrganization = HttpApiEndpoint.patch(
-  "updateOrganization",
+  "updateOrganization"
 )`/organizations/${idParam}`
   .setPayload(
     Schema.Struct({
       name: Schema.String,
-    }),
+    })
   )
   .addSuccess(OrganizationApiSchemas.getOrganization.response);
 
 const createInvitation = HttpApiEndpoint.post(
   "createInvitation",
-  "/:organizationSlug/invite",
+  "/:organizationSlug/invite"
 )
   .setPath(Schema.Struct({ organizationSlug: Schema.String }))
   .setPayload(OrganizationApiSchemas.createInvitation.request)
@@ -78,7 +79,7 @@ const createInvitation = HttpApiEndpoint.post(
 
 const getInvitation = HttpApiEndpoint.get(
   "getInvitation",
-  "/invitations/:organizationSlug",
+  "/invitations/:organizationSlug"
 )
   .setPath(OrganizationApiSchemas.getInvitation.path)
   .setUrlParams(OrganizationApiSchemas.getInvitation.urlParams)
@@ -87,7 +88,7 @@ const getInvitation = HttpApiEndpoint.get(
 
 const acceptInvitation = HttpApiEndpoint.post(
   "acceptInvitation",
-  "/invitations/:id/accept",
+  "/invitations/:id/accept"
 )
   .setPath(OrganizationApiSchemas.acceptInvitation.path)
   .setPayload(OrganizationApiSchemas.acceptInvitation.request)
@@ -96,7 +97,7 @@ const acceptInvitation = HttpApiEndpoint.post(
 
 const getMembers = HttpApiEndpoint.get(
   "getMembers",
-  "/members/:organizationSlug",
+  "/members/:organizationSlug"
 )
   .addSuccess(OrganizationApiSchemas.getMembers.response)
   .addError(HttpApiError.NotFound)
@@ -109,7 +110,7 @@ const getInvitations = HttpApiEndpoint.get("getInvitations", "/invitations")
 // Store management endpoints
 const getConnectedStores = HttpApiEndpoint.get(
   "getConnectedStores",
-  "/:organizationSlug/stores",
+  "/:organizationSlug/stores"
 )
   .setPath(OrganizationApiSchemas.getConnectedStores.path)
   .addSuccess(OrganizationApiSchemas.getConnectedStores.response)
@@ -122,7 +123,7 @@ const connectStore = HttpApiEndpoint.post("connectStore", "/stores")
 
 const disconnectStore = HttpApiEndpoint.del(
   "disconnectStore",
-  "/stores/:shopDomain",
+  "/stores/:shopDomain"
 )
   .setPath(OrganizationApiSchemas.disconnectStore.path)
   .addSuccess(OrganizationApiSchemas.disconnectStore.response)
@@ -160,13 +161,20 @@ const organizationsGroupLive = () =>
           const result = yield* repository.get(organizationSlug);
           return result;
         }).pipe(
+          Effect.withSpan("OrganizationDO.getOrganization", {
+            attributes: {
+              "organization.slug": organizationSlug,
+              "api.endpoint": "/organization/:organizationSlug",
+              "api.method": "GET",
+            },
+          }),
           Effect.mapError(
             (error) =>
               new HttpApiError.HttpApiDecodeError({
                 message: error.message || String(error),
                 issues: [],
-              }),
-          ),
+              })
+          )
         );
       })
       .handle("createOrganization", ({ payload }) => {
@@ -176,37 +184,37 @@ const organizationsGroupLive = () =>
               Effect.annotateLogs({
                 payload: JSON.stringify(payload, null, 2),
                 timestamp: new Date().toISOString(),
-              }),
+              })
             );
 
             yield* Effect.log(
-              "Attempting to get OrganizationUseCase dependency",
+              "Attempting to get OrganizationUseCase dependency"
             );
             const organizationUseCase = yield* OrganizationUseCase;
             yield* Effect.log("OrganizationUseCase obtained successfully").pipe(
               Effect.annotateLogs({
                 useCaseType: typeof organizationUseCase,
                 availableMethods: Object.keys(organizationUseCase),
-              }),
+              })
             );
 
             yield* Effect.log("Calling organizationUseCase.createOrg").pipe(
               Effect.annotateLogs({
                 organization: JSON.stringify(payload.organization, null, 2),
                 userId: payload.userId,
-              }),
+              })
             );
 
             const result = yield* organizationUseCase.createOrg(
               payload.organization,
-              payload.userId,
+              payload.userId
             );
 
             yield* Effect.log("Organization created successfully").pipe(
               Effect.annotateLogs({
                 result: JSON.stringify(result, null, 2),
                 timestamp: new Date().toISOString(),
-              }),
+              })
             );
 
             // The use case returns { org: Organization, memberCreateData: {} }
@@ -214,11 +222,11 @@ const organizationsGroupLive = () =>
             const organization = result.org;
 
             yield* Effect.log(
-              "=== CREATE ORGANIZATION HANDLER SUCCESS ===",
+              "=== CREATE ORGANIZATION HANDLER SUCCESS ==="
             ).pipe(
               Effect.annotateLogs({
                 resultOrg: JSON.stringify(organization, null, 2),
-              }),
+              })
             );
 
             // Ensure the organization object matches OrganizationSchema
@@ -236,61 +244,79 @@ const organizationsGroupLive = () =>
                 formattedOrganization: JSON.stringify(
                   formattedOrganization,
                   null,
-                  2,
+                  2
                 ),
-              }),
+              })
             );
 
             return formattedOrganization;
           } catch (error) {
             yield* Effect.logError(
-              "=== SYNC ERROR IN CREATE ORGANIZATION HANDLER ===",
+              "=== SYNC ERROR IN CREATE ORGANIZATION HANDLER ==="
             ).pipe(
               Effect.annotateLogs({
                 error: error instanceof Error ? error.message : String(error),
                 stack: error instanceof Error ? error.stack : undefined,
                 errorType: typeof error,
                 timestamp: new Date().toISOString(),
-              }),
+              })
             );
             throw error;
           }
         }).pipe(
+          Effect.withSpan("OrganizationDO.createOrganization", {
+            attributes: {
+              "organization.name": payload.organization.name,
+              "organization.slug": payload.organization.slug,
+              "user.id": payload.userId,
+              "api.endpoint": "/organization",
+              "api.method": "POST",
+            },
+          }),
           Effect.mapError((error) => {
             Effect.runSync(
               Effect.logError(
-                "=== EFFECT ERROR IN CREATE ORGANIZATION HANDLER ===",
+                "=== EFFECT ERROR IN CREATE ORGANIZATION HANDLER ==="
               ).pipe(
                 Effect.annotateLogs({
                   error: error instanceof Error ? error.message : String(error),
                   stack: error instanceof Error ? error.stack : undefined,
                   errorType: typeof error,
                   timestamp: new Date().toISOString(),
-                }),
-              ),
+                })
+              )
             );
             return new HttpApiError.HttpApiDecodeError({
               message: error.message || String(error),
               issues: [],
             });
-          }),
+          })
         );
       })
       .handle("createInvitation", ({ path: { organizationSlug }, payload }) => {
         return Effect.gen(function* () {
           const invitationService = yield* InvitationUseCase;
           const invitation = yield* invitationService.create(
-            payload.newInvitation,
+            payload.newInvitation
           );
 
           return { invitation };
         }).pipe(
+          Effect.withSpan("OrganizationDO.createInvitation", {
+            attributes: {
+              "organization.slug": organizationSlug,
+              "invitation.email": payload.newInvitation.inviteeEmail,
+              "invitation.role": payload.newInvitation.role,
+              "api.endpoint": "/:organizationSlug/invite",
+              "api.method": "POST",
+            },
+          }),
           Effect.mapError((error) => {
             return new HttpApiError.HttpApiDecodeError({
               message: error.message || String(error),
               issues: [],
             });
-          }),
+          })
         );
       })
       .handle("getInvitation", ({ path: { organizationSlug } }) => {
@@ -302,20 +328,28 @@ const organizationsGroupLive = () =>
               new HttpApiError.HttpApiDecodeError({
                 message: "Token is required",
                 issues: [],
-              }),
+              })
             );
           }
           const invitationService = yield* InvitationUseCase;
           const invitation = yield* invitationService.get(token);
           return invitation;
         }).pipe(
+          Effect.withSpan("OrganizationDO.getInvitation", {
+            attributes: {
+              "organization.slug": organizationSlug,
+              "invitation.token.present": !!token,
+              "api.endpoint": "/invitations/:organizationSlug",
+              "api.method": "GET",
+            },
+          }),
           Effect.mapError(
             (error) =>
               new HttpApiError.HttpApiDecodeError({
                 message: error.message || String(error),
                 issues: [],
-              }),
-          ),
+              })
+          )
         );
       })
       .handle("getMembers", ({ path: { organizationSlug } }) => {
@@ -324,13 +358,20 @@ const organizationsGroupLive = () =>
           const members = yield* memberRepo.getMembers;
           return members;
         }).pipe(
+          Effect.withSpan("OrganizationDO.getMembers", {
+            attributes: {
+              "organization.slug": organizationSlug,
+              "api.endpoint": "/members/:organizationSlug",
+              "api.method": "GET",
+            },
+          }),
           Effect.mapError(
             (error) =>
               new HttpApiError.HttpApiDecodeError({
                 message: error.message || String(error),
                 issues: [],
-              }),
-          ),
+              })
+          )
         );
       })
       .handle("getInvitations", () => {
@@ -343,10 +384,17 @@ const organizationsGroupLive = () =>
                 new HttpApiError.HttpApiDecodeError({
                   message: error.message || String(error),
                   issues: [],
-                }),
-            ),
+                })
+            )
           );
-        });
+        }).pipe(
+          Effect.withSpan("OrganizationDO.getInvitations", {
+            attributes: {
+              "api.endpoint": "/invitations",
+              "api.method": "GET",
+            },
+          })
+        );
       })
       .handle(
         "acceptInvitation",
@@ -373,7 +421,7 @@ const organizationsGroupLive = () =>
                       ],
                     });
                   }),
-                  Effect.tap(() => {}),
+                  Effect.tap(() => {})
                 );
 
               return result;
@@ -392,11 +440,21 @@ const organizationsGroupLive = () =>
                       path: [],
                     },
                   ],
-                }),
+                })
               );
             }
-          });
-        },
+          }).pipe(
+            Effect.withSpan("OrganizationDO.acceptInvitation", {
+              attributes: {
+                "invitation.id": id,
+                "invitation.token.present": !!token,
+                "user.id": userId,
+                "api.endpoint": "/invitations/:id/accept",
+                "api.method": "POST",
+              },
+            })
+          );
+        }
       )
       .handle("getConnectedStores", ({ path: { organizationSlug } }) => {
         return Effect.gen(function* () {
@@ -410,9 +468,9 @@ const organizationsGroupLive = () =>
                   new Error(
                     `Failed to get organization '${organizationSlug}': ${
                       error.message || String(error)
-                    }`,
-                  ),
-              ),
+                    }`
+                  )
+              )
             );
 
           const stores = yield* connectedStoreRepo
@@ -423,20 +481,27 @@ const organizationsGroupLive = () =>
                   new Error(
                     `Failed to get stores for org '${org.id}' (${org.name}): ${
                       error.message || String(error)
-                    }`,
-                  ),
-              ),
+                    }`
+                  )
+              )
             );
 
           return stores;
         }).pipe(
+          Effect.withSpan("OrganizationDO.getConnectedStores", {
+            attributes: {
+              "organization.slug": organizationSlug,
+              "api.endpoint": "/:organizationSlug/stores",
+              "api.method": "GET",
+            },
+          }),
           Effect.mapError(
             (error) =>
               new HttpApiError.HttpApiDecodeError({
                 message: error.message || String(error),
                 issues: [],
-              }),
-          ),
+              })
+          )
         );
       })
       .handle("connectStore", ({ payload }) => {
@@ -452,8 +517,8 @@ const organizationsGroupLive = () =>
                 new HttpApiError.HttpApiDecodeError({
                   message: `Organization '${orgSlugFromPayload}' not found. The organization must exist before connecting stores.`,
                   issues: [],
-                }),
-            ),
+                })
+            )
           );
 
           // Verify org exists before proceeding
@@ -462,13 +527,13 @@ const organizationsGroupLive = () =>
               new HttpApiError.HttpApiDecodeError({
                 message: `Organization '${orgSlugFromPayload}' not found`,
                 issues: [],
-              }),
+              })
             );
           }
 
           // Check if the shop is already connected to this organization (local check)
           const existingStore = yield* connectedStoreRepo.getByShopDomain(
-            payload.shopDomain,
+            payload.shopDomain
           );
 
           if (existingStore && existingStore.organizationId !== org.id) {
@@ -476,7 +541,7 @@ const organizationsGroupLive = () =>
               new HttpApiError.HttpApiDecodeError({
                 message: `Shop '${payload.shopDomain}' is already connected to another organization. Each Shopify store can only be connected to one organization at a time. Please disconnect from the current organization before connecting to '${orgSlugFromPayload}'.`,
                 issues: [],
-              }),
+              })
             );
           }
 
@@ -500,6 +565,15 @@ const organizationsGroupLive = () =>
             status: store.status,
           };
         }).pipe(
+          Effect.withSpan("OrganizationDO.connectStore", {
+            attributes: {
+              "organization.slug": payload.organizationSlug,
+              "store.shopDomain": payload.shopDomain,
+              "store.type": payload.type,
+              "api.endpoint": "/stores",
+              "api.method": "POST",
+            },
+          }),
           Effect.mapError((error) => {
             if (error instanceof Error) {
               return new HttpApiError.HttpApiDecodeError({
@@ -514,7 +588,7 @@ const organizationsGroupLive = () =>
               }`,
               issues: [],
             });
-          }),
+          })
         );
       })
       .handle("disconnectStore", ({ path: { shopDomain } }) => {
@@ -528,20 +602,27 @@ const organizationsGroupLive = () =>
 
           return { success: true };
         }).pipe(
+          Effect.withSpan("OrganizationDO.disconnectStore", {
+            attributes: {
+              "store.shopDomain": shopDomain,
+              "api.endpoint": "/stores/:shopDomain",
+              "api.method": "DELETE",
+            },
+          }),
           Effect.mapError(
             (error) =>
               new HttpApiError.HttpApiDecodeError({
                 message: error.message || String(error),
                 issues: [],
-              }),
-          ),
+              })
+          )
         );
-      }),
+      })
   );
 
 export function getOrgHandler(
   doState: DurableObjectState,
-  organizationSlug: string,
+  organizationSlug: string
 ) {
   // Use the provided organization slug instead of relying on doState.id.name
   if (!organizationSlug || organizationSlug.trim().length === 0) {
@@ -551,15 +632,15 @@ export function getOrgHandler(
   const MemberServiceLayer = Layer.provide(MemberRepoLive, DrizzleDOClientLive);
   const OrgServiceLayer = Layer.provide(
     OrgRepoLive,
-    Layer.merge(DrizzleDOClientLive, MemberServiceLayer),
+    Layer.merge(DrizzleDOClientLive, MemberServiceLayer)
   );
   const ConnectedStoreLayer = Layer.provide(
     ConnectedStoreRepoLive,
-    DrizzleDOClientLive,
+    DrizzleDOClientLive
   );
   const OrganizationUseCaseLayer = Layer.provide(
     OrganizationUseCaseLive,
-    Layer.merge(OrgServiceLayer, ConnectedStoreLayer),
+    Layer.merge(OrgServiceLayer, ConnectedStoreLayer)
   );
   const DORepoLayer = Layer.succeed(DurableObjectState, doState);
 
@@ -571,7 +652,7 @@ export function getOrgHandler(
 
   const InvitationRepoLayer = Layer.provide(
     InvitationLayerLive(organizationDoId),
-    DORepoLayer,
+    DORepoLayer
   );
   const finalLayer = Layer.provide(
     Layer.mergeAll(
@@ -579,25 +660,31 @@ export function getOrgHandler(
       InvitationRepoLayer,
       MemberServiceLayer,
       ConnectedStoreLayer,
-      OrganizationUseCaseLayer,
+      OrganizationUseCaseLayer
     ),
-    DORepoLayer,
+    DORepoLayer
   );
   // Organizations group layer with all dependencies
   const organizationsGroupLayerLive = Layer.provide(
     organizationsGroupLive(), // Pass the organization slug
-    finalLayer,
+    finalLayer
   );
   // API layer with Swagger
   const OrganizationApiLive = HttpApiBuilder.api(api).pipe(
-    Layer.provide(organizationsGroupLayerLive),
+    Layer.provide(organizationsGroupLayerLive)
   );
   const SwaggerLayer = HttpApiSwagger.layer().pipe(
-    Layer.provide(OrganizationApiLive),
+    Layer.provide(OrganizationApiLive)
   );
-  // Final handler with all layers merged
+  // Final handler with all layers merged, including tracing
   const { dispose, handler } = HttpApiBuilder.toWebHandler(
-    Layer.mergeAll(OrganizationApiLive, SwaggerLayer, HttpServer.layerContext),
+    Layer.mergeAll(
+      OrganizationApiLive,
+      SwaggerLayer,
+      HttpServer.layerContext,
+      Tracing
+    )
   );
+
   return { dispose, handler };
 }

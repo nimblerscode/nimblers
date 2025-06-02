@@ -1,10 +1,11 @@
 "use server";
 
 import { env } from "cloudflare:workers";
-import { Effect, Exit, Layer } from "effect";
+import { Effect, Layer } from "effect";
 import { requestInfo } from "rwsdk/worker";
 
 import { DatabaseLive, OrganizationDOLive } from "@/config/layers";
+import { Tracing } from "@/tracing";
 
 import { OrgD1Service } from "@/domain/global/organization/service";
 import type { UserId } from "@/domain/global/user/model";
@@ -24,127 +25,112 @@ export interface CreateOrganizationActionState {
   organization?: NewOrganization | null; // Or a more specific DTO for the created org
 }
 
-// === CREATE ORGANIZATION ACTION ===
+// Define the server action for creating an organization
 export async function createOrganizationAction(
   _prevState: CreateOrganizationActionState, // previous state from useActionState
-  formData: FormData,
+  formData: FormData
 ): Promise<CreateOrganizationActionState> {
-  const ctx = requestInfo.ctx as AppContext;
+  const program = Effect.gen(function* () {
+    // Get the user context from rwsdk
+    const ctx = requestInfo.ctx as AppContext;
 
-  // --- Retrieve authenticated userId ---
-  if (!ctx.session || !ctx.session.userId) {
-    return {
-      success: false,
-      message: "Authentication required. Please log in and try again.",
-      errors: { auth: ["User not authenticated."] },
-      organization: null,
+    if (!ctx.session || !ctx.session.userId) {
+      return {
+        success: false,
+        message: "User not authenticated.",
+        errors: null,
+      };
+    }
+
+    const creatorId = ctx.session.userId;
+
+    // Extract and validate organization data from the form
+    const name = formData.get("name") as string;
+    const slug = formData.get("slug") as string;
+    const logo = formData.get("logo") as string | null;
+
+    if (!name || !slug) {
+      return {
+        success: false,
+        message: "Organization name and slug are required.",
+        errors: {
+          name: !name ? ["Organization name is required"] : [],
+          slug: !slug ? ["Organization slug is required"] : [],
+        },
+      };
+    }
+
+    // Transform to expected format
+    const newOrganization: NewOrganization = {
+      name,
+      slug,
+      logo: logo || null,
+      metadata: null,
     };
-  }
-  const creatorId = ctx.session.userId;
 
-  // --- Basic Validation (can be enhanced or moved) ---
-  const name = formData.get("name") as string;
-  const logo = formData.get("logo") as string | undefined;
-
-  // Validate organization name
-  if (!name || typeof name !== "string" || name.trim().length === 0) {
-    return {
-      success: false,
-      message: "Organization name is required and cannot be empty.",
-      errors: { name: ["Organization name is required and cannot be empty."] },
-      organization: null,
-    };
-  }
-
-  // the slug is the name in lowercase with dashes
-  const slug = name.trim().toLowerCase().replace(/ /g, "-");
-
-  // Validate slug
-  if (!slug || slug.length === 0) {
-    return {
-      success: false,
-      message: "Invalid organization name. Please provide a valid name.",
-      errors: {
-        name: ["Invalid organization name. Please provide a valid name."],
-      },
-      organization: null,
-    };
-  }
-
-  const orgCreatePayload: NewOrganization = {
-    name: name.trim(),
-    slug,
-    logo: logo ?? undefined,
-    // id and createdAt will be handled by the DO/service layer
-  };
-
-  // Create the Effect program using the service
-  const createOrgProgram = OrganizationDOService.pipe(
-    Effect.flatMap((service) =>
-      service.createOrganization(orgCreatePayload, creatorId as UserId),
-    ),
-  );
-
-  const finalLayer = OrganizationDOLive({ ORG_DO: env.ORG_DO });
-  const runnableEffect = createOrgProgram.pipe(Effect.provide(finalLayer));
-
-  // Run the Effect
-  const program = await Effect.runPromiseExit(runnableEffect);
-
-  if (Exit.isSuccess(program)) {
-    // insert the organization into the D1 database
-    const organization = program.value;
-
-    // Create the effect to insert into main DB
-    const orgRepoLayer = OrgRepoD1LayerLive.pipe(
-      Layer.provide(DatabaseLive({ DB: env.DB })),
+    // Create organization via DO
+    const organization = yield* OrganizationDOService.pipe(
+      Effect.flatMap((service) =>
+        service.createOrganization(newOrganization, creatorId as UserId)
+      ),
+      Effect.withSpan("create-organization-in-do", {
+        attributes: {
+          "organization.name": name,
+          "organization.slug": slug,
+          "user.id": creatorId,
+          "action.type": "create-organization",
+        },
+      })
     );
 
-    const create = OrgD1Service.pipe(
+    // Create the effect to insert into main DB
+    const orgD1Result = yield* OrgD1Service.pipe(
       Effect.flatMap((service) =>
         service.create({
           id: organization.id, // Use slug as ID for consistency
           slug: organization.slug,
           creatorId: creatorId as UserId,
-        }),
+        })
       ),
-    ).pipe(Effect.provide(orgRepoLayer));
-
-    const result = await Effect.runPromiseExit(create);
-
-    if (Exit.isSuccess(result)) {
-      return {
-        success: true,
-        message: "Organization created successfully!",
-        organization: {
-          name: organization.name,
-          slug: organization.slug,
-          logo: organization.logo ?? undefined,
+      Effect.withSpan("create-organization-in-d1", {
+        attributes: {
+          "organization.id": organization.id,
+          "organization.slug": organization.slug,
+          "user.id": creatorId,
         },
-        errors: null,
-      };
-    }
+      })
+    );
 
-    if (Exit.isFailure(result)) {
-      return {
-        success: false,
-        message: "Failed to insert organization into main DB.",
-        errors: null,
-      };
-    }
-  }
-
-  if (Exit.isFailure(program)) {
     return {
-      success: false,
-      message: `Failed to create organization: ${program.cause}`,
+      success: true,
+      message: "Organization created successfully!",
+      organization: {
+        name: organization.name,
+        slug: organization.slug,
+        logo: organization.logo ? organization.logo : undefined,
+      },
       errors: null,
     };
-  }
+  }).pipe(
+    Effect.withSpan("create-organization-action", {
+      attributes: {
+        "action.type": "create-organization",
+      },
+    }),
+    Effect.provide(
+      Layer.mergeAll(
+        OrganizationDOLive({ ORG_DO: env.ORG_DO }),
+        OrgRepoD1LayerLive.pipe(Layer.provide(DatabaseLive({ DB: env.DB })))
+      )
+    ),
+    Effect.catchAll((error) =>
+      Effect.succeed({
+        success: false,
+        message: `Failed to create organization: ${error}`,
+        errors: null,
+      })
+    )
+  );
 
-  return {
-    success: false,
-    message: "Failed to create organization. Unknown error.",
-    errors: null,
-  };
+  return Effect.runPromise(program.pipe(Effect.provide(Tracing)));
 }

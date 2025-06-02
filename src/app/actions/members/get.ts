@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { Effect, Layer } from "effect";
 import { requestInfo } from "rwsdk/worker";
 import { DatabaseLive, MemberDOLive } from "@/config/layers";
+import { Tracing } from "@/tracing";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import { OrgD1Service } from "@/domain/global/organization/service";
 import type { UserId } from "@/domain/global/user/model";
@@ -24,62 +25,77 @@ function checkIfOrgExists(organizationSlug: OrganizationSlug) {
 
   const getOrgIdBySlugProgram = OrgD1Service.pipe(
     Effect.flatMap((service) =>
-      service.verifyUserOrgMembership(organizationSlug, userId),
-    ),
+      service.verifyUserOrgMembership(organizationSlug, userId)
+    )
   );
 
   const finalLayer = OrgRepoD1LayerLive.pipe(
-    Layer.provide(DatabaseLive({ DB: env.DB })),
+    Layer.provide(DatabaseLive({ DB: env.DB }))
   );
 
   const slug = Effect.runPromise(
-    getOrgIdBySlugProgram.pipe(Effect.provide(finalLayer)),
+    getOrgIdBySlugProgram.pipe(Effect.provide(finalLayer))
   );
 
   return slug;
 }
 
 async function getUsersFromMembers(members: Member[]) {
-  const memberIds = members.map((member) => member.userId);
+  const program = Effect.gen(function* () {
+    const userRepo = yield* UserRepo;
+    const userIds = members.map((member) => member.userId);
+    const users = yield* userRepo.getUsers(userIds);
 
-  const getUsersProgram = UserRepo.pipe(
-    Effect.flatMap((service) => service.getUsers(memberIds)),
+    return members.map((member) => {
+      const user = users.find((u: any) => u.id === member.userId);
+      return {
+        ...member,
+        user: user || null,
+      };
+    });
+  });
+
+  const userRepoLayer = UserRepoLive.pipe(
+    Layer.provide(DatabaseLive({ DB: env.DB }))
   );
 
-  const finalLayer = UserRepoLive.pipe(
-    Layer.provide(DatabaseLive({ DB: env.DB })),
-  );
-
-  const users = await Effect.runPromise(
-    getUsersProgram.pipe(Effect.provide(finalLayer)),
-  );
-
-  return users;
+  return Effect.runPromise(program.pipe(Effect.provide(userRepoLayer)));
 }
 
 export async function getMembers(organizationSlug: OrganizationSlug) {
-  const slug = Effect.tryPromise({
-    try: () => checkIfOrgExists(organizationSlug),
-    catch: (e) => {
-      return e;
-    },
-  });
+  const program = Effect.gen(function* () {
+    const slug = yield* Effect.tryPromise({
+      try: () => checkIfOrgExists(organizationSlug),
+      catch: (e) => {
+        return e;
+      },
+    });
 
-  const slugResult = await Effect.runPromise(slug);
+    const members = yield* MemberDOService.pipe(
+      Effect.flatMap((service) => service.get(slug)),
+      Effect.catchAll((_e) => {
+        return Effect.succeed([]);
+      }),
+      Effect.withSpan("get-members-from-do", {
+        attributes: {
+          "organization.slug": organizationSlug,
+          "action.type": "get-members",
+        },
+      })
+    );
 
-  const getMembersProgram = MemberDOService.pipe(
-    Effect.flatMap((service) => service.get(slugResult)),
-    Effect.catchAll((_e) => {
-      return Effect.succeed([]);
+    const users = yield* Effect.promise(() => getUsersFromMembers(members));
+
+    return { members: users };
+  }).pipe(
+    Effect.withSpan("get-members-action", {
+      attributes: {
+        "action.type": "get-members",
+        "organization.slug": organizationSlug,
+      },
     }),
+    Effect.provide(MemberDOLive({ ORG_DO: env.ORG_DO }))
   );
 
-  const finalLayer = MemberDOLive({ ORG_DO: env.ORG_DO });
-
-  const runnableEffect = getMembersProgram.pipe(Effect.provide(finalLayer));
-  const program = await Effect.runPromise(runnableEffect);
-
-  const users = await getUsersFromMembers(program);
-
-  return { members: users };
+  return Effect.runPromise(program.pipe(Effect.provide(Tracing)));
 }
