@@ -11,7 +11,7 @@ describe("Organization Store Connections", () => {
   const createConnectedStoreData = (
     organizationSlug: string,
     shopDomain: string,
-    status: "active" | "disconnected" | "error" = "active"
+    status: "active" | "disconnected" | "error" = "active",
   ) => ({
     id: `store-${organizationSlug}-${shopDomain.replace(".myshopify.com", "")}`,
     organizationId: organizationSlug,
@@ -34,7 +34,7 @@ describe("Organization Store Connections", () => {
     it("should validate connected store data structure", () => {
       const store = createConnectedStoreData(
         "test-org",
-        "test-shop.myshopify.com"
+        "test-shop.myshopify.com",
       );
 
       expect(store).toHaveProperty("id");
@@ -59,17 +59,17 @@ describe("Organization Store Connections", () => {
       const activeStore = createConnectedStoreData(
         "org-1",
         "active.myshopify.com",
-        "active"
+        "active",
       );
       const disconnectedStore = createConnectedStoreData(
         "org-1",
         "disconnected.myshopify.com",
-        "disconnected"
+        "disconnected",
       );
       const errorStore = createConnectedStoreData(
         "org-1",
         "error.myshopify.com",
-        "error"
+        "error",
       );
 
       expect(activeStore.status).toBe("active");
@@ -101,10 +101,10 @@ describe("Organization Store Connections", () => {
 
       // Verify organization IDs are different
       expect(
-        org1Stores.every((store) => store.organizationId === "org-1")
+        org1Stores.every((store) => store.organizationId === "org-1"),
       ).toBe(true);
       expect(
-        org2Stores.every((store) => store.organizationId === "org-2")
+        org2Stores.every((store) => store.organizationId === "org-2"),
       ).toBe(true);
     });
 
@@ -112,7 +112,7 @@ describe("Organization Store Connections", () => {
       // This tests that shop domains can only be connected to ONE organization
       const org1Store = createConnectedStoreData(
         "org-1",
-        "exclusive-shop.myshopify.com"
+        "exclusive-shop.myshopify.com",
       );
 
       // Attempting to connect the same shop to another organization should be prevented
@@ -187,7 +187,7 @@ describe("Organization Store Connections", () => {
         createConnectedStoreData(
           "test-org",
           "shop2.myshopify.com",
-          "disconnected"
+          "disconnected",
         ),
       ];
 
@@ -209,7 +209,7 @@ describe("Organization Store Connections", () => {
       expect(apiResponse[0].status).toBe("active");
       expect(apiResponse[1].status).toBe("disconnected");
       expect(
-        apiResponse.every((store) => store.organizationId === "test-org")
+        apiResponse.every((store) => store.organizationId === "test-org"),
       ).toBe(true);
     });
 
@@ -297,20 +297,20 @@ describe("Organization Store Connections", () => {
       authUrl.searchParams.set("scope", "read_products,write_products");
       authUrl.searchParams.set(
         "redirect_uri",
-        `${baseUrl}/shopify/oauth/callback`
+        `${baseUrl}/shopify/oauth/callback`,
       );
       authUrl.searchParams.set("state", createOAuthState(organizationSlug));
 
       expect(authUrl.hostname).toBe("test-shop.myshopify.com");
       expect(authUrl.pathname).toBe("/admin/oauth/authorize");
       expect(authUrl.searchParams.get("client_id")).toBe(
-        testEnv.SHOPIFY_CLIENT_ID
+        testEnv.SHOPIFY_CLIENT_ID,
       );
       expect(authUrl.searchParams.get("scope")).toBe(
-        "read_products,write_products"
+        "read_products,write_products",
       );
       expect(authUrl.searchParams.get("redirect_uri")).toBe(
-        `${baseUrl}/shopify/oauth/callback`
+        `${baseUrl}/shopify/oauth/callback`,
       );
       expect(authUrl.searchParams.get("state")).toContain(organizationSlug);
     });
@@ -333,7 +333,7 @@ describe("Organization Store Connections", () => {
       const errorStore = createConnectedStoreData(
         "test-org",
         "error.myshopify.com",
-        "error"
+        "error",
       );
 
       expect(errorStore.status).toBe("error");
@@ -369,12 +369,12 @@ describe("Organization Store Connections", () => {
       const connectedStore = createConnectedStoreData(
         "test-org",
         "connected.myshopify.com",
-        "active"
+        "active",
       );
       const disconnectedStore = createConnectedStoreData(
         "test-org",
         "disconnected.myshopify.com",
-        "disconnected"
+        "disconnected",
       );
 
       // Simulate UI state based on store status
@@ -404,7 +404,7 @@ describe("Organization Store Connections", () => {
         createConnectedStoreData(
           "multi-org",
           "store3.myshopify.com",
-          "disconnected"
+          "disconnected",
         ),
       ];
 
@@ -414,7 +414,7 @@ describe("Organization Store Connections", () => {
       expect(activeStores).toHaveLength(2);
       expect(primaryStore.shopDomain).toBe("store1.myshopify.com");
       expect(
-        stores.every((store) => store.organizationId === "multi-org")
+        stores.every((store) => store.organizationId === "multi-org"),
       ).toBe(true);
     });
   });
@@ -461,7 +461,7 @@ describe("Organization Store Connections", () => {
       // Each organization can have multiple stores
       expect(org1Stores).toHaveLength(2);
       expect(
-        org1Stores.every((store) => store.organizationId === "org-1")
+        org1Stores.every((store) => store.organizationId === "org-1"),
       ).toBe(true);
 
       // But each shop can only belong to one organization

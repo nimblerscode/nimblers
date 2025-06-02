@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { Effect, Layer, Option } from "effect";
+import { Effect, Layer } from "effect";
 import { nanoid } from "nanoid";
 import {
   type ConnectedStore,
@@ -62,7 +62,7 @@ export const ConnectedStoreRepoLive = Layer.effect(
 
           if (!result || result.length === 0) {
             return yield* Effect.fail(
-              new OrgDbError({ cause: "Insert returned no results" })
+              new OrgDbError({ cause: "Insert returned no results" }),
             );
           }
 
@@ -80,8 +80,8 @@ export const ConnectedStoreRepoLive = Layer.effect(
                 .where(
                   and(
                     eq(connectedStore.organizationId, store.organizationId),
-                    eq(connectedStore.shopDomain, store.shopDomain)
-                  )
+                    eq(connectedStore.shopDomain, store.shopDomain),
+                  ),
                 )
                 .limit(1),
             catch: (error) => new OrgDbError({ cause: error }),
@@ -109,7 +109,7 @@ export const ConnectedStoreRepoLive = Layer.effect(
 
             if (!result || result.length === 0) {
               return yield* Effect.fail(
-                new OrgDbError({ cause: "Update returned no results" })
+                new OrgDbError({ cause: "Update returned no results" }),
               );
             }
 
@@ -144,7 +144,7 @@ export const ConnectedStoreRepoLive = Layer.effect(
 
           if (!result || result.length === 0) {
             return yield* Effect.fail(
-              new OrgDbError({ cause: "Insert returned no results" })
+              new OrgDbError({ cause: "Insert returned no results" }),
             );
           }
 
@@ -182,7 +182,7 @@ export const ConnectedStoreRepoLive = Layer.effect(
 
       getByOrganizationAndShop: (
         organizationId: OrganizationId,
-        shopDomain: string
+        shopDomain: string,
       ) =>
         Effect.gen(function* () {
           const results = yield* Effect.tryPromise({
@@ -193,8 +193,8 @@ export const ConnectedStoreRepoLive = Layer.effect(
                 .where(
                   and(
                     eq(connectedStore.organizationId, organizationId),
-                    eq(connectedStore.shopDomain, shopDomain)
-                  )
+                    eq(connectedStore.shopDomain, shopDomain),
+                  ),
                 )
                 .limit(1),
             catch: (error) => new OrgDbError({ cause: error }),
@@ -229,5 +229,5 @@ export const ConnectedStoreRepoLive = Layer.effect(
           });
         }),
     };
-  })
+  }),
 );

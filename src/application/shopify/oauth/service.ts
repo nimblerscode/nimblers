@@ -26,7 +26,7 @@ import {
 
 // Environment binding for Shopify OAuth
 export abstract class ShopifyOAuthEnv extends Context.Tag(
-  "@core/shopify/oauth/Env"
+  "@core/shopify/oauth/Env",
 )<
   ShopifyOAuthEnv,
   {
@@ -106,14 +106,14 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
     return {
       handleInstallRequest: (
         organizationSlug: OrganizationSlug,
-        request: Request
+        request: Request,
       ) =>
         Effect.gen(function* () {
           const params = yield* extractRequestParams(request);
 
           // Parse and validate the install request
           const installRequest = yield* S.decodeUnknown(
-            OAuthInstallRequestSchema
+            OAuthInstallRequestSchema,
           )(params).pipe(
             Effect.mapError((error) => {
               // Check if this is specifically a shop domain validation error
@@ -143,7 +143,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
                 message: "Invalid install request parameters",
                 cause: error,
               });
-            })
+            }),
           );
 
           // Verify HMAC signature
@@ -152,25 +152,25 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             return yield* Effect.fail(
               new OAuthError({
                 message: "Missing Shopify client secret",
-              })
+              }),
             );
           }
 
           const isValidHmac = yield* hmacVerifier.verifyInstallRequest(
             installRequest,
-            clientSecret
+            clientSecret,
           );
           if (!isValidHmac) {
             return yield* Effect.fail(
               new InvalidHmacError({
                 message: "Invalid HMAC signature for install request",
-              })
+              }),
             );
           }
 
           // Validate shop domain
           const shop = yield* shopValidator.validateShopDomain(
-            installRequest.shop
+            installRequest.shop,
           );
 
           // Check if we already have a token for this shop
@@ -203,7 +203,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
               `client_id=${clientId}&` +
               `scope=${scopes.join(",")}&` +
               `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-              `state=${stateWithOrg}` // Use organization-encoded state
+              `state=${stateWithOrg}`, // Use organization-encoded state
           );
 
           // Check if embedded and handle iframe escape
@@ -259,7 +259,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
 
           // Parse and validate the callback request
           const callbackRequest = yield* S.decodeUnknown(
-            OAuthCallbackRequestSchema
+            OAuthCallbackRequestSchema,
           )(params).pipe(
             Effect.mapError((error) => {
               // Check if this is specifically a shop domain validation error
@@ -289,7 +289,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
                 message: "Invalid callback request parameters",
                 cause: error,
               });
-            })
+            }),
           );
 
           // Verify HMAC signature
@@ -298,19 +298,19 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             return yield* Effect.fail(
               new OAuthError({
                 message: "Missing Shopify client secret",
-              })
+              }),
             );
           }
 
           const isValidHmac = yield* hmacVerifier.verifyCallbackRequest(
             callbackRequest,
-            clientSecret
+            clientSecret,
           );
           if (!isValidHmac) {
             return yield* Effect.fail(
               new InvalidHmacError({
                 message: "Invalid HMAC signature for callback request",
-              })
+              }),
             );
           }
 
@@ -324,14 +324,14 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             return yield* Effect.fail(
               new InvalidNonceError({
                 message: "Invalid or expired nonce",
-              })
+              }),
             );
           }
           yield* nonceManager.consume(actualNonce);
 
           // Validate shop domain
           const shop = yield* shopValidator.validateShopDomain(
-            callbackRequest.shop
+            callbackRequest.shop,
           );
 
           // Exchange authorization code for access token
@@ -340,7 +340,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             shop,
             callbackRequest.code,
             clientId,
-            clientSecret
+            clientSecret,
           );
 
           // Store the access token with organization context from state
@@ -348,19 +348,19 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             shop,
             tokenResponse.access_token,
             tokenResponse.scope,
-            organizationSlugFromState // Use org slug extracted from state
+            organizationSlugFromState, // Use org slug extracted from state
           );
 
           // Register webhooks after successful installation
           yield* Effect.gen(function* () {
             const webhookUrl = envConfig.getShopifyWebhookUrl(
-              "/shopify/webhooks/app/uninstalled"
+              "/shopify/webhooks/app/uninstalled",
             );
 
             // Skip webhook registration in development to avoid Shopify tunnel URL rejection
             if (webhookUrl === "SKIP_WEBHOOK_REGISTRATION") {
               yield* Effect.logInfo(
-                "Webhook registration skipped in development environment"
+                "Webhook registration skipped in development environment",
               );
               return;
             }
@@ -368,7 +368,7 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
             yield* webhookService.registerAppUninstallWebhook(
               shop,
               tokenResponse.access_token,
-              webhookUrl
+              webhookUrl,
             );
           }).pipe(
             Effect.catchAll((error) => {
@@ -381,10 +381,10 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
                   {
                     shop,
                     webhookUrl: envConfig.getShopifyWebhookUrl(
-                      "/shopify/webhooks/app/uninstalled"
+                      "/shopify/webhooks/app/uninstalled",
                     ),
                     errorType: typeof error,
-                  }
+                  },
                 );
 
                 // Check if it's a "webhook already exists" error (422 status)
@@ -396,19 +396,19 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
                 ) {
                   yield* Effect.logInfo(
                     "Webhook already exists - continuing with OAuth flow",
-                    { shop }
+                    { shop },
                   );
                 } else {
                   yield* Effect.logWarning(
                     "Unexpected webhook registration error - continuing with OAuth flow",
-                    { shop, error: errorMessage }
+                    { shop, error: errorMessage },
                   );
                 }
 
                 // Return success to continue the OAuth flow
                 return;
               });
-            })
+            }),
           );
 
           // Redirect to app using environment config
@@ -426,19 +426,19 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
         clientId: ClientId,
         scopes: Scope[],
         redirectUri: string,
-        nonce: Nonce
+        nonce: Nonce,
       ) =>
         Effect.succeed(
           `https://${shop}/admin/oauth/authorize?` +
             `client_id=${clientId}&` +
             `scope=${scopes.join(",")}&` +
             `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-            `state=${nonce}`
+            `state=${nonce}`,
         ).pipe(Effect.withSpan("ShopifyOAuthUseCase.buildAuthorizationUrl")),
 
       checkConnectionStatus: (
         organizationSlug: OrganizationSlug,
-        shop: ShopDomain
+        shop: ShopDomain,
       ) =>
         Effect.gen(function* () {
           // Check if we have a stored access token
@@ -448,8 +448,8 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
                 new OAuthError({
                   message: "Failed to check connection status",
                   cause: error,
-                })
-            )
+                }),
+            ),
           );
 
           if (accessToken) {
@@ -480,18 +480,18 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
 
       registerWebhooksAfterInstall: (
         shop: ShopDomain,
-        accessToken: AccessToken
+        accessToken: AccessToken,
       ) =>
         Effect.gen(function* () {
           // Register the app/uninstalled webhook
           const webhookUrl = envConfig.getShopifyWebhookUrl(
-            "/shopify/webhooks/app/uninstalled"
+            "/shopify/webhooks/app/uninstalled",
           );
 
           // Skip webhook registration in development to avoid Shopify tunnel URL rejection
           if (webhookUrl === "SKIP_WEBHOOK_REGISTRATION") {
             yield* Effect.logInfo(
-              "Webhook registration skipped in development environment"
+              "Webhook registration skipped in development environment",
             );
             return;
           }
@@ -499,11 +499,11 @@ export const ShopifyOAuthUseCaseLive: Layer.Layer<
           yield* webhookService.registerAppUninstallWebhook(
             shop,
             accessToken,
-            webhookUrl
+            webhookUrl,
           );
         }).pipe(
-          Effect.withSpan("ShopifyOAuthUseCase.registerWebhooksAfterInstall")
+          Effect.withSpan("ShopifyOAuthUseCase.registerWebhooksAfterInstall"),
         ),
     };
-  })
+  }),
 );

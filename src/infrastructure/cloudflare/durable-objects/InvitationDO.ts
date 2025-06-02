@@ -135,13 +135,16 @@ export const InvitationDOServiceLive = Layer.effect(
           const stub = invitationDONamespace.get(doId);
           const response = yield* Effect.tryPromise({
             try: async () => {
-              const response = await stub.fetch("http://internal/invite", {
-                method: "POST",
-                headers: Headers.unsafeFromRecord({
-                  "Content-Type": "application/json",
-                }),
-                body: JSON.stringify({ newInvitation }),
-              });
+              const response = await stub.fetch(
+                `http://internal/${organizationSlug}/invite`,
+                {
+                  method: "POST",
+                  headers: Headers.unsafeFromRecord({
+                    "Content-Type": "application/json",
+                  }),
+                  body: JSON.stringify({ newInvitation }),
+                },
+              );
               // If response is not ok, throw error regardless of body content
               if (!response.ok) {
                 throw new OrgDbError({

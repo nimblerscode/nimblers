@@ -86,7 +86,7 @@ export const InvitationRepoLive = Layer.effect(
             return new OrgDbError({
               cause: error,
             });
-          })
+          }),
         ),
 
       findPendingByEmail: (email: Email) =>
@@ -130,7 +130,7 @@ export const InvitationRepoLive = Layer.effect(
               ...row,
               expiresAt: Number(row.expiresAt),
               createdAt: Number(row.createdAt),
-            })
+            }),
           );
         }),
 
@@ -191,5 +191,5 @@ export const InvitationRepoLive = Layer.effect(
     };
 
     return invitationRepo;
-  })
+  }),
 );

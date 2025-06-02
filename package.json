@@ -40,7 +40,13 @@
   },
   "dependencies": {
     "@effect/experimental": "^0.44.21",
+    "@effect/opentelemetry": "^0.50.4",
     "@effect/platform": "^0.80.21",
+    "@microlabs/otel-cf-workers": "1.0.0-rc.52",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.201.1",
+    "@opentelemetry/sdk-metrics": "^2.0.1",
+    "@opentelemetry/sdk-trace-base": "^2.0.1",
+    "@opentelemetry/sdk-trace-web": "^2.0.1",
     "@react-email/components": "^0.0.41",
     "@react-email/render": "^1.1.2",
     "better-auth": "^1.2.8",

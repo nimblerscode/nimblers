@@ -45,8 +45,8 @@ export const ShopifyComplianceLayerLive = Layer.provide(
   Layer.mergeAll(
     ShopifyHmacVerifierLive,
     ComplianceDataRepoLive,
-    ComplianceLoggerLive
-  )
+    ComplianceLoggerLive,
+  ),
 );
 
 /**
@@ -54,7 +54,7 @@ export const ShopifyComplianceLayerLive = Layer.provide(
  */
 export const ComplianceWebhookLayerLive = Layer.provide(
   ComplianceWebhookServiceLive,
-  ShopifyComplianceLayerLive
+  ShopifyComplianceLayerLive,
 );
 
 /**
@@ -66,7 +66,7 @@ export function GlobalShopConnectionLayerLive(env: { DB: D1Database }) {
   const repoLayer = Layer.provide(GlobalShopConnectionRepoLive, drizzleLayer);
   const useCaseLayer = Layer.provide(
     GlobalShopConnectionUseCaseLive,
-    Layer.mergeAll(repoLayer)
+    Layer.mergeAll(repoLayer),
   );
 
   return useCaseLayer;
@@ -95,7 +95,7 @@ export function StoreConnectionLayerLive(env: {
 
   const storeServiceLayer = Layer.provide(
     ShopifyStoreServiceLive,
-    Layer.mergeAll(storeEnvLayer, globalShopLayer, FetchHttpClient.layer)
+    Layer.mergeAll(storeEnvLayer, globalShopLayer, FetchHttpClient.layer),
   );
 
   return storeServiceLayer;
@@ -127,8 +127,8 @@ export function ConnectStoreApplicationLayerLive(env: {
       globalShopLayer,
       storeConnectionLayer,
       orgServiceLayer,
-      connectStoreEnvLayer
-    )
+      connectStoreEnvLayer,
+    ),
   );
 }
 
@@ -141,7 +141,7 @@ export function ShopifyStoreOperationsLayerLive(env: {
 }) {
   return Layer.mergeAll(
     GlobalShopConnectionLayerLive(env),
-    StoreConnectionLayerLive(env)
+    StoreConnectionLayerLive(env),
   );
 }
 
@@ -160,7 +160,7 @@ export function ShopifyOAuthDOServiceLive(env: {
   // Durable Object namespace layer
   const doNamespaceLayer = Layer.succeed(
     ShopifyOAuthDONamespace,
-    env.SHOPIFY_OAUTH_DO
+    env.SHOPIFY_OAUTH_DO,
   );
 
   // Use stateless nonce manager - encode organization context in state parameter
@@ -186,14 +186,14 @@ export function ShopifyOAuthDOServiceLive(env: {
           return Effect.succeed(void 0);
         },
       };
-    })
+    }),
   );
 
   // DO service layers that communicate with the Durable Object handlers
   const nonceManagerLayer = StatelessNonceManagerLive;
   const accessTokenServiceLayer = Layer.provide(
     AccessTokenServiceDOLive,
-    doNamespaceLayer
+    doNamespaceLayer,
   );
 
   // Infrastructure service layers
@@ -210,7 +210,7 @@ export function ShopifyOAuthDOServiceLive(env: {
     webhookServiceLayer,
     envLayer,
     doNamespaceLayer,
-    EnvironmentConfigServiceLive
+    EnvironmentConfigServiceLive,
   );
 
   // Use case layer
@@ -232,7 +232,7 @@ export function ShopifyOAuthApplicationLayerLive(env: {
 }) {
   const baseLayer = Layer.merge(
     ShopifyOAuthDOServiceLive(env),
-    ConnectStoreApplicationLayerLive(env)
+    ConnectStoreApplicationLayerLive(env),
   );
   return Layer.provide(ShopifyOAuthApplicationServiceLive, baseLayer);
 }
@@ -260,7 +260,7 @@ export const generateShopifyOAuthUrl = (
   shop: string,
   clientId: string,
   scope: string,
-  redirectUri: string
+  redirectUri: string,
 ): string => {
   // Generate organization-scoped state parameter
   // Format: {organizationSlug}_org_{nonce}

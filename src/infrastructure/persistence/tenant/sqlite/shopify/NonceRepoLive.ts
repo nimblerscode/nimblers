@@ -81,5 +81,5 @@ export const NonceRepoLive = Layer.effect(
           // rather than checking affected rows in this simplified implementation
         }),
     };
-  })
+  }),
 );

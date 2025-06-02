@@ -76,10 +76,9 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
       // Method 3: Extract from URL path segments
       if (!organizationSlug) {
         const pathSegments = url.pathname.split("/").filter(Boolean);
-        // Look for organization slug in URL (could be first segment or after specific patterns)
+        // For requests like /test/invite, /test/stores, etc., the org slug is the first segment
         if (pathSegments.length > 0) {
-          // For requests like /organization, /members/org-slug, etc.
-          organizationSlug = pathSegments[pathSegments.length - 1];
+          organizationSlug = pathSegments[0]; // First segment is the organization slug
           logger.info("Found slug from URL path", { slug: organizationSlug });
         }
       }

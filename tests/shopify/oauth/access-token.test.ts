@@ -33,7 +33,7 @@ describe("Shopify OAuth Access Token Service", () => {
           } as AccessTokenResponse;
         }
         return yield* Effect.fail(
-          new AccessTokenError({ message: "Invalid code" })
+          new AccessTokenError({ message: "Invalid code" }),
         );
       }),
     store: (_shop, _token, _scope, _organizationSlug) => Effect.succeed(void 0),
@@ -56,12 +56,12 @@ describe("Shopify OAuth Access Token Service", () => {
           testShop,
           testCode,
           testClientId,
-          testClientSecret
+          testClientSecret,
         );
 
         expect(response.access_token).toBe(testToken);
         expect(response.scope).toBe(testScope);
-      }).pipe(Effect.provide(MockAccessTokenService))
+      }).pipe(Effect.provide(MockAccessTokenService)),
     );
 
     it.scoped("should reject invalid authorization code", () =>
@@ -75,15 +75,15 @@ describe("Shopify OAuth Access Token Service", () => {
             testShop,
             invalidCode,
             testClientId,
-            testClientSecret
-          )
+            testClientSecret,
+          ),
         );
 
         expect(result._tag).toBe("Left");
         if (result._tag === "Left") {
           expect(result.left).toBeInstanceOf(AccessTokenError);
         }
-      }).pipe(Effect.provide(MockAccessTokenService))
+      }).pipe(Effect.provide(MockAccessTokenService)),
     );
   });
 
@@ -96,12 +96,12 @@ describe("Shopify OAuth Access Token Service", () => {
           testShop,
           testToken,
           testScope,
-          testOrganizationSlug
+          testOrganizationSlug,
         );
 
         const retrievedToken = yield* accessTokenService.retrieve(testShop);
         expect(retrievedToken).toBe(testToken);
-      }).pipe(Effect.provide(MockAccessTokenService))
+      }).pipe(Effect.provide(MockAccessTokenService)),
     );
   });
 
@@ -112,7 +112,7 @@ describe("Shopify OAuth Access Token Service", () => {
 
         const retrievedToken = yield* accessTokenService.retrieve(testShop);
         expect(retrievedToken).toBe(testToken);
-      }).pipe(Effect.provide(MockAccessTokenService))
+      }).pipe(Effect.provide(MockAccessTokenService)),
     );
   });
 });

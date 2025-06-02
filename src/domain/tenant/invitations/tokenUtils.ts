@@ -37,7 +37,7 @@ export const InviteTokenLive = Layer.effect(
   InviteToken,
   Effect.gen(function* () {
     // Use the secret directly as a Uint8Array instead of importing as CryptoKey
-    const secret = env.SECRET_KEY;
+    const secret = env.SESSION_SECRET;
     // Convert to Uint8Array directly
     const secretKey = getSecretKey(secret);
 

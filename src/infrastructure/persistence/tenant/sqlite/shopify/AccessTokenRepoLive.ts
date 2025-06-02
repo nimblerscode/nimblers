@@ -26,7 +26,7 @@ export const AccessTokenRepoLive = Layer.effect(
         shop: ShopDomain,
         code: AuthorizationCode,
         clientId: ClientId,
-        clientSecret: ClientSecret
+        clientSecret: ClientSecret,
       ) =>
         Effect.gen(function* () {
           const tokenUrl = `https://${shop}/admin/oauth/access_token`;
@@ -55,7 +55,7 @@ export const AccessTokenRepoLive = Layer.effect(
             return yield* Effect.fail(
               new AccessTokenError({
                 message: `Token exchange failed with status ${response.status}`,
-              })
+              }),
             );
           }
 
@@ -75,7 +75,7 @@ export const AccessTokenRepoLive = Layer.effect(
         shop: ShopDomain,
         token: AccessToken,
         scope: Scope,
-        organizationSlug: OrganizationSlug
+        organizationSlug: OrganizationSlug,
       ) =>
         Effect.gen(function* () {
           yield* Effect.tryPromise({
@@ -171,5 +171,5 @@ export const AccessTokenRepoLive = Layer.effect(
           };
         }),
     };
-  })
+  }),
 );

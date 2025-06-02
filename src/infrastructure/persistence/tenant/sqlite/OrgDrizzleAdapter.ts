@@ -15,11 +15,11 @@ export class OrganizationNotFoundError extends Schema.TaggedError<OrganizationNo
   {
     slug: Schema.String,
     message: Schema.optional(Schema.String),
-  }
+  },
 ) {}
 
 export const makeOrgDrizzleAdapter = (
-  db: DrizzleSqliteDODatabase<typeof schema>
+  db: DrizzleSqliteDODatabase<typeof schema>,
 ) => ({
   getOrgBySlug: async (slug: string) => {
     const orgResults = await db

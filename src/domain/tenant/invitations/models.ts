@@ -30,7 +30,7 @@ export type GetInvitationError = InvitationError | OrgDbError;
 const TimestampNumberSchema = S.Number;
 
 // Branded IDs for better type safety
-export const InvitationIdSchema = S.UUID.pipe(S.brand("InvitationId"));
+export const InvitationIdSchema = S.String.pipe(S.brand("InvitationId"));
 export type InvitationId = S.Schema.Type<typeof InvitationIdSchema>;
 
 export const InvitationSchema = S.Struct({

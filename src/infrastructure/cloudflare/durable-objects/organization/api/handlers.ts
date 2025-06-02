@@ -67,7 +67,11 @@ const _updateOrganization = HttpApiEndpoint.patch(
   )
   .addSuccess(OrganizationApiSchemas.getOrganization.response);
 
-const createInvitation = HttpApiEndpoint.post("createInvitation", "/invite")
+const createInvitation = HttpApiEndpoint.post(
+  "createInvitation",
+  "/:organizationSlug/invite",
+)
+  .setPath(Schema.Struct({ organizationSlug: Schema.String }))
   .setPayload(OrganizationApiSchemas.createInvitation.request)
   .addSuccess(OrganizationApiSchemas.createInvitation.response)
   .addError(HttpApiError.BadRequest);
@@ -272,21 +276,21 @@ const organizationsGroupLive = () =>
           }),
         );
       })
-      .handle("createInvitation", ({ payload }) => {
+      .handle("createInvitation", ({ path: { organizationSlug }, payload }) => {
         return Effect.gen(function* () {
           const invitationService = yield* InvitationUseCase;
           const invitation = yield* invitationService.create(
             payload.newInvitation,
           );
+
           return { invitation };
         }).pipe(
-          Effect.mapError(
-            (error) =>
-              new HttpApiError.HttpApiDecodeError({
-                message: error.message || String(error),
-                issues: [],
-              }),
-          ),
+          Effect.mapError((error) => {
+            return new HttpApiError.HttpApiDecodeError({
+              message: error.message || String(error),
+              issues: [],
+            });
+          }),
         );
       })
       .handle("getInvitation", ({ path: { organizationSlug } }) => {
@@ -558,8 +562,15 @@ export function getOrgHandler(
     Layer.merge(OrgServiceLayer, ConnectedStoreLayer),
   );
   const DORepoLayer = Layer.succeed(DurableObjectState, doState);
+
+  // Create a DurableObjectId with the correct organization slug name
+  const organizationDoId: DurableObjectId = {
+    ...doState.id,
+    name: organizationSlug,
+  };
+
   const InvitationRepoLayer = Layer.provide(
-    InvitationLayerLive(doState.id),
+    InvitationLayerLive(organizationDoId),
     DORepoLayer,
   );
   const finalLayer = Layer.provide(
@@ -588,11 +599,5 @@ export function getOrgHandler(
   const { dispose, handler } = HttpApiBuilder.toWebHandler(
     Layer.mergeAll(OrganizationApiLive, SwaggerLayer, HttpServer.layerContext),
   );
-  // Wrap handler with additional error logging
-  const wrappedHandler = async (request: Request): Promise<Response> => {
-    const response = await handler(request);
-    return response;
-  };
-
-  return { dispose, handler: wrappedHandler };
+  return { dispose, handler };
 }

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { Effect, Layer, Option, Schema as S } from "effect";
+import { nanoid } from "nanoid";
 import type { Email } from "@/domain/global/email/model";
 import {
   type Member,
@@ -33,7 +33,7 @@ export const MemberRepoLive = Layer.effect(
                 return new MemberDbError({
                   cause: `Input data validation error: ${e}`,
                 });
-              })
+              }),
             );
 
             const dbRow = yield* Effect.tryPromise({
@@ -88,7 +88,7 @@ export const MemberRepoLive = Layer.effect(
               },
               catch: (unknownError) =>
                 new MemberDbError({ cause: unknownError }),
-            })
+            }),
           );
 
           if (!dbResult || dbResult.length === 0) {
@@ -135,5 +135,5 @@ export const MemberRepoLive = Layer.effect(
         });
       }).pipe(Effect.withSpan("MemberRepo.getMembers")),
     };
-  })
+  }),
 );
