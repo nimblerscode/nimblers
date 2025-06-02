@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 import { Data, Effect, pipe } from "effect";
 import { InvitationDOService } from "@/application/tenant/invitations/service";
 import { InvitationDOLive } from "@/config/layers";
+import { Tracing } from "@/tracing";
 import type { Email } from "@/domain/global/email/model";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { User, UserId } from "@/domain/global/user/model";
@@ -11,7 +12,7 @@ import type { Invitation } from "@/domain/tenant/invitations/models";
 
 // Define Effect-TS branded error types following project patterns
 export class AuthenticationError extends Data.TaggedError(
-  "AuthenticationError",
+  "AuthenticationError"
 )<{
   readonly message: string;
   readonly code?: string;
@@ -69,7 +70,7 @@ export type InviteUserState =
 
 // Validation functions using Effect
 const validateUser = (
-  user: User | undefined,
+  user: User | undefined
 ): Effect.Effect<User, AuthenticationError> =>
   pipe(
     Effect.succeed(user),
@@ -80,12 +81,12 @@ const validateUser = (
         new AuthenticationError({
           message: "User authentication required",
           code: "USER_NOT_AUTHENTICATED",
-        }),
-    ),
+        })
+    )
   );
 
 const validateFormData = (
-  formData: FormData,
+  formData: FormData
 ): Effect.Effect<
   {
     email: Email;
@@ -98,7 +99,7 @@ const validateFormData = (
     const email = formData.get("email") as string;
     const role = formData.get("role") as string;
     const organizationSlug = formData.get(
-      "organizationSlug",
+      "organizationSlug"
     ) as OrganizationSlug;
 
     // Validate required fields
@@ -109,8 +110,8 @@ const validateFormData = (
             message: "Email address is required",
             code: "MISSING_EMAIL",
             field: "email",
-          }),
-        ),
+          })
+        )
       );
     }
 
@@ -121,8 +122,8 @@ const validateFormData = (
             message: "Role is required",
             code: "MISSING_ROLE",
             field: "role",
-          }),
-        ),
+          })
+        )
       );
     }
 
@@ -133,8 +134,8 @@ const validateFormData = (
             message: "Organization is required",
             code: "MISSING_ORGANIZATION",
             field: "organizationSlug",
-          }),
-        ),
+          })
+        )
       );
     }
 
@@ -147,8 +148,8 @@ const validateFormData = (
             message: "Please enter a valid email address",
             code: "INVALID_EMAIL",
             field: "email",
-          }),
-        ),
+          })
+        )
       );
     }
 
@@ -161,8 +162,8 @@ const validateFormData = (
             message: "Invalid role selected",
             code: "INVALID_ROLE",
             field: "role",
-          }),
-        ),
+          })
+        )
       );
     }
 
@@ -174,7 +175,7 @@ const validateFormData = (
   });
 
 const convertToSerializableError = (
-  error: InviteUserError,
+  error: InviteUserError
 ): SerializableError => {
   switch (error._tag) {
     case "AuthenticationError":
@@ -216,7 +217,7 @@ const buildSuccessState = (
   user: User,
   email: Email,
   role: string,
-  invitation: Invitation,
+  invitation: Invitation
 ): InviteUserState => ({
   success: true,
   message: `Invitation sent to ${email} successfully!`,
@@ -235,16 +236,31 @@ const buildSuccessState = (
 
 export async function inviteUserAction(
   prevState: InviteUserState,
-  formData: FormData,
+  formData: FormData
 ): Promise<InviteUserState> {
   const program = pipe(
     Effect.gen(function* () {
-      // Validate user authentication
-      const user = yield* validateUser(prevState.user);
+      // Validate user authentication (automatically traced)
+      const user = yield* Effect.withSpan("validate-user", {
+        attributes: {
+          "user.authenticated": prevState.user ? "true" : "false",
+          "user.id": prevState.user?.id || "unknown",
+        },
+      })(validateUser(prevState.user));
 
-      // Validate and extract form data
-      const { email, role, organizationSlug } =
-        yield* validateFormData(formData);
+      // Validate and extract form data (automatically traced)
+      const { email, role, organizationSlug } = yield* Effect.withSpan(
+        "validate-form-data",
+        {
+          attributes: {
+            "form.has_email": formData.get("email") ? "true" : "false",
+            "form.has_role": formData.get("role") ? "true" : "false",
+            "form.has_organization": formData.get("organizationSlug")
+              ? "true"
+              : "false",
+          },
+        }
+      )(validateFormData(formData));
 
       const invitationProgram = InvitationDOService.pipe(
         Effect.flatMap((service) =>
@@ -254,14 +270,20 @@ export async function inviteUserAction(
               inviteeEmail: email as Email,
               role: role,
             },
-            organizationSlug,
-          ),
+            organizationSlug
+          )
         ),
+        Effect.withSpan("create-invitation-in-do", {
+          attributes: {
+            "invitation.email": email,
+            "invitation.role": role,
+            "invitation.organization_slug": organizationSlug,
+            "inviter.id": prevState.user.id,
+          },
+        })
       );
 
-      const fullLayer = InvitationDOLive({
-        ORG_DO: env.ORG_DO,
-      });
+      const fullLayer = InvitationDOLive({ ORG_DO: env.ORG_DO });
 
       const invitation = yield* Effect.tryPromise({
         try: () =>
@@ -277,16 +299,28 @@ export async function inviteUserAction(
 
       return buildSuccessState(user, email, role, invitation);
     }),
-    Effect.catchAll((error) => {
-      const serializableError = convertToSerializableError(error);
-      return Effect.succeed({
-        success: false,
-        message: error.message || "Failed to send invitation",
-        errors: serializableError,
-        user: prevState.user,
-      } as InviteUserState);
+    Effect.withSpan("invite-user-action", {
+      attributes: {
+        "action.type": "invite-user",
+        "user.authenticated": prevState.user ? "true" : "false",
+        "organization.slug":
+          (formData.get("organizationSlug") as string) || "unknown",
+      },
     }),
+    Effect.catchAll((error) => {
+      return Effect.logError("Invitation creation failed", error).pipe(
+        Effect.andThen(() => {
+          const serializableError = convertToSerializableError(error);
+          return Effect.succeed({
+            success: false,
+            message: error.message || "Failed to send invitation",
+            errors: serializableError,
+            user: prevState.user,
+          } as InviteUserState);
+        })
+      );
+    })
   );
 
-  return Effect.runPromise(program);
+  return Effect.runPromise(program.pipe(Effect.provide(Tracing)));
 }

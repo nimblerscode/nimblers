@@ -66,7 +66,13 @@
     "SHOPIFY_CLIENT_ID": "f665ecacb8ebb0109bd7994468b79d14",
     "SHOPIFY_CLIENT_SECRET": "7d6c7135aff1ed2b8962541c0462b8ca",
     "DEV_TUNNEL_URL": "https://fence-enlargement-submission-protective.trycloudflare.com",
-    "RESEND_API_KEY": "re_Usgg5eJS_Kcpyy8fqx9Nd2Jna2HjzuymA"
+    "RESEND_API_KEY": "re_Usgg5eJS_Kcpyy8fqx9Nd2Jna2HjzuymA",
+    "HONEYCOMB_API_KEY": "0YQfTrWYee6qkrNyHUcEBV",
+    "HONEYCOMB_DATASET": "nimblers",
+    "OTEL_SERVICE_NAME": "nimblers-worker",
+    "OTEL_SERVICE_VERSION": "1.0.0",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://api.honeycomb.io/v1/traces",
+    "OTEL_EXPORTER_OTLP_HEADERS": "x-honeycomb-team=0YQfTrWYee6qkrNyHUcEBV"
   },
 
   "routes": [
