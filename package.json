@@ -60,12 +60,14 @@
     "react-aria-components": "^1.9.0",
     "react-dom": "19.2.0-canary-39cad7af-20250411",
     "resend": "^4.5.1",
-    "rwsdk": "^0.0.84"
+    "rwsdk": "^0.0.84",
+    "twilio": "^5.7.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.0.0-beta.4",
     "@cloudflare/vitest-pool-workers": "^0.8.33",
     "@cloudflare/workers-types": "^4.20250528.0",
+    "@effect/language-service": "^0.17.1",
     "@effect/vitest": "^0.21.5",
     "@pandacss/dev": "^0.53.7",
     "@storybook/addon-essentials": "9.0.0-alpha.12",
