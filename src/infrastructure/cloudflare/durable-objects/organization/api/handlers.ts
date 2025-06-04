@@ -18,6 +18,7 @@ import {
   OrganizationUseCase,
   OrgService,
 } from "@/domain/tenant/organization/service";
+import { CampaignUseCase } from "@/domain/tenant/campaigns/service";
 import { ConnectedStoreRepoLive } from "@/infrastructure/persistence/tenant/sqlite/ConnectedStoreRepoLive";
 import {
   DrizzleDOClientLive,
@@ -25,6 +26,7 @@ import {
 } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
 import { OrgRepoLive } from "@/infrastructure/persistence/tenant/sqlite/OrgRepoLive";
+import { CampaignLayerLive } from "@/config/layers";
 import { Tracing } from "@/tracing";
 import { OrganizationApiSchemas } from "./schemas";
 
@@ -129,6 +131,16 @@ const disconnectStore = HttpApiEndpoint.del(
   .addSuccess(OrganizationApiSchemas.disconnectStore.response)
   .addError(HttpApiError.NotFound);
 
+// Campaign endpoints
+const createCampaign = HttpApiEndpoint.post("createCampaign", "/campaigns")
+  .setPayload(OrganizationApiSchemas.createCampaign.request)
+  .addSuccess(OrganizationApiSchemas.createCampaign.response)
+  .addError(HttpApiError.BadRequest);
+
+const listCampaigns = HttpApiEndpoint.get("listCampaigns", "/campaigns")
+  .addSuccess(OrganizationApiSchemas.listCampaigns.response)
+  .addError(HttpApiError.NotFound);
+
 // Group all user-related endpoints
 const organizationsGroup = HttpApiGroup.make("organizations")
   // .add(getOrganizations)
@@ -142,6 +154,8 @@ const organizationsGroup = HttpApiGroup.make("organizations")
   .add(getConnectedStores)
   .add(connectStore)
   .add(disconnectStore)
+  .add(createCampaign)
+  .add(listCampaigns)
   // .add(deleteOrganization)
   // .add(updateOrganization)
   .addError(Unauthorized, { status: 401 });
@@ -618,6 +632,50 @@ const organizationsGroupLive = () =>
           )
         );
       })
+      .handle("createCampaign", ({ payload }) => {
+        return Effect.gen(function* () {
+          const campaignService = yield* CampaignUseCase;
+          const campaign = yield* campaignService.createCampaign(payload);
+          return campaign;
+        }).pipe(
+          Effect.withSpan("OrganizationDO.createCampaign", {
+            attributes: {
+              "campaign.name": payload.name,
+              "campaign.type": payload.campaignType,
+              "api.endpoint": "/campaigns",
+              "api.method": "POST",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("listCampaigns", () => {
+        return Effect.gen(function* () {
+          const campaignService = yield* CampaignUseCase;
+          const result = yield* campaignService.listCampaigns();
+          return result;
+        }).pipe(
+          Effect.withSpan("OrganizationDO.listCampaigns", {
+            attributes: {
+              "api.endpoint": "/campaigns",
+              "api.method": "GET",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
   );
 
 export function getOrgHandler(
@@ -654,13 +712,15 @@ export function getOrgHandler(
     InvitationLayerLive(organizationDoId),
     DORepoLayer
   );
+  const CampaignLayer = Layer.provide(CampaignLayerLive(), DrizzleDOClientLive);
   const finalLayer = Layer.provide(
     Layer.mergeAll(
       OrgServiceLayer,
       InvitationRepoLayer,
       MemberServiceLayer,
       ConnectedStoreLayer,
-      OrganizationUseCaseLayer
+      OrganizationUseCaseLayer,
+      CampaignLayer
     ),
     DORepoLayer
   );

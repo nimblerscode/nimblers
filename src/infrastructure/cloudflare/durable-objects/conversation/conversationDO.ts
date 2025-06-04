@@ -1,3 +1,7 @@
+import {
+  type ConversationId,
+  unsafeConversationId,
+} from "@/domain/tenant/shared/branded-types";
 import { EffectDurableObjectBase } from "../base/EffectDurableObjectBase";
 import { getConversationHandler } from "./api/handlers";
 
@@ -51,58 +55,7 @@ export class ConversationDurableObject extends EffectDurableObjectBase {
 
       logger.info("Getting handler from getConversationHandler");
 
-      // Extract conversation ID from multiple sources
-      let conversationId: string | null = null;
-
-      // Method 1: Try doState.id.name first (most reliable for DO addressing)
-      if (this.state.id.name) {
-        conversationId = this.state.id.name;
-        logger.info("Found conversation ID from doState.id.name", {
-          conversationId,
-        });
-      }
-
-      // Method 2: Extract from request headers
-      if (!conversationId) {
-        conversationId = request.headers.get("X-Conversation-Id");
-        if (conversationId) {
-          logger.info("Found conversation ID from X-Conversation-Id header", {
-            conversationId,
-          });
-        }
-      }
-
-      // Method 3: Extract from URL path segments
-      if (!conversationId) {
-        const pathSegments = url.pathname.split("/").filter(Boolean);
-        // For requests like /conversation/conv_123/messages, the conversation ID is the second segment
-        if (pathSegments.length > 1 && pathSegments[0] === "conversation") {
-          conversationId = pathSegments[1];
-          logger.info("Found conversation ID from URL path", {
-            conversationId,
-          });
-        }
-      }
-
-      // Method 4: For new conversations, generate from customer phone + org slug
-      if (!conversationId) {
-        const customerPhone = request.headers.get("X-Customer-Phone");
-        const organizationSlug = request.headers.get("X-Organization-Slug");
-
-        if (customerPhone && organizationSlug) {
-          conversationId = `${organizationSlug}_${customerPhone.replace(
-            /\+/g,
-            ""
-          )}`;
-          logger.info("Generated conversation ID from phone and org", {
-            conversationId,
-            customerPhone,
-            organizationSlug,
-          });
-        }
-      }
-
-      if (!conversationId) {
+      if (!this.state.id.name) {
         logger.error("No conversation ID found in any source", {
           doIdName: this.state.id.name,
           headers: Object.fromEntries(request.headers),
@@ -110,6 +63,10 @@ export class ConversationDurableObject extends EffectDurableObjectBase {
         });
         return new Response("Conversation ID not found", { status: 400 });
       }
+
+      const conversationId: ConversationId = unsafeConversationId(
+        this.state.id.name
+      );
 
       logger.info("Conversation ID resolved", { conversationId });
 

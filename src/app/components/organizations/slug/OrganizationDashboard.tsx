@@ -1,5 +1,6 @@
 import type { SerializableInvitation } from "@/app/actions/invitations/list";
-import { Grid, Heading, VStack } from "@/app/design-system";
+import { Grid, Heading, VStack, Button, HStack } from "@/app/design-system";
+import { Link } from "@/app/design-system/Link";
 import type { ShopDomain } from "@/domain/global/organization/models";
 import type { User } from "@/domain/global/user/model";
 import type { Organization } from "@/domain/tenant/organization/model";
@@ -55,6 +56,36 @@ export function OrganizationDashboard({
           connectedStores={shopifyData.connectedStores}
           oauthMessage={shopifyData.oauthMessage}
         />
+      </VStack>
+
+      {/* Visual Separator */}
+      <div
+        className={css({
+          borderTop: "1px solid",
+          borderColor: "border.strong",
+          mx: "0",
+        })}
+      />
+
+      {/* Campaigns Section */}
+      <VStack gap="4" alignItems="stretch">
+        <HStack justifyContent="space-between" alignItems="center">
+          <Heading as="h2">Campaigns</Heading>
+          <Link href={`/organization/${organization.slug}/campaigns/create`}>
+            <Button variant="primary" size="md">
+              Create Campaign
+            </Button>
+          </Link>
+        </HStack>
+
+        {/* Campaign quick actions */}
+        <HStack gap="4">
+          <Link href={`/organization/${organization.slug}/campaigns`}>
+            <Button variant="outline" size="md">
+              View All Campaigns
+            </Button>
+          </Link>
+        </HStack>
       </VStack>
 
       {/* Visual Separator */}

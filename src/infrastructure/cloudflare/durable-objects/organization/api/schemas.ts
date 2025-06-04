@@ -13,6 +13,10 @@ import {
   NewOrganizationSchema,
   OrganizationSchema,
 } from "@/domain/tenant/organization/model";
+import {
+  CampaignSchema,
+  CreateCampaignInputSchema,
+} from "@/domain/tenant/campaigns/models";
 
 /**
  * Shared API schemas for Organization Durable Object
@@ -130,14 +134,29 @@ export const OrganizationApiSchemas = {
         status: Schema.Union(
           Schema.Literal("active"),
           Schema.Literal("disconnected"),
-          Schema.Literal("error"),
+          Schema.Literal("error")
         ),
         connectedAt: Schema.Date,
         lastSyncAt: Schema.NullOr(Schema.Date),
         metadata: Schema.NullOr(Schema.String),
         createdAt: Schema.Date,
-      }),
+      })
     ),
+  },
+
+  // Create Campaign
+  createCampaign: {
+    request: CreateCampaignInputSchema,
+    response: CampaignSchema,
+  },
+
+  // List Campaigns
+  listCampaigns: {
+    response: Schema.Struct({
+      campaigns: Schema.Array(CampaignSchema),
+      hasMore: Schema.Boolean,
+      cursor: Schema.NullOr(Schema.String),
+    }),
   },
 } as const;
 

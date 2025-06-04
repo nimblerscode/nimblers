@@ -13,7 +13,7 @@ import type {
   CampaignAnalytics,
 } from "@/domain/tenant/campaigns/models";
 
-export const CampaignUseCaseLive = (doId: DurableObjectId) =>
+export const CampaignUseCaseLive = () =>
   Layer.effect(
     CampaignUseCase,
     Effect.gen(function* () {

@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import { TwilioMessageProviderLive } from "../../src/infrastructure/messaging/twilio/message-provider";
 import { TwilioApiClient } from "../../src/infrastructure/messaging/twilio/api-client";
-import { TwilioConfig } from "../../src/infrastructure/messaging/twilio/config";
+import {
+  TwilioConfig,
+  type TwilioConfiguration,
+} from "../../src/infrastructure/messaging/twilio/config";
 import { MessageProviderService } from "../../src/domain/global/messaging/service";
 import {
   MessageSendError,
@@ -16,7 +19,6 @@ import {
   type ApiSendMessageInput,
   type ApiSendMessageOutput,
   type ApiGetMessageOutput,
-  type MessageProviderConfig,
 } from "../../src/domain/global/messaging/models";
 
 // Mock API Client
@@ -59,7 +61,7 @@ const mockConfig: MessageProviderConfig = {
 // Helper to create test layer
 const createTestLayer = (mockApiClient: any = createMockApiClient()) => {
   const MockApiClientLayer = Layer.succeed(TwilioApiClient, mockApiClient);
-  const MockConfigLayer = Layer.succeed(TwilioConfig, { config: mockConfig });
+  const MockConfigLayer = Layer.succeed(TwilioConfig, mockConfig);
 
   return Layer.provide(
     TwilioMessageProviderLive,

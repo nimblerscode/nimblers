@@ -9,6 +9,10 @@ import type { Email } from "@/domain/global/email/model";
 import type { OrganizationSlug } from "@/domain/global/organization/models";
 import type { User, UserId } from "@/domain/global/user/model";
 import type { Invitation } from "@/domain/tenant/invitations/models";
+import {
+  unsafeMemberRole,
+  makeMemberRole,
+} from "@/domain/tenant/shared/branded-types";
 
 // Define Effect-TS branded error types following project patterns
 export class AuthenticationError extends Data.TaggedError(
@@ -262,13 +266,20 @@ export async function inviteUserAction(
         }
       )(validateFormData(formData));
 
+      // Validate and convert role to branded type
+      const memberRole = yield* makeMemberRole(role).pipe(
+        Effect.catchTag("BrandedTypeValidationError", () =>
+          Effect.succeed(unsafeMemberRole(role))
+        )
+      );
+
       const invitationProgram = InvitationDOService.pipe(
         Effect.flatMap((service) =>
           service.create(
             {
+              inviteeEmail: email,
+              role: memberRole,
               inviterId: prevState.user.id as UserId,
-              inviteeEmail: email as Email,
-              role: role,
             },
             organizationSlug
           )

@@ -15,6 +15,7 @@ import {
   DrizzleDOClient,
   schema,
 } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
+import { unsafeMemberRole } from "@/domain/tenant/shared/branded-types";
 
 type InvitationFromDB = {
   id: string;
@@ -31,7 +32,7 @@ function mapDbInvitationToDomain(inv: InvitationFromDB): Invitation {
     id: inv.id as InvitationId,
     email: inv.email as Email,
     inviterId: inv.inviterId as UserId,
-    role: inv.role,
+    role: unsafeMemberRole(inv.role),
     status: inv.status,
     expiresAt: inv.expiresAt,
     createdAt: inv.createdAt,
@@ -86,7 +87,7 @@ export const InvitationRepoLive = Layer.effect(
             return new OrgDbError({
               cause: error,
             });
-          }),
+          })
         ),
 
       findPendingByEmail: (email: Email) =>
@@ -130,7 +131,7 @@ export const InvitationRepoLive = Layer.effect(
               ...row,
               expiresAt: Number(row.expiresAt),
               createdAt: Number(row.createdAt),
-            }),
+            })
           );
         }),
 
@@ -191,5 +192,5 @@ export const InvitationRepoLive = Layer.effect(
     };
 
     return invitationRepo;
-  }),
+  })
 );

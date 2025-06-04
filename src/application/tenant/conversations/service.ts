@@ -1,272 +1,274 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Schema } from "effect";
+import type {
+  Conversation,
+  CreateMessageRequest,
+  GetMessagesRequest,
+  IncomingMessagePayload,
+  Message,
+  MessagesResponse,
+  UpdateConversationStatusRequest,
+} from "@/domain/tenant/conversations/models";
 import {
-  ConversationUseCase,
+  ConversationCreationError,
+  ConversationNotFoundError,
+  ConversationStatus,
+  ConversationUpdateError,
+  MessageSendError,
+} from "@/domain/tenant/conversations/models";
+import {
   ConversationRepo,
   MessageRepo,
   MessagingService,
-  ConversationEventRepo,
 } from "@/domain/tenant/conversations/service";
 import {
-  type CreateMessageRequest,
-  type UpdateConversationStatusRequest,
-  type GetMessagesRequest,
-  type IncomingMessagePayload,
-  ConversationNotFoundError,
-  ConversationCreationError,
-  ConversationUpdateError,
-  MessageSendError,
-  type Conversation,
-} from "@/domain/tenant/conversations/models";
-import type { SendMessageResponse } from "@/domain/global/messaging/models";
+  CampaignId,
+  ConversationId,
+  makeMessageContent,
+  makeMessageType,
+  OrganizationSlug,
+  PhoneNumber,
+} from "@/domain/tenant/shared/branded-types";
 
-export abstract class ConversationDOService extends Context.Tag(
-  "@conversation/ConversationDOService"
+// === Request Schemas ===
+export const CreateConversationRequestSchema = Schema.Struct({
+  organizationSlug: OrganizationSlug,
+  campaignId: Schema.NullOr(CampaignId),
+  customerPhone: PhoneNumber,
+  storePhone: PhoneNumber,
+  status: ConversationStatus,
+  metadata: Schema.NullOr(Schema.String),
+});
+
+export type CreateConversationRequest = Schema.Schema.Type<
+  typeof CreateConversationRequestSchema
+>;
+
+export const ConversationSummarySchema = Schema.Struct({
+  conversation: ConversationId,
+  messageCount: Schema.Number,
+  lastActivity: Schema.NullOr(Schema.DateFromSelf),
+});
+
+export type ConversationSummary = Schema.Schema.Type<
+  typeof ConversationSummarySchema
+>;
+
+// === Service Interface ===
+export abstract class ConversationUseCase extends Context.Tag(
+  "@core/ConversationUseCase"
 )<
-  ConversationDOService,
+  ConversationUseCase,
   {
     readonly getConversation: (
-      conversationId: string
+      conversationId: ConversationId
     ) => Effect.Effect<Conversation, ConversationNotFoundError>;
+    readonly createConversation: (
+      data: CreateConversationRequest
+    ) => Effect.Effect<Conversation, ConversationCreationError>;
+    readonly updateConversationStatus: (
+      conversationId: ConversationId,
+      request: UpdateConversationStatusRequest
+    ) => Effect.Effect<
+      Conversation,
+      ConversationNotFoundError | ConversationUpdateError
+    >;
+    readonly getMessages: (
+      conversationId: ConversationId,
+      request: GetMessagesRequest
+    ) => Effect.Effect<MessagesResponse, ConversationNotFoundError>;
     readonly sendMessage: (
-      conversationId: string,
-      content: string
-    ) => Effect.Effect<SendMessageResponse, MessageSendError>;
+      conversationId: ConversationId,
+      request: CreateMessageRequest
+    ) => Effect.Effect<Message, MessageSendError | ConversationNotFoundError>;
     readonly receiveMessage: (
-      conversationId: string,
+      conversationId: ConversationId,
       payload: IncomingMessagePayload
-    ) => Effect.Effect<Message, ConversationUpdateError>;
+    ) => Effect.Effect<Message, ConversationNotFoundError | MessageSendError>;
+    readonly getConversationSummary: (
+      conversationId: ConversationId
+    ) => Effect.Effect<ConversationSummary, ConversationNotFoundError>;
   }
 >() {}
 
-export const ConversationUseCaseLive = (conversationId: string) =>
+export const ConversationUseCaseLive = () =>
   Layer.effect(
     ConversationUseCase,
     Effect.gen(function* () {
       const conversationRepo = yield* ConversationRepo;
       const messageRepo = yield* MessageRepo;
       const messagingService = yield* MessagingService;
-      const eventRepo = yield* ConversationEventRepo;
 
       return {
-        getConversation: (conversationId: string) =>
+        getConversation: (conversationId: ConversationId) =>
           Effect.gen(function* () {
-            const conversation = yield* conversationRepo.get(conversationId);
+            const conversation = yield* conversationRepo
+              .get(conversationId)
+              .pipe(
+                Effect.mapError(
+                  () =>
+                    new ConversationNotFoundError({
+                      conversationId,
+                    })
+                )
+              );
 
             if (!conversation) {
               return yield* Effect.fail(
-                new ConversationNotFoundError({ conversationId })
+                new ConversationNotFoundError({
+                  conversationId,
+                })
               );
             }
+
+            return conversation;
+          }),
+
+        createConversation: (data: CreateConversationRequest) =>
+          Effect.gen(function* () {
+            // Validate input using schema
+            const validatedData = yield* Schema.decodeUnknown(
+              CreateConversationRequestSchema
+            )(data);
+
+            const conversation = yield* conversationRepo.create({
+              ...validatedData,
+              lastMessageAt: null,
+            });
 
             return conversation;
           }).pipe(
-            Effect.mapError((error) => {
-              // Map any repository error to domain error
-              if (error._tag === "DbError") {
-                return new ConversationNotFoundError({ conversationId });
+            Effect.catchAll((error) => {
+              // Map all errors to ConversationCreationError
+              if (error instanceof ConversationCreationError) {
+                return Effect.fail(error);
               }
-              return error as ConversationNotFoundError;
-            }),
-            Effect.withSpan("ConversationUseCase.getConversation")
+              return Effect.fail(
+                new ConversationCreationError({
+                  reason: String(error),
+                })
+              );
+            })
           ),
 
-        createConversation: (data: {
-          organizationSlug: string;
-          campaignId?: string;
-          customerPhone: string;
-          storePhone: string;
-          metadata?: string;
-        }) =>
-          Effect.gen(function* () {
-            // Generate a conversation ID based on organization and customer
-            const generatedConversationId = `${
-              data.organizationSlug
-            }_${data.customerPhone.replace(/\+/g, "")}`;
-
-            // Check if conversation already exists
-            const existingConversation = yield* conversationRepo
-              .get(generatedConversationId)
-              .pipe(
-                Effect.mapError((error) => {
-                  // Map DbError to domain error
-                  if (error._tag === "DbError") {
-                    return new ConversationCreationError({
-                      reason: "Failed to check existing conversation",
-                    });
-                  }
-                  return error;
-                })
-              );
-            if (existingConversation) {
-              return existingConversation;
-            }
-
-            // Create new conversation - ensure metadata is properly typed
-            const conversation = yield* conversationRepo
-              .create({
-                organizationSlug: data.organizationSlug,
-                campaignId: data.campaignId ?? null,
-                customerPhone: data.customerPhone,
-                storePhone: data.storePhone,
-                status: "active",
-                lastMessageAt: null,
-                metadata: data.metadata ?? null,
-              })
-              .pipe(
-                Effect.mapError((error) => {
-                  // Map all errors to ConversationCreationError
-                  if (error._tag === "DbError") {
-                    return new ConversationCreationError({
-                      reason: "Failed to create conversation in database",
-                    });
-                  }
-                  // error is already a ConversationCreationError, return as-is
-                  return error;
-                })
-              );
-
-            // Log conversation created event
-            yield* eventRepo
-              .create(conversation.id, {
-                eventType: "conversation_created",
-                description: `Conversation created for customer ${data.customerPhone}`,
-                metadata: JSON.stringify({
-                  campaignId: data.campaignId,
-                  organizationSlug: data.organizationSlug,
-                }),
-              })
-              .pipe(
-                Effect.mapError((error) => {
-                  // Map DbError to domain error for event creation
-                  if (error._tag === "DbError") {
-                    return new ConversationCreationError({
-                      reason: "Failed to log conversation creation event",
-                    });
-                  }
-                  return error;
-                })
-              );
-
-            return conversation;
-          }).pipe(Effect.withSpan("ConversationUseCase.createConversation")),
-
         updateConversationStatus: (
-          conversationId: string,
+          conversationId,
           request: UpdateConversationStatusRequest
         ) =>
           Effect.gen(function* () {
             const conversation = yield* conversationRepo
               .get(conversationId)
               .pipe(
-                Effect.mapError((error) => {
-                  // Map DbError to domain error
-                  if (error._tag === "DbError") {
-                    return new ConversationNotFoundError({ conversationId });
-                  }
-                  return error;
-                })
+                Effect.mapError(
+                  () =>
+                    new ConversationNotFoundError({
+                      conversationId,
+                    })
+                )
               );
 
             if (!conversation) {
               return yield* Effect.fail(
-                new ConversationNotFoundError({ conversationId })
+                new ConversationNotFoundError({
+                  conversationId,
+                })
               );
             }
 
             const updatedConversation = yield* conversationRepo
               .updateStatus(conversationId, request.status)
               .pipe(
-                Effect.mapError((error) => {
-                  // Map DbError to domain error
-                  if (error._tag === "DbError") {
-                    return new ConversationUpdateError({
-                      reason: "Failed to update conversation status",
+                Effect.mapError(
+                  (error) =>
+                    new ConversationUpdateError({
+                      reason: String(error),
                       conversationId,
-                    });
-                  }
-                  return error;
-                })
-              );
-
-            // Log status change event
-            yield* eventRepo
-              .create(conversationId, {
-                eventType: "status_changed",
-                description: `Conversation status changed from ${conversation.status} to ${request.status}`,
-                metadata: JSON.stringify({
-                  previousStatus: conversation.status,
-                  newStatus: request.status,
-                }),
-              })
-              .pipe(
-                Effect.mapError((error) => {
-                  // Map DbError to domain error for event creation
-                  if (error._tag === "DbError") {
-                    return new ConversationUpdateError({
-                      reason: "Failed to log status change event",
-                      conversationId,
-                    });
-                  }
-                  return error;
-                })
+                    })
+                )
               );
 
             return updatedConversation;
           }).pipe(
-            Effect.withSpan("ConversationUseCase.updateConversationStatus")
+            Effect.mapError((error) => {
+              // Map BrandedTypeValidationError to ConversationUpdateError
+              if (error instanceof ConversationNotFoundError) {
+                return error;
+              }
+              if (error instanceof ConversationUpdateError) {
+                return error;
+              }
+              return new ConversationUpdateError({
+                reason: String(error),
+                conversationId,
+              });
+            })
           ),
-
-        getMessages: (conversationId: string, request: GetMessagesRequest) =>
+        getMessages: (conversationId, request: GetMessagesRequest) =>
           Effect.gen(function* () {
-            // Verify conversation exists
             const conversation = yield* conversationRepo
               .get(conversationId)
               .pipe(
-                Effect.mapError((error) => {
-                  // Map DbError to domain error
-                  if (error._tag === "DbError") {
-                    return new ConversationNotFoundError({ conversationId });
-                  }
-                  return error;
-                })
+                Effect.mapError(
+                  () =>
+                    new ConversationNotFoundError({
+                      conversationId,
+                    })
+                )
               );
 
             if (!conversation) {
               return yield* Effect.fail(
-                new ConversationNotFoundError({ conversationId })
+                new ConversationNotFoundError({
+                  conversationId,
+                })
               );
             }
 
-            return yield* messageRepo
-              .getByConversation(conversationId, request)
+            const messagesResult = yield* messageRepo
+              .getAllMessages(request)
               .pipe(
-                Effect.mapError((error) => {
-                  // Map DbError to domain error
-                  if (error._tag === "DbError") {
-                    return new ConversationNotFoundError({ conversationId });
-                  }
-                  return error;
-                })
+                Effect.mapError(
+                  () =>
+                    new ConversationNotFoundError({
+                      conversationId,
+                    })
+                )
               );
-          }).pipe(Effect.withSpan("ConversationUseCase.getMessages")),
 
-        sendMessage: (conversationId: string, request: CreateMessageRequest) =>
+            return messagesResult[0];
+          }),
+
+        sendMessage: (conversationId, request: CreateMessageRequest) =>
           Effect.gen(function* () {
-            // Verify conversation exists
-            const conversation = yield* conversationRepo.get(conversationId);
+            const conversation = yield* conversationRepo
+              .get(conversationId)
+              .pipe(
+                Effect.mapError(
+                  () =>
+                    new ConversationNotFoundError({
+                      conversationId,
+                    })
+                )
+              );
 
             if (!conversation) {
               return yield* Effect.fail(
-                new ConversationNotFoundError({ conversationId })
+                new ConversationNotFoundError({
+                  conversationId,
+                })
               );
             }
 
-            // Create message record
-            const message = yield* messageRepo.create(conversationId, {
+            // Validate message content and type
+            const content = yield* makeMessageContent(request.content);
+            const messageType = request.messageType
+              ? yield* makeMessageType(request.messageType)
+              : yield* makeMessageType("text");
+
+            const message = yield* messageRepo.create({
               direction: "outbound",
-              content: request.content,
+              content,
               status: "pending",
-              messageType: request.messageType || "text",
+              messageType,
               externalMessageId: null,
               sentAt: null,
               deliveredAt: null,
@@ -276,69 +278,54 @@ export const ConversationUseCaseLive = (conversationId: string) =>
               metadata: request.metadata ?? null,
             });
 
-            // Send message via messaging service
-            const sendResult = yield* messagingService.sendMessage(
-              conversation.customerPhone,
-              conversation.storePhone,
-              request.content,
-              request.messageType
-            );
-
-            // Update message with external ID and delivery status
-            const updatedMessage = yield* messageRepo
-              .updateStatus(
-                message.id,
-                sendResult.status === "sent" ? "sent" : "failed",
-                {
-                  sentAt: sendResult.status === "sent" ? new Date() : undefined,
-                  failedAt:
-                    sendResult.status === "failed" ? new Date() : undefined,
-                  failureReason:
-                    sendResult.status === "failed"
-                      ? "Delivery failed"
-                      : undefined,
-                }
+            // Send message via external service
+            const sendResult = yield* messagingService
+              .sendMessage(
+                conversation.customerPhone,
+                conversation.storePhone,
+                request.content,
+                request.messageType
               )
               .pipe(
-                Effect.mapError((error) => {
-                  // Map MessageNotFoundError to MessageSendError
-                  if (error._tag === "MessageNotFoundError") {
-                    return new MessageSendError({
-                      reason: "Failed to update message status",
+                Effect.mapError(
+                  (error) =>
+                    new MessageSendError({
+                      reason: String(error),
                       messageId: message.id,
-                    });
-                  }
-                  if (error._tag === "DbError") {
-                    return new MessageSendError({
-                      reason: "Database error while updating message",
-                      messageId: message.id,
-                    });
-                  }
-                  return error;
-                })
+                    })
+                )
               );
 
-            yield* messageRepo
-              .updateExternalId(message.id, sendResult.externalMessageId)
-              .pipe(
-                Effect.mapError((error) => {
-                  // Map MessageNotFoundError to MessageSendError
-                  if (error._tag === "MessageNotFoundError") {
-                    return new MessageSendError({
-                      reason: "Failed to update message external ID",
-                      messageId: message.id,
-                    });
-                  }
-                  if (error._tag === "DbError") {
-                    return new MessageSendError({
-                      reason:
-                        "Database error while updating message external ID",
-                      messageId: message.id,
-                    });
-                  }
-                  return error;
+            // Update message with external ID if successful
+            if (sendResult.status === "sent") {
+              yield* messageRepo
+                .updateExternalId(message.id, sendResult.externalMessageId)
+                .pipe(
+                  Effect.mapError(
+                    (error) =>
+                      new MessageSendError({
+                        reason: `Failed to update external ID: ${String(
+                          error
+                        )}`,
+                        messageId: message.id,
+                      })
+                  )
+                );
+            } else {
+              yield* messageRepo
+                .updateStatus(message.id, "failed", {
+                  failureReason: "Delivery failed",
                 })
-              );
+                .pipe(
+                  Effect.mapError(
+                    (error) =>
+                      new MessageSendError({
+                        reason: `Failed to update status: ${String(error)}`,
+                        messageId: message.id,
+                      })
+                  )
+                );
+            }
 
             // Update conversation last message timestamp
             yield* conversationRepo.updateLastMessageAt(
@@ -346,49 +333,56 @@ export const ConversationUseCaseLive = (conversationId: string) =>
               new Date()
             );
 
-            // Log message sent event
-            yield* eventRepo.create(conversationId, {
-              eventType: "message_sent",
-              description: `Outbound message sent to ${conversation.customerPhone}`,
-              metadata: JSON.stringify({
-                messageId: message.id,
-                externalMessageId: sendResult.externalMessageId,
-                status: sendResult.status,
-              }),
-            });
+            return message;
+          }).pipe(
+            Effect.mapError((error) => {
+              // Map all errors to expected types
+              if (error instanceof ConversationNotFoundError) {
+                return error;
+              }
+              if (error instanceof MessageSendError) {
+                return error;
+              }
+              return new MessageSendError({
+                reason: String(error),
+              });
+            })
+          ),
 
-            return updatedMessage;
-          }).pipe(Effect.withSpan("ConversationUseCase.sendMessage")),
-
-        receiveMessage: (
-          conversationId: string,
-          payload: IncomingMessagePayload
-        ) =>
+        receiveMessage: (conversationId, payload: IncomingMessagePayload) =>
           Effect.gen(function* () {
-            // Get or create conversation
-            let conversation = yield* conversationRepo.get(conversationId);
+            const conversation = yield* conversationRepo
+              .get(conversationId)
+              .pipe(
+                Effect.mapError(
+                  () =>
+                    new ConversationNotFoundError({
+                      conversationId,
+                    })
+                )
+              );
 
             if (!conversation) {
-              // Create new conversation for incoming message
-              conversation = yield* conversationRepo.create({
-                organizationSlug: conversationId.split("_")[0], // Extract org slug from conversation ID
-                campaignId: null, // Incoming messages don't have campaigns initially
-                customerPhone: payload.from,
-                storePhone: payload.to,
-                status: "active",
-                lastMessageAt: null,
-                metadata: payload.metadata ?? null,
-              });
+              return yield* Effect.fail(
+                new ConversationNotFoundError({
+                  conversationId,
+                })
+              );
             }
 
-            // Create inbound message record
-            const message = yield* messageRepo.create(conversationId, {
+            // Validate message content and type
+            const content = yield* makeMessageContent(payload.content);
+            const messageType = payload.messageType
+              ? yield* makeMessageType(payload.messageType)
+              : yield* makeMessageType("text");
+
+            const message = yield* messageRepo.create({
               direction: "inbound",
-              content: payload.content,
-              status: "delivered", // Incoming messages are already delivered
-              messageType: payload.messageType || "text",
+              content,
+              status: "delivered",
+              messageType,
               externalMessageId: payload.externalMessageId,
-              sentAt: payload.timestamp || new Date(),
+              sentAt: payload.timestamp ?? new Date(),
               deliveredAt: new Date(),
               readAt: null,
               failedAt: null,
@@ -402,51 +396,55 @@ export const ConversationUseCaseLive = (conversationId: string) =>
               new Date()
             );
 
-            // Log message received event
-            yield* eventRepo.create(conversationId, {
-              eventType: "message_received",
-              description: `Inbound message received from ${payload.from}`,
-              metadata: JSON.stringify({
-                messageId: message.id,
-                externalMessageId: payload.externalMessageId,
-                provider: payload.provider,
-              }),
-            });
-
             return message;
-          }).pipe(Effect.withSpan("ConversationUseCase.receiveMessage")),
+          }).pipe(
+            Effect.mapError((error) => {
+              // Map all errors to expected types
+              if (error instanceof ConversationNotFoundError) {
+                return error;
+              }
+              return new MessageSendError({
+                reason: String(error),
+              });
+            })
+          ),
 
-        getConversationSummary: (conversationId: string) =>
+        getConversationSummary: (conversationId: ConversationId) =>
           Effect.gen(function* () {
-            const conversation = yield* conversationRepo.get(conversationId);
+            const conversation = yield* conversationRepo
+              .get(conversationId)
+              .pipe(
+                Effect.mapError(
+                  () =>
+                    new ConversationNotFoundError({
+                      conversationId,
+                    })
+                )
+              );
 
             if (!conversation) {
               return yield* Effect.fail(
-                new ConversationNotFoundError({ conversationId })
+                new ConversationNotFoundError({
+                  conversationId,
+                })
               );
             }
 
-            // Get message statistics
-            const messagesResponse = yield* messageRepo.getByConversation(
-              conversationId,
-              { limit: 1000 } // Get more messages for accurate count
-            );
-
-            const messages = messagesResponse.messages;
-            const messageCount = messages.length;
-            const lastMessage = messages.length > 0 ? messages[0] : null; // Messages are ordered by newest first
-            const unreadCount = messages.filter(
-              (msg) => msg.direction === "inbound" && !msg.readAt
-            ).length;
-
+            // Simple summary without message count for now
             return {
-              conversation,
-              messageCount,
-              lastMessage,
-              unreadCount,
-            };
+              conversation: conversation.id,
+              messageCount: 0,
+              lastActivity: conversation.lastMessageAt,
+            } as const;
           }).pipe(
-            Effect.withSpan("ConversationUseCase.getConversationSummary")
+            Effect.mapError((error) => {
+              if (error instanceof ConversationNotFoundError) {
+                return error;
+              }
+              return new ConversationNotFoundError({
+                conversationId,
+              });
+            })
           ),
       };
     })

@@ -7,7 +7,10 @@ import {
   ConversationNotFoundError,
   MessageSendError,
   ConversationUpdateError,
+  type ConversationId,
+  type MessageContent,
 } from "@/domain/tenant/conversations/models";
+import { makeMessageType } from "@/domain/tenant/shared/branded-types";
 
 // Export namespace for layer configuration
 export abstract class ConversationDONamespace extends Context.Tag(
@@ -34,14 +37,14 @@ export abstract class ConversationDOService extends Context.Tag(
   ConversationDOService,
   {
     readonly getConversation: (
-      conversationId: string
+      conversationId: ConversationId
     ) => Effect.Effect<ConversationType, ConversationNotFoundError>;
     readonly sendMessage: (
-      conversationId: string,
-      content: string
+      conversationId: ConversationId,
+      content: MessageContent
     ) => Effect.Effect<SendMessageResponseType, MessageSendError>;
     readonly receiveMessage: (
-      conversationId: string,
+      conversationId: ConversationId,
       payload: ReceiveMessageRequestType
     ) => Effect.Effect<ReceiveMessageResponseType, ConversationUpdateError>;
   }
@@ -53,7 +56,7 @@ export const ConversationDOAdapterLive = Layer.effect(
   Effect.gen(function* () {
     const conversationDONamespace = yield* ConversationDONamespace;
 
-    const getConversationDO = (conversationId: string) => {
+    const getConversationDO = (conversationId: ConversationId) => {
       return Effect.gen(function* () {
         yield* Effect.log("GET CONVERSATION DO START").pipe(
           Effect.annotateLogs({
@@ -63,7 +66,7 @@ export const ConversationDOAdapterLive = Layer.effect(
         );
 
         // Validate conversation ID before creating DO
-        if (!conversationId || conversationId.trim().length === 0) {
+        if (!conversationId) {
           return yield* Effect.fail(
             new ConversationNotFoundError({
               conversationId,
@@ -100,7 +103,10 @@ export const ConversationDOAdapterLive = Layer.effect(
       );
     };
 
-    const sendMessageDO = (conversationId: string, content: string) => {
+    const sendMessageDO = (
+      conversationId: ConversationId,
+      content: MessageContent
+    ) => {
       return Effect.gen(function* () {
         yield* Effect.log("SEND MESSAGE DO START").pipe(
           Effect.annotateLogs({
@@ -133,10 +139,23 @@ export const ConversationDOAdapterLive = Layer.effect(
         // Create type-safe client using TypeOnce.dev pattern
         const client = yield* createConversationDOClient(stub);
 
+        // Create message type safely
+        const messageType = yield* makeMessageType("text").pipe(
+          Effect.mapError(
+            (error) =>
+              new MessageSendError({
+                reason: `Invalid message type: ${String(error)}`,
+              })
+          )
+        );
+
         // Use auto-generated method with perfect type safety!
         const result = yield* client.conversations
           .sendMessage({
-            payload: { content, messageType: "text" },
+            payload: {
+              content: content,
+              messageType: messageType,
+            },
           })
           .pipe(
             Effect.mapError((error) => {
@@ -161,7 +180,7 @@ export const ConversationDOAdapterLive = Layer.effect(
     };
 
     const receiveMessageDO = (
-      conversationId: string,
+      conversationId: ConversationId,
       payload: ReceiveMessageRequestType
     ) => {
       return Effect.gen(function* () {

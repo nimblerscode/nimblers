@@ -129,7 +129,7 @@ export type ApiSendMessageInput = S.Schema.Type<
 export const ApiSendMessageOutputSchema = S.Struct({
   sid: MessageId,
   status: S.String,
-  dateCreated: S.Date,
+  dateCreated: S.DateFromSelf,
   price: S.optional(S.String),
 });
 export type ApiSendMessageOutput = S.Schema.Type<
@@ -142,8 +142,8 @@ export const ApiGetMessageOutputSchema = S.Struct({
   body: MessageContent,
   to: PhoneNumber,
   from: PhoneNumber,
-  dateCreated: S.Date,
-  dateUpdated: S.Date,
+  dateCreated: S.DateFromSelf,
+  dateUpdated: S.DateFromSelf,
 });
 export type ApiGetMessageOutput = S.Schema.Type<
   typeof ApiGetMessageOutputSchema

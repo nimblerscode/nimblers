@@ -7,6 +7,7 @@ import {
   OrganizationIdSchema,
   type OrgDbError,
 } from "@/domain/tenant/organization/model";
+import { MemberRole } from "@/domain/tenant/shared/branded-types";
 
 export const InvitationStatusLiterals = {
   pending: S.Literal("pending"),
@@ -19,7 +20,7 @@ export const InvitationStatusSchema = S.Union(
   InvitationStatusLiterals.pending,
   InvitationStatusLiterals.accepted,
   InvitationStatusLiterals.expired,
-  InvitationStatusLiterals.revoked,
+  InvitationStatusLiterals.revoked
 );
 
 export type InvitationStatus = S.Schema.Type<typeof InvitationStatusSchema>;
@@ -37,7 +38,7 @@ export const InvitationSchema = S.Struct({
   id: InvitationIdSchema,
   email: EmailSchema,
   inviterId: UserIdSchema,
-  role: S.String, // Consider an enum/literal union if roles are predefined
+  role: MemberRole,
   status: InvitationStatusSchema,
   expiresAt: TimestampNumberSchema,
   createdAt: TimestampNumberSchema,
@@ -48,7 +49,7 @@ export type Invitation = S.Schema.Type<typeof InvitationSchema>;
 export const NewInvitationSchema = S.Struct({
   inviterId: UserIdSchema,
   inviteeEmail: EmailSchema,
-  role: S.String,
+  role: MemberRole,
 });
 
 export type NewInvitation = S.Schema.Type<typeof NewInvitationSchema>;
@@ -70,19 +71,19 @@ export class InvitationExpired extends Data.TaggedError("InvitationExpired")<{
 }> {}
 
 export class InvitationAlreadyAccepted extends Data.TaggedError(
-  "InvitationAlreadyAccepted",
+  "InvitationAlreadyAccepted"
 )<{ message: string; invitationId: string }> {}
 
 export class InvitationAlreadyRevoked extends Data.TaggedError(
-  "InvitationAlreadyRevoked",
+  "InvitationAlreadyRevoked"
 )<{ message: string; invitationId: string }> {}
 
 export class DuplicatePendingInvitation extends Data.TaggedError(
-  "DuplicatePendingInvitation",
+  "DuplicatePendingInvitation"
 )<{ message: string; email: string }> {}
 
 export class MaxPendingInvitationsReached extends Data.TaggedError(
-  "MaxPendingInvitationsReached",
+  "MaxPendingInvitationsReached"
 )<{ message: string; organizationId: OrganizationId; limit: number }> {}
 
 export class UserAlreadyMember extends Data.TaggedError("UserAlreadyMember")<{
@@ -91,7 +92,7 @@ export class UserAlreadyMember extends Data.TaggedError("UserAlreadyMember")<{
 }> {}
 
 export class InvalidInvitationStatusTransition extends Data.TaggedError(
-  "InvalidInvitationStatusTransition",
+  "InvalidInvitationStatusTransition"
 )<{
   message: string;
   invitationId: string;
@@ -130,7 +131,7 @@ export const CreateInvitationInputSchema = S.Struct({
   organizationId: OrganizationIdSchema,
   inviterId: UserIdSchema,
   inviteeEmail: EmailSchema,
-  role: S.String,
+  role: MemberRole,
 });
 
 export type CreateInvitationInput = S.Schema.Type<

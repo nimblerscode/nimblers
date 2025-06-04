@@ -8,6 +8,13 @@
       "when": 1748979217438,
       "tag": "0000_special_ulik",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1749061712060,
+      "tag": "0001_lying_sleeper",
+      "breakpoints": true
     }
   ]
 }

@@ -1,26 +1,35 @@
 import { Effect, Layer } from "effect";
 import { eq, desc, and, gt } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import {
-  ConversationRepo,
-  DbError,
-} from "@/domain/tenant/conversations/service";
+import { ConversationRepo } from "@/domain/tenant/conversations/service";
 import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { conversation } from "@/infrastructure/persistence/conversation/sqlite/schema";
-import type { Conversation } from "@/domain/tenant/conversations/models";
+import type {
+  Conversation,
+  ConversationId,
+  OrganizationSlug,
+} from "@/domain/tenant/conversations/models";
 import {
   ConversationCreationError,
   ConversationNotFoundError,
+  ConversationUpdateError,
 } from "@/domain/tenant/conversations/models";
+import {
+  unsafeConversationId,
+  unsafeOrganizationSlug,
+  unsafeCampaignId,
+  unsafePhoneNumber,
+  type CampaignId,
+} from "@/domain/tenant/shared/branded-types";
 
 // Helper function to convert database row to domain model
 function mapDbRowToConversation(row: any): Conversation {
   return {
-    id: row.id,
-    organizationSlug: row.organizationSlug,
-    campaignId: row.campaignId ?? null,
-    customerPhone: row.customerPhone,
-    storePhone: row.storePhone,
+    id: unsafeConversationId(row.id),
+    organizationSlug: unsafeOrganizationSlug(row.organizationSlug),
+    campaignId: row.campaignId ? unsafeCampaignId(row.campaignId) : null,
+    customerPhone: unsafePhoneNumber(row.customerPhone),
+    storePhone: unsafePhoneNumber(row.storePhone),
     status: row.status as Conversation["status"],
     lastMessageAt: row.lastMessageAt ?? null,
     createdAt: row.createdAt,
@@ -34,7 +43,7 @@ export const ConversationRepoLive = Layer.effect(
     const drizzleClient = yield* DrizzleDOClient;
 
     return {
-      get: (conversationId: string) =>
+      get: (conversationId: ConversationId) =>
         Effect.gen(function* () {
           const result = yield* Effect.tryPromise({
             try: async () => {
@@ -46,11 +55,13 @@ export const ConversationRepoLive = Layer.effect(
 
               return results.length > 0 ? results[0] : null;
             },
-            catch: (error) => new DbError(error),
+            catch: (error) => new ConversationNotFoundError({ conversationId }),
           });
 
           if (!result) {
-            return null;
+            return yield* Effect.fail(
+              new ConversationNotFoundError({ conversationId })
+            );
           }
 
           return mapDbRowToConversation(result);
@@ -58,7 +69,7 @@ export const ConversationRepoLive = Layer.effect(
 
       create: (data: Omit<Conversation, "id" | "createdAt">) =>
         Effect.gen(function* () {
-          const conversationId = `conv_${nanoid()}`;
+          const conversationId = nanoid();
           const now = new Date();
 
           // Build insert data with proper null handling for Drizzle
@@ -89,14 +100,13 @@ export const ConversationRepoLive = Layer.effect(
                     "Conversation already exists for this customer and organization",
                 });
               }
-              return new DbError(error);
+              return new ConversationCreationError({
+                reason: `Database error: ${errorMessage}`,
+              });
             },
           });
 
-          if (
-            result instanceof ConversationCreationError ||
-            result instanceof DbError
-          ) {
+          if (result instanceof ConversationCreationError) {
             return yield* Effect.fail(result);
           }
 
@@ -109,7 +119,10 @@ export const ConversationRepoLive = Layer.effect(
           });
         }),
 
-      updateStatus: (conversationId: string, status: Conversation["status"]) =>
+      updateStatus: (
+        conversationId: ConversationId,
+        status: Conversation["status"]
+      ) =>
         Effect.gen(function* () {
           const updateResult = yield* Effect.tryPromise({
             try: async () => {
@@ -120,30 +133,37 @@ export const ConversationRepoLive = Layer.effect(
                 .returning();
 
               if (result.length === 0) {
-                throw new ConversationNotFoundError({ conversationId });
+                throw new ConversationNotFoundError({
+                  conversationId,
+                });
               }
 
               return result[0];
             },
             catch: (error) => {
               if (error instanceof ConversationNotFoundError) {
-                return error;
+                return new ConversationUpdateError({
+                  reason: `Conversation not found: ${conversationId}`,
+                  conversationId,
+                });
               }
-              return new DbError(error);
+              const message =
+                error instanceof Error ? error.message : String(error);
+              return new ConversationUpdateError({
+                reason: `Database error: ${message}`,
+                conversationId,
+              });
             },
           });
 
-          if (
-            updateResult instanceof ConversationNotFoundError ||
-            updateResult instanceof DbError
-          ) {
+          if (updateResult instanceof ConversationUpdateError) {
             return yield* Effect.fail(updateResult);
           }
 
           return mapDbRowToConversation(updateResult);
         }),
 
-      updateLastMessageAt: (conversationId: string, timestamp: Date) =>
+      updateLastMessageAt: (conversationId: ConversationId, timestamp: Date) =>
         Effect.gen(function* () {
           const updateResult = yield* Effect.tryPromise({
             try: async () => {
@@ -154,29 +174,36 @@ export const ConversationRepoLive = Layer.effect(
                 .returning();
 
               if (result.length === 0) {
-                throw new ConversationNotFoundError({ conversationId });
+                throw new ConversationNotFoundError({
+                  conversationId,
+                });
               }
 
               return result[0];
             },
             catch: (error) => {
               if (error instanceof ConversationNotFoundError) {
-                return error;
+                return new ConversationUpdateError({
+                  reason: `Conversation not found: ${conversationId}`,
+                  conversationId,
+                });
               }
-              return new DbError(error);
+              const message =
+                error instanceof Error ? error.message : String(error);
+              return new ConversationUpdateError({
+                reason: `Database error: ${message}`,
+                conversationId,
+              });
             },
           });
 
-          if (
-            updateResult instanceof ConversationNotFoundError ||
-            updateResult instanceof DbError
-          ) {
+          if (updateResult instanceof ConversationUpdateError) {
             return yield* Effect.fail(updateResult);
           }
         }),
 
       getByOrganization: (
-        organizationSlug: string,
+        organizationSlug: OrganizationSlug,
         options?: { limit?: number; cursor?: string }
       ) =>
         Effect.gen(function* () {
@@ -218,14 +245,18 @@ export const ConversationRepoLive = Layer.effect(
                 cursor: nextCursor,
               };
             },
-            catch: (error) => new DbError(error),
+            catch: (error) => {
+              const message =
+                error instanceof Error ? error.message : String(error);
+              throw new Error(`Database error: ${message}`);
+            },
           });
 
           return result;
         }),
 
       getByCampaign: (
-        campaignId: string,
+        campaignId: CampaignId,
         options?: { limit?: number; cursor?: string }
       ) =>
         Effect.gen(function* () {
@@ -265,7 +296,11 @@ export const ConversationRepoLive = Layer.effect(
                 cursor: nextCursor,
               };
             },
-            catch: (error) => new DbError(error),
+            catch: (error) => {
+              const message =
+                error instanceof Error ? error.message : String(error);
+              throw new Error(`Database error: ${message}`);
+            },
           });
 
           return result;

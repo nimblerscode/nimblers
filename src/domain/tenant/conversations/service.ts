@@ -1,27 +1,24 @@
-import { Context, Effect } from "effect";
+import { Context, type Effect } from "effect";
 import type {
+  CampaignId,
   Conversation,
-  Message,
-  ConversationEvent,
-  CreateMessageRequest,
-  UpdateConversationStatusRequest,
-  GetMessagesRequest,
-  MessagesResponse,
-  IncomingMessagePayload,
-  ConversationNotFoundError,
-  MessageNotFoundError,
   ConversationCreationError,
-  MessageSendError,
+  ConversationId,
+  ConversationNotFoundError,
   ConversationUpdateError,
+  CreateMessageRequest,
+  GetMessagesRequest,
+  IncomingMessagePayload,
+  Message,
+  MessageCreateError,
+  MessageId,
+  MessageNotFoundError,
+  MessageSendError,
+  MessagesNotFoundError,
+  MessagesResponse,
+  MessageUpdateError,
+  UpdateConversationStatusRequest,
 } from "./models";
-
-// Database-level errors (infrastructure layer)
-export class DbError extends Error {
-  readonly _tag = "DbError";
-  constructor(public cause: unknown) {
-    super("Database operation failed");
-  }
-}
 
 // Repository interface for conversation data access
 export abstract class ConversationRepo extends Context.Tag(
@@ -30,32 +27,21 @@ export abstract class ConversationRepo extends Context.Tag(
   ConversationRepo,
   {
     readonly get: (
-      conversationId: string
-    ) => Effect.Effect<Conversation | null, DbError>;
+      conversationId: ConversationId
+    ) => Effect.Effect<Conversation, ConversationNotFoundError>;
     readonly create: (
       data: Omit<Conversation, "id" | "createdAt">
-    ) => Effect.Effect<Conversation, ConversationCreationError | DbError>;
+    ) => Effect.Effect<Conversation, ConversationCreationError>;
     readonly updateStatus: (
-      conversationId: string,
+      conversationId: ConversationId,
       status: Conversation["status"]
-    ) => Effect.Effect<Conversation, ConversationNotFoundError | DbError>;
+    ) => Effect.Effect<Conversation, ConversationUpdateError>;
     readonly updateLastMessageAt: (
-      conversationId: string,
+      conversationId: ConversationId,
       timestamp: Date
-    ) => Effect.Effect<void, ConversationNotFoundError | DbError>;
-    readonly getByOrganization: (
-      organizationSlug: string,
-      options?: { limit?: number; cursor?: string }
-    ) => Effect.Effect<
-      {
-        conversations: Conversation[];
-        hasMore: boolean;
-        cursor: string | null;
-      },
-      DbError
-    >;
+    ) => Effect.Effect<void, ConversationUpdateError>;
     readonly getByCampaign: (
-      campaignId: string,
+      campaignId: CampaignId,
       options?: { limit?: number; cursor?: string }
     ) => Effect.Effect<
       {
@@ -63,7 +49,7 @@ export abstract class ConversationRepo extends Context.Tag(
         hasMore: boolean;
         cursor: string | null;
       },
-      DbError
+      ConversationNotFoundError
     >;
   }
 >() {}
@@ -75,16 +61,16 @@ export abstract class MessageRepo extends Context.Tag(
   MessageRepo,
   {
     readonly create: (
-      conversationId: string,
       data: Omit<Message, "id" | "createdAt">
-    ) => Effect.Effect<Message, DbError>;
-    readonly get: (messageId: string) => Effect.Effect<Message | null, DbError>;
-    readonly getByConversation: (
-      conversationId: string,
+    ) => Effect.Effect<Message, MessageCreateError>;
+    readonly get: (
+      messageId: MessageId
+    ) => Effect.Effect<Message, MessageNotFoundError>;
+    readonly getAllMessages: (
       options: GetMessagesRequest
-    ) => Effect.Effect<MessagesResponse, DbError>;
+    ) => Effect.Effect<MessagesResponse[], MessagesNotFoundError>;
     readonly updateStatus: (
-      messageId: string,
+      messageId: MessageId,
       status: Message["status"],
       metadata?: {
         sentAt?: Date;
@@ -93,31 +79,11 @@ export abstract class MessageRepo extends Context.Tag(
         failedAt?: Date;
         failureReason?: string;
       }
-    ) => Effect.Effect<Message, MessageNotFoundError | DbError>;
+    ) => Effect.Effect<Message, MessageUpdateError>;
     readonly updateExternalId: (
-      messageId: string,
+      messageId: MessageId,
       externalMessageId: string
-    ) => Effect.Effect<void, MessageNotFoundError | DbError>;
-  }
->() {}
-
-// Repository interface for conversation events (optional)
-export abstract class ConversationEventRepo extends Context.Tag(
-  "@conversations/ConversationEventRepo"
-)<
-  ConversationEventRepo,
-  {
-    readonly create: (
-      conversationId: string,
-      data: Omit<ConversationEvent, "id" | "createdAt">
-    ) => Effect.Effect<ConversationEvent, DbError>;
-    readonly getByConversation: (
-      conversationId: string,
-      options?: { limit?: number; cursor?: string }
-    ) => Effect.Effect<
-      { events: ConversationEvent[]; hasMore: boolean; cursor: string | null },
-      DbError
-    >;
+    ) => Effect.Effect<void, MessageUpdateError>;
   }
 >() {}
 
@@ -142,59 +108,6 @@ export abstract class MessagingService extends Context.Tag(
   }
 >() {}
 
-// Use case interface for conversation business logic
-export abstract class ConversationUseCase extends Context.Tag(
-  "@conversations/ConversationUseCase"
-)<
-  ConversationUseCase,
-  {
-    readonly getConversation: (
-      conversationId: string
-    ) => Effect.Effect<Conversation, ConversationNotFoundError>;
-    readonly createConversation: (data: {
-      organizationSlug: string;
-      campaignId?: string;
-      customerPhone: string;
-      storePhone: string;
-      metadata?: string;
-    }) => Effect.Effect<Conversation, ConversationCreationError | DbError>;
-    readonly updateConversationStatus: (
-      conversationId: string,
-      request: UpdateConversationStatusRequest
-    ) => Effect.Effect<
-      Conversation,
-      ConversationNotFoundError | ConversationUpdateError | DbError
-    >;
-    readonly getMessages: (
-      conversationId: string,
-      request: GetMessagesRequest
-    ) => Effect.Effect<MessagesResponse, ConversationNotFoundError | DbError>;
-    readonly sendMessage: (
-      conversationId: string,
-      request: CreateMessageRequest
-    ) => Effect.Effect<
-      Message,
-      ConversationNotFoundError | MessageSendError | DbError
-    >;
-    readonly receiveMessage: (
-      conversationId: string,
-      payload: IncomingMessagePayload
-    ) => Effect.Effect<
-      Message,
-      ConversationNotFoundError | ConversationCreationError | DbError
-    >;
-    readonly getConversationSummary: (conversationId: string) => Effect.Effect<
-      {
-        conversation: Conversation;
-        messageCount: number;
-        lastMessage: Message | null;
-        unreadCount: number;
-      },
-      ConversationNotFoundError | DbError
-    >;
-  }
->() {}
-
 /**
  * Durable Object service for distributed conversation operations
  */
@@ -204,14 +117,14 @@ export abstract class ConversationDOService extends Context.Tag(
   ConversationDOService,
   {
     readonly getConversation: (
-      conversationId: string
+      conversationId: ConversationId
     ) => Effect.Effect<Conversation, ConversationNotFoundError>;
     readonly sendMessage: (
-      conversationId: string,
+      conversationId: ConversationId,
       content: string
     ) => Effect.Effect<{ message: Message }, MessageSendError>;
     readonly receiveMessage: (
-      conversationId: string,
+      conversationId: ConversationId,
       payload: IncomingMessagePayload
     ) => Effect.Effect<
       { success: boolean; messageId: string; status: string },

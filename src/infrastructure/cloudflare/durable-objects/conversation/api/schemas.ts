@@ -1,30 +1,46 @@
+import {
+  ConversationStatus,
+  MessageStatus,
+} from "@/domain/tenant/conversations/models";
+import { MessageDirection } from "@/domain/tenant/conversations/models";
+import {
+  CampaignId,
+  MessageType,
+  ConversationId,
+  MessageContent,
+  MessageId,
+  OrganizationSlug,
+  PhoneNumber,
+  ExternalMessageId,
+  Cursor,
+} from "@/domain/tenant/shared/branded-types";
 import { Schema } from "effect";
 
 // Base schemas for conversation entities
 const ConversationSchema = Schema.Struct({
-  id: Schema.String,
-  organizationSlug: Schema.String,
-  campaignId: Schema.optional(Schema.NullOr(Schema.String)),
-  customerPhone: Schema.String,
-  storePhone: Schema.String,
-  status: Schema.Literal("active", "paused", "resolved", "archived"),
-  lastMessageAt: Schema.optional(Schema.NullOr(Schema.DateFromSelf)),
+  id: ConversationId,
+  organizationSlug: OrganizationSlug,
+  campaignId: Schema.NullOr(CampaignId),
+  customerPhone: PhoneNumber,
+  storePhone: PhoneNumber,
+  status: ConversationStatus,
+  lastMessageAt: Schema.NullOr(Schema.DateFromSelf),
   createdAt: Schema.DateFromSelf,
-  metadata: Schema.optional(Schema.NullOr(Schema.String)),
+  metadata: Schema.NullOr(Schema.String),
 });
 
 const MessageSchema = Schema.Struct({
-  id: Schema.String,
-  direction: Schema.Literal("inbound", "outbound"),
-  content: Schema.String,
-  status: Schema.Literal("pending", "sent", "delivered", "read", "failed"),
-  messageType: Schema.String,
-  externalMessageId: Schema.NullOr(Schema.String),
-  sentAt: Schema.optional(Schema.NullOr(Schema.DateFromSelf)),
-  deliveredAt: Schema.optional(Schema.NullOr(Schema.DateFromSelf)),
-  readAt: Schema.optional(Schema.NullOr(Schema.DateFromSelf)),
-  failedAt: Schema.optional(Schema.NullOr(Schema.DateFromSelf)),
-  failureReason: Schema.optional(Schema.NullOr(Schema.String)),
+  id: MessageId,
+  direction: MessageDirection,
+  content: MessageContent,
+  status: MessageStatus,
+  messageType: MessageType,
+  externalMessageId: Schema.NullOr(ExternalMessageId),
+  sentAt: Schema.NullOr(Schema.DateFromSelf),
+  deliveredAt: Schema.NullOr(Schema.DateFromSelf),
+  readAt: Schema.NullOr(Schema.DateFromSelf),
+  failedAt: Schema.NullOr(Schema.DateFromSelf),
+  failureReason: Schema.NullOr(Schema.String),
   createdAt: Schema.DateFromSelf,
   metadata: Schema.optional(Schema.NullOr(Schema.String)),
 });
@@ -37,9 +53,9 @@ export const ConversationApiSchemas = {
 
   getMessages: {
     urlParams: Schema.Struct({
-      limit: Schema.optional(Schema.NumberFromString),
-      cursor: Schema.optional(Schema.String),
-      direction: Schema.optional(Schema.Literal("inbound", "outbound")),
+      limit: Schema.NumberFromString,
+      cursor: Cursor,
+      direction: MessageDirection,
     }),
     response: Schema.Struct({
       messages: Schema.Array(MessageSchema),
@@ -52,8 +68,8 @@ export const ConversationApiSchemas = {
 
   sendMessage: {
     request: Schema.Struct({
-      content: Schema.String,
-      messageType: Schema.optional(Schema.String),
+      content: MessageContent,
+      messageType: Schema.optional(MessageType),
     }),
     response: Schema.Struct({
       message: MessageSchema,
@@ -62,7 +78,7 @@ export const ConversationApiSchemas = {
 
   updateConversationStatus: {
     request: Schema.Struct({
-      status: Schema.Literal("active", "paused", "resolved", "archived"),
+      status: ConversationStatus,
     }),
     response: Schema.Struct({
       conversation: ConversationSchema,
@@ -71,14 +87,14 @@ export const ConversationApiSchemas = {
 
   getConversationSummary: {
     response: Schema.Struct({
-      id: Schema.String,
-      status: Schema.Literal("active", "paused", "resolved", "archived"),
+      id: ConversationId,
+      status: ConversationStatus,
       lastMessageAt: Schema.DateFromSelf,
       messageCount: Schema.Number,
       lastMessage: Schema.Struct({
-        id: Schema.String,
-        direction: Schema.Literal("inbound", "outbound"),
-        content: Schema.String,
+        id: MessageId,
+        direction: MessageDirection,
+        content: MessageContent,
         createdAt: Schema.DateFromSelf,
       }),
     }),
@@ -87,20 +103,20 @@ export const ConversationApiSchemas = {
   receiveMessage: {
     request: Schema.Struct({
       // Twilio webhook format
-      MessageSid: Schema.optional(Schema.String),
-      From: Schema.optional(Schema.String),
-      To: Schema.optional(Schema.String),
-      Body: Schema.optional(Schema.String),
+      MessageSid: Schema.optional(ExternalMessageId),
+      From: Schema.optional(PhoneNumber),
+      To: Schema.optional(PhoneNumber),
+      Body: Schema.optional(MessageContent),
       // Generic format
-      id: Schema.optional(Schema.String),
-      from: Schema.optional(Schema.String),
-      to: Schema.optional(Schema.String),
-      content: Schema.optional(Schema.String),
+      id: Schema.optional(MessageId),
+      from: Schema.optional(PhoneNumber),
+      to: Schema.optional(PhoneNumber),
+      content: Schema.optional(MessageContent),
     }),
     response: Schema.Struct({
       success: Schema.Boolean,
-      messageId: Schema.String,
-      status: Schema.String,
+      messageId: MessageId,
+      status: MessageStatus,
     }),
   },
 };

@@ -13,6 +13,7 @@ import type {
 import { DrizzleDOClient } from "./drizzle";
 import { campaign } from "./schema";
 import { eq, desc, sql, lt, and } from "drizzle-orm";
+import { unsafeTimezone } from "@/domain/tenant/shared/branded-types";
 
 // Type for the actual database row
 type SelectCampaign = typeof campaign.$inferSelect;
@@ -26,7 +27,7 @@ const convertToDomainCampaign = (row: SelectCampaign): Campaign => ({
   status: row.status as Campaign["status"],
   schedule: {
     scheduledAt: row.scheduledAt ? new Date(row.scheduledAt) : undefined,
-    timezone: row.timezone || "UTC",
+    timezone: unsafeTimezone(row.timezone || "UTC"),
     startedAt: row.startedAt ? new Date(row.startedAt) : undefined,
     completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
   },

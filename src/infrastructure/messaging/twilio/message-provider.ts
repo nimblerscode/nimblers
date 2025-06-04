@@ -53,7 +53,7 @@ export const TwilioMessageProviderLive = Layer.effect(
               from: request.from,
               body: request.content,
               options: {
-                statusCallback: config.config.webhookUrl,
+                statusCallback: config.webhookUrl,
                 provideFeedback: true,
               },
             })

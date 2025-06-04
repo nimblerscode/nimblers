@@ -25,6 +25,7 @@
     "clean:vite": "rm -rf ./node_modules/.vite",
     "release": "npm run clean && npm run build && wrangler deploy",
     "format": "biome check --write ./src",
+    "migrate:all": "npm run migrate:gateway && npm run migrate:tenant && npm run migrate:shopify && npm run migrate:conversation",
     "migrate:new": "drizzle-kit generate",
     "migrate:gateway": "drizzle-kit generate --config=drizzle.config.gateway.ts",
     "migrate:tenant": "drizzle-kit generate --config=drizzle.config.tenant.ts",
@@ -61,8 +62,7 @@
     "react-aria-components": "^1.9.0",
     "react-dom": "19.2.0-canary-39cad7af-20250411",
     "resend": "^4.5.1",
-    "rwsdk": "^0.1.0-alpha.0",
-    "twilio": "^5.7.0"
+    "rwsdk": "^0.0.84"
   },
   "devDependencies": {
     "@biomejs/biome": "2.0.0-beta.4",

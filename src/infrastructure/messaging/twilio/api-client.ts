@@ -13,17 +13,8 @@ import {
   validatePhoneNumber,
   validateMessageId,
 } from "@/domain/global/messaging/models";
-import type { Twilio } from "twilio";
 
-// Real Twilio SDK dependency
-export abstract class TwilioSDKService extends Context.Tag(
-  "@messaging/TwilioSDKService"
-)<
-  TwilioSDKService,
-  {
-    readonly sdk: Twilio;
-  }
->() {}
+import { TwilioConfig } from "./config";
 
 // Twilio API client abstraction with schema validation
 export abstract class TwilioApiClient extends Context.Tag(
@@ -48,13 +39,61 @@ export abstract class TwilioApiClient extends Context.Tag(
     readonly validatePhoneNumber: (
       phoneNumber: PhoneNumber
     ) => Effect.Effect<boolean, MessageProviderError | MessageValidationError>;
+
+    readonly healthCheck: () => Effect.Effect<boolean, MessageProviderError>;
   }
 >() {}
 
+// Fetch-based Twilio API client implementation
 export const TwilioApiClientLive = Layer.effect(
   TwilioApiClient,
   Effect.gen(function* () {
-    const twilioSDK = yield* TwilioSDKService;
+    const config = yield* TwilioConfig;
+
+    // Helper function to create Twilio API requests
+    const createTwilioRequest = (
+      endpoint: string,
+      method: string,
+      body?: URLSearchParams
+    ): Request => {
+      const baseUrl = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}`;
+      const url = `${baseUrl}${endpoint}`;
+
+      // Create Basic Auth token
+      const token = btoa(`${config.accountSid}:${config.authToken}`);
+
+      const headers = new Headers({
+        Authorization: `Basic ${token}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      });
+
+      return new Request(url, {
+        method,
+        headers,
+        body: body?.toString(),
+      });
+    };
+
+    // Helper function to handle Twilio API responses
+    const handleTwilioResponse = async (response: Response) => {
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => ({}))) as any;
+        throw new MessageProviderError({
+          message: `Twilio API error ${response.status}: ${
+            errorData.message || response.statusText
+          }`,
+          providerId: "twilio",
+          cause: {
+            status: response.status,
+            code: errorData.code,
+            message: errorData.message,
+            moreInfo: errorData.more_info,
+          },
+        });
+      }
+
+      return (await response.json()) as any;
+    };
 
     return {
       sendMessage: (
@@ -76,19 +115,42 @@ export const TwilioApiClientLive = Layer.effect(
             )
           );
 
-          // Call Twilio SDK with validated data
+          // Create form data for Twilio API
+          const formData = new URLSearchParams({
+            To: validatedInput.to as string,
+            From: validatedInput.from as string,
+            Body: validatedInput.body as string,
+          });
+
+          // Add optional parameters
+          if (validatedInput.options?.statusCallback) {
+            formData.append(
+              "StatusCallback",
+              validatedInput.options.statusCallback
+            );
+          }
+          if (validatedInput.options?.provideFeedback !== undefined) {
+            formData.append(
+              "ProvideFeedback",
+              validatedInput.options.provideFeedback.toString()
+            );
+          }
+          if (validatedInput.options?.mediaUrl) {
+            validatedInput.options.mediaUrl.forEach((url) => {
+              formData.append("MediaUrl", url);
+            });
+          }
+
+          // Make API call using fetch
           const result = yield* Effect.tryPromise({
             try: async () => {
-              return await twilioSDK.sdk.messages.create({
-                to: validatedInput.to as string, // Convert branded type for Twilio SDK
-                from: validatedInput.from as string,
-                body: validatedInput.body as string,
-                statusCallback: validatedInput.options?.statusCallback,
-                provideFeedback: validatedInput.options?.provideFeedback,
-                mediaUrl: validatedInput.options?.mediaUrl
-                  ? [...validatedInput.options.mediaUrl]
-                  : undefined, // Convert readonly array to mutable
-              });
+              const request = createTwilioRequest(
+                "/Messages.json",
+                "POST",
+                formData
+              );
+              const response = await fetch(request);
+              return await handleTwilioResponse(response);
             },
             catch: (error) =>
               new MessageProviderError({
@@ -100,27 +162,13 @@ export const TwilioApiClientLive = Layer.effect(
               }),
           });
 
-          // Check for Twilio-specific errors
-          if (result.errorCode) {
-            yield* Effect.fail(
-              new MessageProviderError({
-                message: `Twilio error ${result.errorCode}: ${result.errorMessage}`,
-                providerId: "twilio",
-                cause: {
-                  errorCode: result.errorCode,
-                  errorMessage: result.errorMessage,
-                },
-              })
-            );
-          }
-
           // Validate and return output using schema
           const validatedOutput = yield* S.decodeUnknown(
             ApiSendMessageOutputSchema
           )({
             sid: result.sid,
             status: result.status,
-            dateCreated: result.dateCreated,
+            dateCreated: new Date(result.date_created),
             price: result.price || undefined,
           }).pipe(
             Effect.mapError(
@@ -145,10 +193,15 @@ export const TwilioApiClientLive = Layer.effect(
           // Validate message ID input
           yield* validateMessageId(messageSid);
 
-          // Call Twilio SDK
+          // Make API call using fetch
           const result = yield* Effect.tryPromise({
             try: async () => {
-              return await twilioSDK.sdk.messages(messageSid as string).fetch();
+              const request = createTwilioRequest(
+                `/Messages/${messageSid as string}.json`,
+                "GET"
+              );
+              const response = await fetch(request);
+              return await handleTwilioResponse(response);
             },
             catch: (error) =>
               new MessageProviderError({
@@ -160,20 +213,6 @@ export const TwilioApiClientLive = Layer.effect(
               }),
           });
 
-          // Check for Twilio-specific errors
-          if (result.errorCode) {
-            yield* Effect.fail(
-              new MessageProviderError({
-                message: `Twilio error ${result.errorCode}: ${result.errorMessage}`,
-                providerId: "twilio",
-                cause: {
-                  errorCode: result.errorCode,
-                  errorMessage: result.errorMessage,
-                },
-              })
-            );
-          }
-
           // Validate and return output using schema
           const validatedOutput = yield* S.decodeUnknown(
             ApiGetMessageOutputSchema
@@ -183,8 +222,8 @@ export const TwilioApiClientLive = Layer.effect(
             body: result.body,
             to: result.to,
             from: result.from,
-            dateCreated: result.dateCreated,
-            dateUpdated: result.dateUpdated,
+            dateCreated: new Date(result.date_created),
+            dateUpdated: new Date(result.date_updated),
           }).pipe(
             Effect.mapError(
               (error) =>
@@ -205,19 +244,88 @@ export const TwilioApiClientLive = Layer.effect(
         MessageProviderError | MessageValidationError
       > => {
         return Effect.gen(function* () {
-          // Use domain validation function
+          // Use domain validation function first
           yield* validatePhoneNumber(phoneNumber);
 
-          // Use Twilio's validation API
+          // Use Twilio's Lookup API v1 for validation
           const result = yield* Effect.tryPromise({
             try: async () => {
-              return await twilioSDK.sdk.lookups.v1
-                .phoneNumbers(phoneNumber as string)
-                .fetch();
+              const baseUrl = `https://lookups.twilio.com/v1/PhoneNumbers/${encodeURIComponent(
+                phoneNumber as string
+              )}`;
+              const token = btoa(`${config.accountSid}:${config.authToken}`);
+
+              const response = await fetch(baseUrl, {
+                method: "GET",
+                headers: {
+                  Authorization: `Basic ${token}`,
+                },
+              });
+
+              if (!response.ok) {
+                // If phone number is invalid, Twilio returns 404
+                if (response.status === 404) {
+                  return { valid: false };
+                }
+
+                const errorData = (await response
+                  .json()
+                  .catch(() => ({}))) as any;
+                throw new MessageProviderError({
+                  message: `Twilio Lookup API error ${response.status}: ${
+                    errorData.message || response.statusText
+                  }`,
+                  providerId: "twilio",
+                  cause: errorData,
+                });
+              }
+
+              return (await response.json()) as any;
+            },
+            catch: (error) => {
+              if (error instanceof MessageProviderError) {
+                return error;
+              }
+              return new MessageProviderError({
+                message: `Twilio validatePhoneNumber failed: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+                providerId: "twilio",
+                cause: error,
+              });
+            },
+          });
+
+          // If we got an error object, re-throw it
+          if (result instanceof MessageProviderError) {
+            yield* Effect.fail(result);
+          }
+
+          // If the lookup succeeds without error, the phone number is valid
+          return result.valid !== false;
+        }).pipe(Effect.withSpan("TwilioApiClient.validatePhoneNumber"));
+      },
+
+      healthCheck: (): Effect.Effect<boolean, MessageProviderError> => {
+        return Effect.gen(function* () {
+          // Simple health check: try to get account info
+          const result = yield* Effect.tryPromise({
+            try: async () => {
+              const baseUrl = `https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}.json`;
+              const token = btoa(`${config.accountSid}:${config.authToken}`);
+
+              const response = await fetch(baseUrl, {
+                method: "GET",
+                headers: {
+                  Authorization: `Basic ${token}`,
+                },
+              });
+
+              return response.ok;
             },
             catch: (error) =>
               new MessageProviderError({
-                message: `Twilio validatePhoneNumber failed: ${
+                message: `Twilio health check failed: ${
                   error instanceof Error ? error.message : String(error)
                 }`,
                 providerId: "twilio",
@@ -225,9 +333,8 @@ export const TwilioApiClientLive = Layer.effect(
               }),
           });
 
-          // If the lookup succeeds without error, the phone number is valid
-          return true;
-        }).pipe(Effect.withSpan("TwilioApiClient.validatePhoneNumber"));
+          return result;
+        }).pipe(Effect.withSpan("TwilioApiClient.healthCheck"));
       },
     };
   })

@@ -13,6 +13,7 @@ import { Layout as OrganizationCreateLayout } from "@/app/pages/organization/cre
 import { Layout as OrganizationSlugLayout } from "@/app/pages/organization/slug/Layout";
 import { Layout as ProfileLayout } from "@/app/pages/profile/Layout";
 import { routes as shopifyOAuthRoutes } from "@/app/pages/shopify/routes";
+import { routes as campaignRoutes } from "@/app/pages/organization/slug/campaigns/routes";
 import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
 import {
   authResponse,
@@ -90,7 +91,8 @@ const getOrganizationStoresRoute = async (requestInfo: RequestInfo) => {
 
 export const organizationRoutes = [
   route("/create", [sessionHandler, OrganizationCreateLayout]), // Use the wrapper page
-  route("/:orgSlug", [sessionHandler, OrganizationSlugLayout]),
+  ...prefix("/:orgSlug/campaigns", campaignRoutes), // More specific routes first
+  route("/:orgSlug", [sessionHandler, OrganizationSlugLayout]), // General route last
 ];
 
 // Twilio webhook handler wrapper

@@ -1,22 +1,28 @@
+import { ConversationUseCase } from "@/application/tenant/conversations/service";
 import { ConversationUseCaseLive } from "@/application/tenant/conversations/service";
-import { ConversationUseCase } from "@/domain/tenant/conversations/service";
-import { ConversationEventRepoLive } from "@/infrastructure/persistence/conversation/sqlite/ConversationEventRepoLive";
-import { ConversationRepoLive } from "@/infrastructure/persistence/conversation/sqlite/ConversationRepoLive";
-import { MessageRepoLive } from "@/infrastructure/persistence/conversation/sqlite/MessageRepoLive";
 import { ConversationMessagingServiceLive } from "@/infrastructure/messaging/conversation/ConversationMessagingServiceLive";
 import {
-  TwilioConfig,
   TwilioApiClientLive,
-  TwilioSDKService,
+  TwilioConfig,
   TwilioMessageProviderLive,
 } from "@/infrastructure/messaging/twilio";
-import { Twilio } from "twilio";
+import { ConversationRepoLive } from "@/infrastructure/persistence/conversation/sqlite/ConversationRepoLive";
+import { MessageRepoLive } from "@/infrastructure/persistence/conversation/sqlite/MessageRepoLive";
 
 import {
   DrizzleDOClientLive,
   DurableObjectState,
 } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 
+import type { ConversationId } from "@/domain/tenant/shared/branded-types";
+import {
+  unsafeMessageId,
+  unsafeMessageType,
+  unsafeMessageContent,
+  unsafeExternalMessageId,
+  unsafePhoneNumber,
+  unsafeProvider,
+} from "@/domain/tenant/shared/branded-types";
 import { Tracing } from "@/tracing";
 import {
   HttpApi,
@@ -89,7 +95,7 @@ const api = HttpApi.make("conversationApi").add(conversationsGroup);
 // Export the API definition for client generation
 export { api as conversationApi };
 
-const conversationsGroupLive = (conversationId: string) =>
+const conversationsGroupLive = (conversationId: ConversationId) =>
   HttpApiBuilder.group(api, "conversations", (handlers) =>
     handlers
       .handle("getConversation", () => {
@@ -129,16 +135,16 @@ const conversationsGroupLive = (conversationId: string) =>
           const messagesResult = yield* conversationUseCase.getMessages(
             conversationId,
             {
-              limit: urlParams?.limit ?? 20, // Provide default value
-              cursor: urlParams?.cursor,
-              direction: urlParams?.direction,
+              limit: urlParams.limit ?? 20,
+              cursor: urlParams.cursor ?? null,
+              direction: urlParams.direction ?? "outbound",
             }
           );
 
-          // Ensure proper mapping for message optional fields
+          // Ensure proper mapping for message optional fields - preserve branded types
           const mappedMessages = messagesResult.messages.map((message) => ({
             ...message,
-            messageType: message.messageType ?? "text",
+            messageType: message.messageType ?? unsafeMessageType("text"),
             externalMessageId: message.externalMessageId ?? null,
             sentAt: message.sentAt ?? null,
             deliveredAt: message.deliveredAt ?? null,
@@ -181,15 +187,15 @@ const conversationsGroupLive = (conversationId: string) =>
             conversationId,
             {
               content: payload.content,
-              messageType: payload.messageType ?? "text", // Provide default value
+              messageType: payload.messageType ?? unsafeMessageType("text"), // Use proper branded type
             }
           );
 
-          // Ensure proper mapping for message optional fields
+          // Ensure proper mapping for message optional fields - preserve branded types
           return {
             message: {
               ...message,
-              messageType: message.messageType ?? "text",
+              messageType: message.messageType ?? unsafeMessageType("text"),
               externalMessageId: message.externalMessageId ?? null,
               sentAt: message.sentAt ?? null,
               deliveredAt: message.deliveredAt ?? null,
@@ -262,23 +268,16 @@ const conversationsGroupLive = (conversationId: string) =>
           );
 
           return {
-            id: summary.conversation.id,
-            status: summary.conversation.status,
-            lastMessageAt: summary.conversation.lastMessageAt || new Date(),
+            id: summary.conversation,
+            status: "active" as const,
+            lastMessageAt: summary.lastActivity || new Date(),
             messageCount: summary.messageCount,
-            lastMessage: summary.lastMessage
-              ? {
-                  id: summary.lastMessage.id,
-                  direction: summary.lastMessage.direction,
-                  content: summary.lastMessage.content,
-                  createdAt: summary.lastMessage.createdAt,
-                }
-              : {
-                  id: "none",
-                  direction: "outbound" as const,
-                  content: "No messages yet",
-                  createdAt: new Date(),
-                },
+            lastMessage: {
+              id: unsafeMessageId("none"),
+              direction: "outbound" as const,
+              content: unsafeMessageContent("No messages yet"),
+              createdAt: summary.lastActivity || new Date(),
+            },
           };
         }).pipe(
           Effect.withSpan("ConversationDO.getConversationSummary", {
@@ -303,12 +302,28 @@ const conversationsGroupLive = (conversationId: string) =>
 
           // Parse incoming webhook data (support both Twilio and generic formats)
           const incomingPayload = {
-            externalMessageId: payload.MessageSid || payload.id || "unknown",
-            from: payload.From || payload.from || "unknown",
-            to: payload.To || payload.to || "unknown",
-            content: payload.Body || payload.content || "",
-            messageType: "text",
-            provider: "twilio",
+            externalMessageId: payload.MessageSid
+              ? unsafeExternalMessageId(payload.MessageSid)
+              : payload.id
+              ? unsafeExternalMessageId(payload.id)
+              : unsafeExternalMessageId("unknown"),
+            from: payload.From
+              ? unsafePhoneNumber(payload.From)
+              : payload.from
+              ? unsafePhoneNumber(payload.from)
+              : unsafePhoneNumber("unknown"),
+            to: payload.To
+              ? unsafePhoneNumber(payload.To)
+              : payload.to
+              ? unsafePhoneNumber(payload.to)
+              : unsafePhoneNumber("unknown"),
+            content: payload.Body
+              ? unsafeMessageContent(payload.Body)
+              : payload.content
+              ? unsafeMessageContent(payload.content)
+              : unsafeMessageContent(""),
+            messageType: unsafeMessageType("text"),
+            provider: unsafeProvider("twilio"),
           };
 
           const message = yield* conversationUseCase.receiveMessage(
@@ -319,7 +334,7 @@ const conversationsGroupLive = (conversationId: string) =>
           return {
             success: true,
             messageId: message.id,
-            status: "processed",
+            status: "sent" as const,
           };
         }).pipe(
           Effect.withSpan("ConversationDO.receiveMessage", {
@@ -344,7 +359,7 @@ const conversationsGroupLive = (conversationId: string) =>
 
 export function getConversationHandler(
   doState: DurableObjectState,
-  conversationId: string,
+  conversationId: ConversationId,
   messagingConfig: {
     twilioAccountSid: string;
     twilioAuthToken: string;
@@ -368,30 +383,21 @@ export function getConversationHandler(
     DrizzleClientLayer
   );
   const MessageRepoLayer = Layer.provide(MessageRepoLive, DrizzleClientLayer);
-  const ConversationEventRepoLayer = Layer.provide(
-    ConversationEventRepoLive,
-    DrizzleClientLayer
-  );
 
   // PROPER HEXAGONAL ARCHITECTURE: Use the real TwilioMessageProviderLive
   // Following the same pattern as MessagingLayerLive in config/layers.ts
   const TwilioConfigLayer = Layer.succeed(TwilioConfig, {
-    config: {
-      accountSid: messagingConfig.twilioAccountSid,
-      authToken: messagingConfig.twilioAuthToken,
-      fromNumber: messagingConfig.twilioFromNumber as any,
-      webhookUrl: messagingConfig.twilioWebhookUrl,
-    },
+    accountSid: messagingConfig.twilioAccountSid,
+    authToken: messagingConfig.twilioAuthToken,
+    fromNumber: unsafePhoneNumber(messagingConfig.twilioFromNumber),
+    webhookUrl: messagingConfig.twilioWebhookUrl,
   });
 
-  const TwilioSDKLayer = Layer.succeed(TwilioSDKService, {
-    sdk: new Twilio(
-      messagingConfig.twilioAccountSid,
-      messagingConfig.twilioAuthToken
-    ),
-  });
-
-  const TwilioClientLayer = Layer.provide(TwilioApiClientLive, TwilioSDKLayer);
+  // Fetch-based Twilio client layer
+  const TwilioClientLayer = Layer.provide(
+    TwilioApiClientLive,
+    TwilioConfigLayer
+  );
   const MessageProviderLayer = Layer.provide(
     TwilioMessageProviderLive,
     Layer.merge(TwilioClientLayer, TwilioConfigLayer)
@@ -406,28 +412,30 @@ export function getConversationHandler(
   const AllRepoLayers = Layer.mergeAll(
     ConversationRepoLayer,
     MessageRepoLayer,
-    ConversationEventRepoLayer,
     MessagingServiceLayer
   );
 
-  // Use case layer that depends on all repositories and services
+  // Use case layer that depends on all repositories and services - ConversationUseCaseLive takes no parameters
   const ConversationUseCaseLayer = Layer.provide(
-    ConversationUseCaseLive(conversationId),
+    ConversationUseCaseLive(),
     AllRepoLayers
   );
+
+  // Final layer combining all dependencies
+  const FinalLayer = Layer.mergeAll(AllRepoLayers, ConversationUseCaseLayer);
 
   // Conversations group layer with all dependencies
   const conversationsGroupLayerLive = Layer.provide(
     conversationsGroupLive(conversationId),
-    ConversationUseCaseLayer
+    FinalLayer
   );
 
-  // API layer with all required dependencies
+  // API layer with all required dependencies provided
   const ConversationApiLive = HttpApiBuilder.api(api).pipe(
-    Layer.provide(conversationsGroupLayerLive)
+    Layer.provide(Layer.mergeAll(conversationsGroupLayerLive, FinalLayer))
   );
 
-  // Final handler with all required layers
+  // Final handler
   const { dispose, handler } = HttpApiBuilder.toWebHandler(
     Layer.mergeAll(ConversationApiLive, HttpServer.layerContext, Tracing)
   );

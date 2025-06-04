@@ -71,12 +71,3 @@ export const message = sqliteTable("message", {
   createdAt: normalizeDate("createdAt").notNull(),
   metadata: text("metadata"), // JSON for message-specific data
 });
-
-// Conversation actions/events (optional - for tracking customer journey)
-export const conversationEvent = sqliteTable("conversation_event", {
-  id: text("id").primaryKey(),
-  eventType: text("eventType").notNull(), // 'message_sent', 'customer_replied', 'conversation_resolved', etc.
-  description: text("description"),
-  createdAt: normalizeDate("createdAt").notNull(),
-  metadata: text("metadata"), // JSON for event data
-});

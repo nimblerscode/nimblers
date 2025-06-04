@@ -1,17 +1,25 @@
 import { Data, Schema as S } from "effect";
+import {
+  CampaignId,
+  SegmentId,
+  ConversationId,
+  PhoneNumber,
+  Timezone,
+  type CampaignId as CampaignIdType,
+  type SegmentId as SegmentIdType,
+  type ConversationId as ConversationIdType,
+  type PhoneNumber as PhoneNumberType,
+  type Timezone as TimezoneType,
+} from "@/domain/tenant/shared/branded-types";
 
-// === Branded Types ===
-export const CampaignId = S.String.pipe(S.brand("CampaignId"));
-export type CampaignId = S.Schema.Type<typeof CampaignId>;
-
-export const SegmentId = S.String.pipe(S.brand("SegmentId"));
-export type SegmentId = S.Schema.Type<typeof SegmentId>;
-
-export const ConversationId = S.String.pipe(S.brand("ConversationId"));
-export type ConversationId = S.Schema.Type<typeof ConversationId>;
-
-export const PhoneNumber = S.String.pipe(S.brand("PhoneNumber"));
-export type PhoneNumber = S.Schema.Type<typeof PhoneNumber>;
+// Re-export branded types for convenience
+export type {
+  CampaignIdType as CampaignId,
+  SegmentIdType as SegmentId,
+  ConversationIdType as ConversationId,
+  PhoneNumberType as PhoneNumber,
+  TimezoneType as Timezone,
+};
 
 // === Campaign Enums ===
 export const CampaignStatus = S.Union(
@@ -42,7 +50,7 @@ export type CampaignExecution = S.Schema.Type<typeof CampaignExecution>;
 // === Campaign Scheduling ===
 export const CampaignSchedule = S.Struct({
   scheduledAt: S.optional(S.Date),
-  timezone: S.String.pipe(S.minLength(1)),
+  timezone: Timezone,
   startedAt: S.optional(S.Date),
   completedAt: S.optional(S.Date),
 });
@@ -80,7 +88,7 @@ export const CreateCampaignInputSchema = S.Struct({
   description: S.optional(S.String.pipe(S.maxLength(1000))),
   campaignType: CampaignType,
   scheduledAt: S.optional(S.Date),
-  timezone: S.String.pipe(S.minLength(1)),
+  timezone: Timezone,
   segmentIds: S.Array(SegmentId),
   settings: S.optional(CampaignSettings),
   metadata: S.optional(S.Record({ key: S.String, value: S.Unknown })),
@@ -95,7 +103,7 @@ export const UpdateCampaignInputSchema = S.Struct({
   description: S.optional(S.String.pipe(S.maxLength(1000))),
   status: S.optional(CampaignStatus),
   scheduledAt: S.optional(S.Date),
-  timezone: S.optional(S.String.pipe(S.minLength(1))),
+  timezone: S.optional(Timezone),
   segmentIds: S.optional(S.Array(SegmentId)),
   settings: S.optional(CampaignSettings),
   metadata: S.optional(S.Record({ key: S.String, value: S.Unknown })),

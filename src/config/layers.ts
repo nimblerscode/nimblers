@@ -34,11 +34,9 @@ import { WhatsAppServiceLive } from "@/application/global/messaging/whatsapp/ser
 import {
   TwilioConfig,
   TwilioApiClientLive,
-  TwilioSDKService,
   TwilioMessageProviderLive,
 } from "@/infrastructure/messaging/twilio";
 import type { PhoneNumber } from "@/domain/global/messaging/models";
-import { Twilio } from "twilio";
 
 // Conversation DO layers
 import {
@@ -171,23 +169,20 @@ export function MessagingLayerLive(config: {
   twilioWebhookUrl?: string;
 }) {
   const TwilioConfigLayer = Layer.succeed(TwilioConfig, {
-    config: {
-      accountSid: config.twilioAccountSid,
-      authToken: config.twilioAuthToken,
-      fromNumber: config.twilioFromNumber,
-      webhookUrl: config.twilioWebhookUrl,
-    },
+    accountSid: config.twilioAccountSid,
+    authToken: config.twilioAuthToken,
+    fromNumber: config.twilioFromNumber,
+    webhookUrl: config.twilioWebhookUrl,
   });
 
-  // Real Twilio SDK layer
-  const TwilioSDKLayer = Layer.succeed(TwilioSDKService, {
-    sdk: new Twilio(config.twilioAccountSid, config.twilioAuthToken),
-  });
-
-  const TwilioClientLayer = Layer.provide(TwilioApiClientLive, TwilioSDKLayer);
+  // Fetch-based Twilio client layer
+  const TwilioClientLayer = Layer.provide(
+    TwilioApiClientLive,
+    TwilioConfigLayer
+  );
   const MessageProviderLayer = Layer.provide(
     TwilioMessageProviderLive,
-    Layer.merge(TwilioClientLayer, TwilioConfigLayer)
+    TwilioClientLayer
   );
 
   const SMSLayer = Layer.provide(SMSServiceLive, MessageProviderLayer);
@@ -210,7 +205,7 @@ export function ConversationDOLive(doEnv: {
   return Layer.provide(ConversationDOAdapterLive, doNamespaceLayer);
 }
 
-export const ConversationLayerLive = (conversationId: string) => {
+export const ConversationLayerLive = () => {
   const ConversationRepoLayer = Layer.provide(
     ConversationRepoLive,
     DrizzleDOClientLive
@@ -220,20 +215,20 @@ export const ConversationLayerLive = (conversationId: string) => {
   const MessageRepoLayer = Layer.provide(MessageRepoLive, DrizzleDOClientLive);
 
   const ConversationUseCaseLayer = Layer.provide(
-    ConversationUseCaseLive(conversationId),
+    ConversationUseCaseLive(),
     Layer.merge(ConversationRepoLayer, MessageRepoLayer)
   );
   return ConversationUseCaseLayer;
 };
 
-export const CampaignLayerLive = (doId: DurableObjectId) => {
+export const CampaignLayerLive = () => {
   const CampaignRepoLayer = Layer.provide(
     CampaignRepoLive,
     DrizzleDOClientLive
   );
 
   const CampaignUseCaseLayer = Layer.provide(
-    CampaignUseCaseLive(doId),
+    CampaignUseCaseLive(),
     CampaignRepoLayer
   );
 
@@ -252,7 +247,7 @@ export const SegmentLayerLive = (doId: DurableObjectId) => {
 };
 
 export const CampaignAndSegmentLayerLive = (doId: DurableObjectId) => {
-  const campaignLayer = CampaignLayerLive(doId);
+  const campaignLayer = CampaignLayerLive();
   const segmentLayer = SegmentLayerLive(doId);
 
   return Layer.merge(campaignLayer, segmentLayer);
