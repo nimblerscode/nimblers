@@ -18,7 +18,7 @@ const corsOPTIONSHandler = async ({ request }: { request: Request }) => {
     const getAllowedOrigins = Effect.gen(function* () {
       const _envConfig = yield* Effect.provide(
         Effect.succeed({}),
-        EnvironmentConfigServiceLive,
+        EnvironmentConfigServiceLive
       );
 
       return [
@@ -79,3 +79,4 @@ export default defineApp([
 // Re-export the Durable Object class for wrangler.jsonc
 export { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";
 export { ShopifyOAuthDurableObject } from "./durable-objects/shopify/oauth/shopifyOAuthDO";
+export { ConversationDurableObject } from "./durable-objects/conversation/conversationDO";

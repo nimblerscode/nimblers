@@ -79,18 +79,23 @@ export async function Layout({ params, ctx, request }: RequestInfo) {
   // Handle connected stores result and transform to match component interface
   const connectedStores = connectedStoresResult.success
     ? connectedStoresResult.data.map((store) => ({
-        id: store.id,
-        shopDomain: store.shopDomain as any, // Cast to ShopDomain branded type
-        status: store.status,
-        connectedAt: store.connectedAt,
-        lastSyncAt: store.lastSyncAt,
-      }))
+      id: store.id,
+      shopDomain: store.shopDomain as any, // Cast to ShopDomain branded type
+      status: store.status,
+      connectedAt: store.connectedAt,
+      lastSyncAt: store.lastSyncAt,
+    }))
     : []; // Gracefully handle errors by returning empty array
+
+  // Extract user objects from members
+  const userMembers = membersResult.members
+    .map((member: any) => member.user)
+    .filter((user: any) => user !== null);
 
   return (
     <Wrapper
       organization={org}
-      members={membersResult.members}
+      members={userMembers}
       user={user}
       organizations={organizations}
       activeOrganizationId={activeOrganizationId}

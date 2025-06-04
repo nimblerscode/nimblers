@@ -64,8 +64,7 @@ export async function createOrganizationAction(
     const newOrganization: NewOrganization = {
       name,
       slug,
-      logo: logo || null,
-      metadata: null,
+      logo: logo || undefined,
     };
 
     // Create organization via DO

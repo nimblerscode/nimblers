@@ -3,6 +3,7 @@ import type { RequestInfo } from "rwsdk/worker";
 import { acceptInvitationAction } from "@/app/actions/invitations/accept";
 import { getOrganizationConnectedStores } from "@/app/actions/organization/getStoreConnections";
 import { handleShopifyComplianceWebhook } from "@/app/actions/shopify/compliance";
+import { handleTwilioWebhook } from "@/app/actions/messaging/twilio-webhook";
 // import CreateOrganizationForm from "@/app/components/CreateOrganizationForm"; // No longer directly used here
 import { Document } from "@/app/Document";
 import InvitationsPage from "@/app/pages/InvitationsPage";
@@ -42,7 +43,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
   try {
     const result = await acceptInvitationAction(
       requestInfo.request,
-      requestInfo,
+      requestInfo
     );
     return Response.json(result, { status: 200 });
   } catch (error) {
@@ -54,7 +55,7 @@ const acceptInvitationRoute = async (requestInfo: RequestInfo) => {
             ? error.message
             : "Failed to accept invitation",
       },
-      { status: 400 },
+      { status: 400 }
     );
   }
 };
@@ -70,7 +71,7 @@ const getOrganizationStoresRoute = async (requestInfo: RequestInfo) => {
     if (!orgSlug) {
       return Response.json(
         { error: "Organization slug is required" },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -82,7 +83,7 @@ const getOrganizationStoresRoute = async (requestInfo: RequestInfo) => {
         error: "Failed to fetch stores",
         message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 };
@@ -91,6 +92,11 @@ export const organizationRoutes = [
   route("/create", [sessionHandler, OrganizationCreateLayout]), // Use the wrapper page
   route("/:orgSlug", [sessionHandler, OrganizationSlugLayout]),
 ];
+
+// Twilio webhook handler wrapper
+const handleTwilioWebhookRoute = async (requestInfo: RequestInfo) => {
+  return handleTwilioWebhook(requestInfo.request);
+};
 
 // Combine all routes into a single array
 export const allRoutes = [
@@ -117,6 +123,9 @@ export const allRoutes = [
     sessionHandler,
     getOrganizationStoresRoute,
   ]),
+
+  // Twilio Webhook
+  route("/api/webhooks/twilio", handleTwilioWebhookRoute),
 
   // Shopify Compliance Webhooks
   route("/shopify/privacy/customers-data-request", handleCustomerDataRequest),

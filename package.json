@@ -29,6 +29,7 @@
     "migrate:gateway": "drizzle-kit generate --config=drizzle.config.gateway.ts",
     "migrate:tenant": "drizzle-kit generate --config=drizzle.config.tenant.ts",
     "migrate:shopify": "drizzle-kit generate --config=drizzle.config.shopify.ts",
+    "migrate:conversation": "drizzle-kit generate --config=drizzle.config.conversation.ts",
     "migrate:dev": "wrangler d1 migrations apply DB --local",
     "seed:global": "npm run worker:run ./src/infrastructure/persistence/global/d1/seed.ts",
     "seed:tenant": "npm run worker:run ./src/infrastructure/persistence/tenant/d1/seed.ts",
@@ -60,7 +61,7 @@
     "react-aria-components": "^1.9.0",
     "react-dom": "19.2.0-canary-39cad7af-20250411",
     "resend": "^4.5.1",
-    "rwsdk": "^0.0.84",
+    "rwsdk": "^0.1.0-alpha.0",
     "twilio": "^5.7.0"
   },
   "devDependencies": {

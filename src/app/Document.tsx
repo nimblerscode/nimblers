@@ -1,5 +1,4 @@
 import { css } from "../../styled-system/css";
-import styles from "../app/globals.css?url";
 
 export const Document: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -14,7 +13,6 @@ export const Document: React.FC<{ children: React.ReactNode }> = ({
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       />
-      <link rel="stylesheet" href={styles} />
     </head>
     <body>
       <script

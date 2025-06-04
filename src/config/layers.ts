@@ -28,6 +28,33 @@ import { DrizzleDOClientLive } from "@/infrastructure/persistence/tenant/sqlite/
 import { InvitationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/InvitationRepoLive";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
 
+// Messaging layers
+import { SMSServiceLive } from "@/application/global/messaging/sms/service";
+import { WhatsAppServiceLive } from "@/application/global/messaging/whatsapp/service";
+import {
+  TwilioConfig,
+  TwilioApiClientLive,
+  TwilioSDKService,
+  TwilioMessageProviderLive,
+} from "@/infrastructure/messaging/twilio";
+import type { PhoneNumber } from "@/domain/global/messaging/models";
+import { Twilio } from "twilio";
+
+// Conversation DO layers
+import {
+  ConversationDONamespace,
+  ConversationDOAdapterLive,
+} from "@/infrastructure/cloudflare/durable-objects/conversation/service";
+import { ConversationRepoLive } from "@/infrastructure/persistence/conversation/sqlite/ConversationRepoLive";
+import { MessageRepoLive } from "@/infrastructure/persistence/conversation/sqlite/MessageRepoLive";
+import { ConversationUseCaseLive } from "@/application/tenant/conversations/service";
+
+// Campaign and Segment layers
+import { CampaignRepoLive } from "@/infrastructure/persistence/tenant/sqlite/CampaignRepoLive";
+import { SegmentRepoLive } from "@/infrastructure/persistence/tenant/sqlite/SegmentRepoLive";
+import { CampaignUseCaseLive } from "@/application/tenant/campaigns/service";
+import { SegmentUseCaseLive } from "@/application/tenant/segments/service";
+
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
   const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
@@ -38,7 +65,7 @@ export const SessionLayerLive = () => {
   const sessionRepoLayer = Layer.provide(SessionRepoLive, DrizzleD1ClientLive);
   const sessionUseCaseLayer = Layer.provide(
     SessionUseCaseLive,
-    sessionRepoLayer,
+    sessionRepoLayer
   );
   return sessionUseCaseLayer;
 };
@@ -66,7 +93,7 @@ export function OrganizationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 
   const OrgServiceLayer = Layer.provide(
     OrganizationDOAdapterLive,
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 
   return OrgServiceLayer;
@@ -76,7 +103,7 @@ export function InvitationDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
   const doNamespaceLayer = Layer.succeed(InvitationDONamespace, doEnv.ORG_DO);
   return Layer.provide(
     InvitationDOServiceLive.pipe(Layer.provide(InviteTokenLive)),
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 }
 
@@ -86,13 +113,13 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation repository layer
   const InvitationRepoLayer = Layer.provide(
     InvitationRepoLive,
-    DrizzleDOClientLive,
+    DrizzleDOClientLive
   );
 
   // Email service layer
   const EmailLayer = Layer.provide(
     ResendEmailAdapterLive,
-    Layer.merge(ResendConfigLive, MemberServiceLayer),
+    Layer.merge(ResendConfigLive, MemberServiceLayer)
   );
 
   // Note: UserRepo is not available in Durable Object context
@@ -101,11 +128,7 @@ export const InvitationLayerLive = (doId: DurableObjectId) => {
   // Invitation use case layer with all its dependencies
   const InvitationUseCaseLayer = Layer.provide(
     InvitationUseCaseLive(doId).pipe(Layer.provide(InviteTokenLive)),
-    Layer.mergeAll(
-      EmailLayer,
-      MemberServiceLayer,
-      EnvironmentConfigServiceLive,
-    ),
+    Layer.mergeAll(EmailLayer, MemberServiceLayer, EnvironmentConfigServiceLive)
   );
 
   return InvitationUseCaseLayer.pipe(Layer.provide(InvitationRepoLayer));
@@ -116,7 +139,7 @@ export function MemberDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
 
   const MemberServiceLayer = Layer.provide(
     MembersDOServiceLive,
-    doNamespaceLayer,
+    doNamespaceLayer
   );
 
   return MemberServiceLayer;
@@ -136,6 +159,101 @@ export const EmailVerificationLayerLive = (db: { DB: D1Database }) => {
   // Email verification use case layer with all dependencies
   return Layer.provide(
     EmailVerificationUseCaseLive,
-    Layer.mergeAll(UserRepoLayer, EmailLayer, EnvironmentConfigServiceLive),
+    Layer.mergeAll(UserRepoLayer, EmailLayer, EnvironmentConfigServiceLive)
   );
+};
+
+// Messaging configuration layer
+export function MessagingLayerLive(config: {
+  twilioAccountSid: string;
+  twilioAuthToken: string;
+  twilioFromNumber: PhoneNumber;
+  twilioWebhookUrl?: string;
+}) {
+  const TwilioConfigLayer = Layer.succeed(TwilioConfig, {
+    config: {
+      accountSid: config.twilioAccountSid,
+      authToken: config.twilioAuthToken,
+      fromNumber: config.twilioFromNumber,
+      webhookUrl: config.twilioWebhookUrl,
+    },
+  });
+
+  // Real Twilio SDK layer
+  const TwilioSDKLayer = Layer.succeed(TwilioSDKService, {
+    sdk: new Twilio(config.twilioAccountSid, config.twilioAuthToken),
+  });
+
+  const TwilioClientLayer = Layer.provide(TwilioApiClientLive, TwilioSDKLayer);
+  const MessageProviderLayer = Layer.provide(
+    TwilioMessageProviderLive,
+    Layer.merge(TwilioClientLayer, TwilioConfigLayer)
+  );
+
+  const SMSLayer = Layer.provide(SMSServiceLive, MessageProviderLayer);
+  const WhatsAppLayer = Layer.provide(
+    WhatsAppServiceLive,
+    MessageProviderLayer
+  );
+
+  return Layer.merge(SMSLayer, WhatsAppLayer);
+}
+
+// Conversation DO configuration layer
+export function ConversationDOLive(doEnv: {
+  CONVERSATION_DO: typeof env.CONVERSATION_DO;
+}) {
+  const doNamespaceLayer = Layer.succeed(
+    ConversationDONamespace,
+    doEnv.CONVERSATION_DO
+  );
+  return Layer.provide(ConversationDOAdapterLive, doNamespaceLayer);
+}
+
+export const ConversationLayerLive = (conversationId: string) => {
+  const ConversationRepoLayer = Layer.provide(
+    ConversationRepoLive,
+    DrizzleDOClientLive
+  );
+
+  // Import and provide MessageRepoLive
+  const MessageRepoLayer = Layer.provide(MessageRepoLive, DrizzleDOClientLive);
+
+  const ConversationUseCaseLayer = Layer.provide(
+    ConversationUseCaseLive(conversationId),
+    Layer.merge(ConversationRepoLayer, MessageRepoLayer)
+  );
+  return ConversationUseCaseLayer;
+};
+
+export const CampaignLayerLive = (doId: DurableObjectId) => {
+  const CampaignRepoLayer = Layer.provide(
+    CampaignRepoLive,
+    DrizzleDOClientLive
+  );
+
+  const CampaignUseCaseLayer = Layer.provide(
+    CampaignUseCaseLive(doId),
+    CampaignRepoLayer
+  );
+
+  return CampaignUseCaseLayer;
+};
+
+export const SegmentLayerLive = (doId: DurableObjectId) => {
+  const SegmentRepoLayer = Layer.provide(SegmentRepoLive, DrizzleDOClientLive);
+
+  const SegmentUseCaseLayer = Layer.provide(
+    SegmentUseCaseLive(doId),
+    SegmentRepoLayer
+  );
+
+  return SegmentUseCaseLayer;
+};
+
+export const CampaignAndSegmentLayerLive = (doId: DurableObjectId) => {
+  const campaignLayer = CampaignLayerLive(doId);
+  const segmentLayer = SegmentLayerLive(doId);
+
+  return Layer.merge(campaignLayer, segmentLayer);
 };

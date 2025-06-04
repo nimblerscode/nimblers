@@ -30,6 +30,10 @@
       {
         "name": "SHOPIFY_OAUTH_DO",
         "class_name": "ShopifyOAuthDurableObject"
+      },
+      {
+        "name": "CONVERSATION_DO",
+        "class_name": "ConversationDurableObject"
       }
     ]
   },
@@ -40,6 +44,10 @@
         "ShopifyOAuthDurableObject",
         "OrganizationDurableObject"
       ]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["ConversationDurableObject"]
     }
   ],
 
@@ -75,9 +83,9 @@
     "OTEL_EXPORTER_OTLP_HEADERS": "x-honeycomb-team=0YQfTrWYee6qkrNyHUcEBV",
 
     // === Twilio Messaging Configuration ===
-    "TWILIO_ACCOUNT_SID": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    "TWILIO_AUTH_TOKEN": "your_auth_token_here",
-    "TWILIO_FROM_NUMBER": "+1234567890",
+    "TWILIO_ACCOUNT_SID": "ACc2e8beb2a51c4007783c0dd0c1b3b8ff",
+    "TWILIO_AUTH_TOKEN": "026fbf41a09ac7d9646a238139037839",
+    "TWILIO_FROM_NUMBER": "+15392823029",
     "TWILIO_WEBHOOK_URL": "https://nimblers.co/api/webhooks/twilio"
   },
 

@@ -10,3 +10,8 @@ export const normalizeDate = (column: string) => {
     .default(sql`(unixepoch() * 1000)`);
   // .$onUpdate(() => new Date());
 };
+
+// Nullable version for optional timestamps
+export const normalizeDateNullable = (column: string) => {
+  return integer(column, { mode: "timestamp_ms" });
+};
