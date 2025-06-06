@@ -9,11 +9,13 @@ import { CampaignConversationUseCase } from "@/domain/tenant/campaigns/conversat
 import { CampaignSegmentUseCase } from "@/domain/tenant/campaigns/segment-service";
 import { SegmentCustomerUseCase } from "@/domain/tenant/segment-customers/service";
 import { CustomerUseCase } from "@/domain/tenant/customers/service";
+
 import type {
   CampaignId,
   CreateCampaignInput,
   UpdateCampaignInput,
   ExecuteCampaignInput,
+  LaunchCampaignInput,
   CampaignAnalytics,
 } from "@/domain/tenant/campaigns/models";
 
@@ -486,6 +488,349 @@ export const CampaignUseCaseLive = () =>
             Effect.mapError((error) =>
               error instanceof CampaignRepositoryError
                 ? mapRepositoryError(error, "getCampaignAnalytics", campaignId)
+                : error
+            )
+          ),
+
+        launchCampaign: (data: LaunchCampaignInput) =>
+          Effect.gen(function* () {
+            const campaignOption = yield* campaignRepo.get(data.campaignId);
+            const campaign = yield* Option.match(campaignOption, {
+              onNone: () =>
+                Effect.fail(
+                  new CampaignUseCaseError({
+                    message: "Campaign not found",
+                    campaignId: data.campaignId,
+                    operation: "launchCampaign",
+                  })
+                ),
+              onSome: (campaign) => Effect.succeed(campaign),
+            });
+
+            // Business rule: Can only launch draft campaigns
+            if (campaign.status !== "draft") {
+              return yield* Effect.fail(
+                new CampaignUseCaseError({
+                  message: `Cannot launch campaign with status: ${campaign.status}`,
+                  campaignId: data.campaignId,
+                  operation: "launchCampaign",
+                })
+              );
+            }
+
+            // Business rule: Check if already launching
+            if (campaign.launchProgress?.isLaunching) {
+              return yield* Effect.fail(
+                new CampaignUseCaseError({
+                  message: "Campaign is already being launched",
+                  campaignId: data.campaignId,
+                  operation: "launchCampaign",
+                })
+              );
+            }
+
+            // Start launch process - update campaign to launching state
+            const now = new Date();
+            yield* campaignRepo.update(data.campaignId, {
+              status: "active",
+              launchProgress: {
+                isLaunching: true,
+                launchedAt: now,
+                totalCustomers: 0,
+                conversationsCreated: 0,
+                errors: [],
+                completedAt: undefined,
+              },
+            });
+
+            // Get all customers from campaign segments with deduplication
+            const errors: string[] = [];
+            let totalCustomers = 0;
+            let conversationsCreated = 0;
+
+            try {
+              // Get all segment customers in parallel
+              const segmentCustomerLists = yield* Effect.all(
+                campaign.segmentIds.map((segmentId) =>
+                  segmentCustomerUseCase
+                    .listSegmentCustomers({
+                      segmentId,
+                      limit: 1000, // TODO: Handle pagination for large segments
+                    })
+                    .pipe(
+                      Effect.withSpan("launchCampaign.getSegmentCustomers", {
+                        attributes: { segmentId },
+                      }),
+                      Effect.catchAll((error) => {
+                        errors.push(
+                          `Failed to get customers for segment ${segmentId}: ${
+                            error.message || String(error)
+                          }`
+                        );
+                        return Effect.succeed([]);
+                      })
+                    )
+                ),
+                { concurrency: 5 }
+              );
+
+              // Flatten and deduplicate customers
+              const allSegmentCustomers = segmentCustomerLists.flat();
+              const uniqueCustomerIds = [
+                ...new Set(allSegmentCustomers.map((sc) => sc.customerId)),
+              ];
+              totalCustomers = uniqueCustomerIds.length;
+
+              yield* Effect.logInfo("Campaign launch: found customers", {
+                campaignId: data.campaignId,
+                totalCustomers,
+                uniqueCustomerIds: uniqueCustomerIds.length,
+              });
+
+              if (uniqueCustomerIds.length > 0) {
+                // Get customer details to get phone numbers
+                const customers = yield* Effect.all(
+                  uniqueCustomerIds.map((customerId) =>
+                    customerUseCase.getCustomer(customerId as any).pipe(
+                      Effect.withSpan("launchCampaign.getCustomer", {
+                        attributes: { customerId },
+                      }),
+                      Effect.catchAll((error) => {
+                        errors.push(
+                          `Failed to get customer ${customerId}: ${
+                            error.message || String(error)
+                          }`
+                        );
+                        return Effect.succeed(null);
+                      })
+                    )
+                  ),
+                  { concurrency: 10 }
+                );
+
+                // Filter customers: must have phone and opt-in to SMS
+                // TODO: Add proper opt-in validation based on campaign type
+                // For now, assume all customers are opted in
+                const validCustomers = customers.filter((customer) => {
+                  if (!customer) return false;
+                  if (!customer.phone) {
+                    errors.push(`Customer ${customer.id} has no phone number`);
+                    return false;
+                  }
+                  // TODO: Validate opt-in status when implemented
+                  // For now, assume all customers are opted in
+                  return true;
+                });
+
+                const customerPhones = validCustomers.map(
+                  (customer) => customer!.phone!
+                );
+
+                yield* Effect.logInfo(
+                  "Campaign launch: creating conversations",
+                  {
+                    campaignId: data.campaignId,
+                    validCustomers: validCustomers.length,
+                    customerPhones: customerPhones.length,
+                  }
+                );
+
+                if (customerPhones.length > 0 && !data.dryRun) {
+                  // Create conversation DOs and register relationships
+                  const campaignConversations =
+                    yield* campaignConversationUseCase
+                      .createConversationsForCustomers(
+                        data.campaignId,
+                        customerPhones
+                      )
+                      .pipe(
+                        Effect.withSpan("launchCampaign.createConversations"),
+                        Effect.catchAll((error) => {
+                          errors.push(
+                            `Failed to create conversations: ${
+                              error.message || String(error)
+                            }`
+                          );
+                          return Effect.succeed([]);
+                        })
+                      );
+
+                  conversationsCreated = campaignConversations.length;
+
+                  // Send initial campaign messages via conversation DOs
+                  if (campaignConversations.length > 0) {
+                    yield* Effect.logInfo(
+                      "Campaign launch: sending initial messages",
+                      {
+                        campaignId: data.campaignId,
+                        messageContent: campaign.message.content,
+                        conversationsToMessage: campaignConversations.length,
+                      }
+                    );
+
+                    // Send messages to all conversations in parallel using direct HTTP calls
+                    yield* Effect.all(
+                      campaignConversations.map((conversation) =>
+                        Effect.gen(function* () {
+                          // Get CONVERSATION_DO binding from environment
+                          const { env } = yield* Effect.promise(
+                            () => import("cloudflare:workers")
+                          );
+
+                          // Create conversation DO stub
+                          const doId = env.CONVERSATION_DO.idFromName(
+                            conversation.conversationId
+                          );
+                          const stub = env.CONVERSATION_DO.get(doId);
+
+                          // Step 1: Create conversation in the conversation DO
+                          const createConversationResponse =
+                            yield* Effect.tryPromise({
+                              try: () =>
+                                stub.fetch("http://internal/conversation", {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    organizationSlug: data.organizationSlug,
+                                    campaignId: data.campaignId,
+                                    customerPhone: conversation.customerPhone,
+                                    storePhone: env.TWILIO_FROM_NUMBER, // Use Twilio configured phone number
+                                    status: "active",
+                                    metadata: null,
+                                  }),
+                                }),
+                              catch: (error) => error,
+                            });
+
+                          if (!createConversationResponse.ok) {
+                            const errorText = yield* Effect.tryPromise({
+                              try: () => createConversationResponse.text(),
+                              catch: () => "Unknown error",
+                            });
+                            throw new Error(
+                              `Failed to create conversation - HTTP ${createConversationResponse.status}: ${errorText}`
+                            );
+                          }
+
+                          // Step 2: Send message via HTTP to conversation DO
+                          const response = yield* Effect.tryPromise({
+                            try: () =>
+                              stub.fetch("http://internal/messages", {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                  content: campaign.message.content,
+                                  messageType: "text",
+                                }),
+                              }),
+                            catch: (error) => error,
+                          });
+
+                          if (!response.ok) {
+                            const errorText = yield* Effect.tryPromise({
+                              try: () => response.text(),
+                              catch: () => "Unknown error",
+                            });
+                            throw new Error(
+                              `Failed to send message - HTTP ${response.status}: ${errorText}`
+                            );
+                          }
+
+                          return yield* Effect.tryPromise({
+                            try: () => response.json(),
+                            catch: (error) => error,
+                          });
+                        }).pipe(
+                          Effect.withSpan("launchCampaign.sendInitialMessage", {
+                            attributes: {
+                              conversationId: conversation.conversationId,
+                              campaignId: data.campaignId,
+                              customerPhone: conversation.customerPhone,
+                            },
+                          }),
+                          Effect.catchAll((error: unknown) => {
+                            errors.push(
+                              `Failed to send message to ${
+                                conversation.customerPhone
+                              }: ${
+                                error instanceof Error
+                                  ? error.message
+                                  : String(error)
+                              }`
+                            );
+                            return Effect.succeed(null);
+                          })
+                        )
+                      ),
+                      { concurrency: 5 } // Limit concurrency to avoid overwhelming Twilio
+                    );
+
+                    yield* Effect.logInfo(
+                      "Campaign launch: initial messages sent",
+                      {
+                        campaignId: data.campaignId,
+                        successfulMessages:
+                          campaignConversations.length - errors.length,
+                        failedMessages: errors.length,
+                      }
+                    );
+                  } else if (data.dryRun) {
+                    // Dry run - just count what would be created
+                    conversationsCreated = customerPhones.length;
+                    yield* Effect.logInfo(
+                      "Campaign launch: dry run completed",
+                      {
+                        campaignId: data.campaignId,
+                        wouldCreateConversations: conversationsCreated,
+                      }
+                    );
+                  }
+                }
+              }
+            } catch (error) {
+              errors.push(
+                `Unexpected error during launch: ${
+                  error instanceof Error ? error.message : String(error)
+                }`
+              );
+            }
+
+            // Update campaign with final launch progress
+            const completedAt = new Date();
+            yield* campaignRepo.update(data.campaignId, {
+              launchProgress: {
+                isLaunching: false,
+                launchedAt: now,
+                totalCustomers,
+                conversationsCreated,
+                errors,
+                completedAt,
+              },
+            });
+
+            yield* Effect.logInfo("Campaign launch completed", {
+              campaignId: data.campaignId,
+              totalCustomers,
+              conversationsCreated,
+              errors: errors.length,
+              duration: completedAt.getTime() - now.getTime(),
+            });
+
+            return {
+              success: errors.length === 0 || conversationsCreated > 0,
+              totalCustomers,
+              conversationsCreated,
+              errors,
+            };
+          }).pipe(
+            Effect.withSpan("CampaignUseCase.launchCampaign"),
+            Effect.mapError((error) =>
+              error instanceof CampaignRepositoryError
+                ? mapRepositoryError(error, "launchCampaign", data.campaignId)
                 : error
             )
           ),

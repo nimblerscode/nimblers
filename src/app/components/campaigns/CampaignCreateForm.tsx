@@ -135,6 +135,34 @@ export function CampaignCreateForm({ organizationSlug }: CampaignCreateFormProps
               <input type="hidden" name="timezone" value={selectedTimezone} />
             </VStack>
 
+            {/* Message Content */}
+            <VStack gap="4" alignItems="stretch">
+              <TextField
+                name="messageContent"
+                label="Message Content"
+                inputProps={{
+                  placeholder: "Hello {{firstName}}, check out our special offer...",
+                  required: true,
+                  disabled: pending,
+                  variantSize: "lg",
+                }}
+                description="Your message content. Keep it under 160 characters for SMS."
+              />
+
+              {selectedCampaignType === "email" || selectedCampaignType === "whatsapp" ? (
+                <TextField
+                  name="messageSubject"
+                  label="Subject Line"
+                  inputProps={{
+                    placeholder: "Special Offer Just for You!",
+                    disabled: pending,
+                    variantSize: "lg",
+                  }}
+                  description="Subject line for email campaigns or WhatsApp title"
+                />
+              ) : null}
+            </VStack>
+
             {/* Segment Selection */}
             <SegmentSelector
               organizationSlug={organizationSlug}

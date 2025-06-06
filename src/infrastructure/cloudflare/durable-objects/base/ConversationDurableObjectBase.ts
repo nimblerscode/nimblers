@@ -1,17 +1,11 @@
-// src/infrastructure/cloudflare/durable-objects/base/EffectDurableObjectBase.ts
 import { Effect, Layer } from "effect";
-import {
-  DrizzleDOClient,
-  DrizzleDOClientLive,
-  DurableObjectState,
-} from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import {
   ConversationDrizzleDOClient,
   ConversationDrizzleDOClientLive,
   ConversationDurableObjectState,
 } from "@/infrastructure/persistence/conversation/sqlite/drizzle";
 
-export abstract class EffectDurableObjectBase {
+export abstract class ConversationDurableObjectBase {
   protected readonly state: DurableObjectState;
   protected readonly env: Env;
   protected readonly doId: string;
@@ -23,15 +17,20 @@ export abstract class EffectDurableObjectBase {
 
     this.state.blockConcurrencyWhile(async () => {
       try {
-        const coreMigrationEffect = Effect.flatMap(DrizzleDOClient, (client) =>
-          client.migrate()
+        console.log("ConversationDO: Starting migration process");
+        const coreMigrationEffect = Effect.flatMap(
+          ConversationDrizzleDOClient,
+          (client) => {
+            console.log("ConversationDO: Got drizzle client, calling migrate");
+            return client.migrate();
+          }
         );
         const durableObjectStorageLayer = Layer.succeed(
-          DurableObjectState,
+          ConversationDurableObjectState,
           this.state
         );
         const migrationSpecificProviderLayer = Layer.provide(
-          DrizzleDOClientLive,
+          ConversationDrizzleDOClientLive,
           durableObjectStorageLayer
         );
         const layeredMigrationEffect = Effect.provide(
@@ -41,13 +40,16 @@ export abstract class EffectDurableObjectBase {
         const fullyScopedEffect = Effect.scoped(layeredMigrationEffect);
         const effectToRun = fullyScopedEffect.pipe(
           Effect.catchAll((e) => {
+            console.log("ConversationDO: Migration error:", e);
             return Effect.die(e);
           })
         );
         await Effect.runPromise(effectToRun);
+        console.log("ConversationDO: Migration completed successfully");
       } catch (e) {
+        console.log("ConversationDO: Failed to initialize:", e);
         throw new Error(
-          `Failed to initialize DO during blockConcurrencyWhile: ${e}`
+          `Failed to initialize Conversation DO during blockConcurrencyWhile: ${e}`
         );
       }
     });

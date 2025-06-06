@@ -44,12 +44,24 @@ export const ConversationMessagingServiceLive = Layer.effect(
             status: "sent" as const,
           };
         }).pipe(
-          Effect.catchAll((error) =>
-            Effect.succeed({
+          Effect.catchAll((error) => {
+            // Log the actual error before converting to failed status
+            console.error(
+              "ConversationMessagingService: Message send failed:",
+              {
+                error: error.message || String(error),
+                cause: error.cause,
+                stack: error.stack,
+                to,
+                from,
+                contentLength: content.length,
+              }
+            );
+            return Effect.succeed({
               externalMessageId: "failed",
               status: "failed" as const,
-            })
-          )
+            });
+          })
         ),
 
       parseIncomingWebhook: (payload: unknown) =>

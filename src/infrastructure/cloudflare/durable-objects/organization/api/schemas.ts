@@ -17,6 +17,7 @@ import {
   CampaignSchema,
   CreateCampaignInputSchema,
 } from "@/domain/tenant/campaigns/models";
+import { CampaignId } from "@/domain/tenant/shared/branded-types";
 import {
   SegmentSchema,
   CreateSegmentInputSchema,
@@ -176,6 +177,29 @@ export const OrganizationApiSchemas = {
       campaigns: Schema.Array(CampaignSchema),
       hasMore: Schema.Boolean,
       cursor: Schema.NullOr(Schema.String),
+    }),
+  },
+
+  // Launch Campaign
+  launchCampaign: {
+    path: Schema.Struct({
+      campaignId: CampaignId,
+    }),
+    request: Schema.Struct({
+      organizationSlug: OrganizationSlug,
+      dryRun: Schema.optional(Schema.Boolean),
+    }),
+    response: Schema.Struct({
+      success: Schema.Boolean,
+      totalCustomers: Schema.Number.pipe(
+        Schema.int(),
+        Schema.greaterThanOrEqualTo(0)
+      ),
+      conversationsCreated: Schema.Number.pipe(
+        Schema.int(),
+        Schema.greaterThanOrEqualTo(0)
+      ),
+      errors: Schema.Array(Schema.String),
     }),
   },
 

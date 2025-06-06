@@ -10,9 +10,9 @@ import { ConversationRepoLive } from "@/infrastructure/persistence/conversation/
 import { MessageRepoLive } from "@/infrastructure/persistence/conversation/sqlite/MessageRepoLive";
 
 import {
-  DrizzleDOClientLive,
-  DurableObjectState,
-} from "@/infrastructure/persistence/tenant/sqlite/drizzle";
+  ConversationDrizzleDOClientLive,
+  ConversationDurableObjectState,
+} from "@/infrastructure/persistence/conversation/sqlite/drizzle";
 
 import type { ConversationId } from "@/domain/tenant/shared/branded-types";
 import {
@@ -44,6 +44,14 @@ class Unauthorized extends Schema.TaggedError<Unauthorized>()(
 const getConversation = HttpApiEndpoint.get("getConversation", "/conversation")
   .addSuccess(ConversationApiSchemas.getConversation.response)
   .addError(HttpApiError.NotFound);
+
+const createConversation = HttpApiEndpoint.post(
+  "createConversation",
+  "/conversation"
+)
+  .setPayload(ConversationApiSchemas.createConversation.request)
+  .addSuccess(ConversationApiSchemas.createConversation.response)
+  .addError(HttpApiError.BadRequest);
 
 const getMessages = HttpApiEndpoint.get("getMessages", "/messages")
   .setUrlParams(ConversationApiSchemas.getMessages.urlParams)
@@ -82,6 +90,7 @@ const receiveMessage = HttpApiEndpoint.post(
 // Group all conversation-related endpoints
 const conversationsGroup = HttpApiGroup.make("conversations")
   .add(getConversation)
+  .add(createConversation)
   .add(getMessages)
   .add(sendMessage)
   .add(updateConversationStatus)
@@ -118,6 +127,72 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
               "api.endpoint": "/conversation",
               "api.method": "GET",
               "conversation.id": conversationId,
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("createConversation", ({ payload }) => {
+        return Effect.gen(function* () {
+          const conversationUseCase = yield* ConversationUseCase;
+          const conversation = yield* conversationUseCase.createConversation({
+            id: conversationId,
+            organizationSlug: payload.organizationSlug,
+            campaignId: payload.campaignId,
+            customerPhone: payload.customerPhone,
+            storePhone: payload.storePhone,
+            status: payload.status,
+            metadata: payload.metadata,
+          });
+
+          // Log what we got from the use case
+          yield* Effect.logInfo(
+            "ConversationDO: received conversation from use case",
+            {
+              conversation: {
+                id: conversation.id,
+                lastMessageAt: conversation.lastMessageAt,
+                createdAt: conversation.createdAt,
+                lastMessageAtType: typeof conversation.lastMessageAt,
+                createdAtType: typeof conversation.createdAt,
+              },
+            }
+          );
+
+          // Ensure proper mapping for optional fields
+          const response = {
+            ...conversation,
+            campaignId: conversation.campaignId ?? null,
+            lastMessageAt: conversation.lastMessageAt ?? null,
+            metadata: conversation.metadata ?? null,
+          };
+
+          // Log the final response
+          yield* Effect.logInfo("ConversationDO: returning response", {
+            response: {
+              id: response.id,
+              lastMessageAt: response.lastMessageAt,
+              createdAt: response.createdAt,
+              lastMessageAtType: typeof response.lastMessageAt,
+              createdAtType: typeof response.createdAt,
+            },
+          });
+
+          return response;
+        }).pipe(
+          Effect.withSpan("ConversationDO.createConversation", {
+            attributes: {
+              "api.endpoint": "/conversation",
+              "api.method": "POST",
+              "conversation.id": conversationId,
+              "conversation.customerPhone": payload.customerPhone,
+              "conversation.organizationSlug": payload.organizationSlug,
             },
           }),
           Effect.mapError(
@@ -374,10 +449,13 @@ export function getConversationHandler(
   }
 
   // Create proper layers for conversation repositories and services
-  const DORepoLayer = Layer.succeed(DurableObjectState, doState);
+  const DORepoLayer = Layer.succeed(ConversationDurableObjectState, doState);
 
-  // Repository layers with DrizzleDOClientLive provided with DORepoLayer
-  const DrizzleClientLayer = Layer.provide(DrizzleDOClientLive, DORepoLayer);
+  // Repository layers with ConversationDrizzleDOClientLive provided with DORepoLayer
+  const DrizzleClientLayer = Layer.provide(
+    ConversationDrizzleDOClientLive,
+    DORepoLayer
+  );
   const ConversationRepoLayer = Layer.provide(
     ConversationRepoLive,
     DrizzleClientLayer

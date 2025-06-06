@@ -33,6 +33,13 @@ const convertToDomainCampaign = (row: SelectCampaign): Campaign => ({
     completedAt: row.completedAt ? new Date(row.completedAt) : undefined,
   },
   segmentIds: row.segmentIds ? JSON.parse(row.segmentIds) : [],
+  message: {
+    content: row.messageContent || "Draft message - please edit",
+    subject: row.messageSubject ?? undefined,
+    mediaUrls: row.messageMediaUrls
+      ? JSON.parse(row.messageMediaUrls)
+      : undefined,
+  },
   execution: {
     campaignSentAt: row.campaignSentAt
       ? new Date(row.campaignSentAt)
@@ -41,6 +48,21 @@ const convertToDomainCampaign = (row: SelectCampaign): Campaign => ({
       ? new Date(row.estimatedDeliveryTime)
       : undefined,
   },
+  launchProgress:
+    row.isLaunching === "true"
+      ? {
+          isLaunching: row.isLaunching === "true",
+          launchedAt: row.launchedAt ? new Date(row.launchedAt) : undefined,
+          totalCustomers: Number.parseInt(row.totalCustomers || "0"),
+          conversationsCreated: Number.parseInt(
+            row.conversationsCreated || "0"
+          ),
+          errors: row.launchErrors ? JSON.parse(row.launchErrors) : [],
+          completedAt: row.launchCompletedAt
+            ? new Date(row.launchCompletedAt)
+            : undefined,
+        }
+      : undefined,
   settings: undefined, // Not stored in current schema
   metadata: row.metadata ? JSON.parse(row.metadata) : {},
   createdAt: new Date(row.createdAt),
@@ -57,6 +79,17 @@ const convertToInsertCampaign = (
   scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
   timezone: data.timezone,
   segmentIds: JSON.stringify(data.segmentIds),
+  messageContent: data.message.content,
+  messageSubject: data.message.subject ?? null,
+  messageMediaUrls: data.message.mediaUrls
+    ? JSON.stringify(data.message.mediaUrls)
+    : null,
+  isLaunching: "false",
+  launchedAt: undefined,
+  totalCustomers: "0",
+  conversationsCreated: "0",
+  launchErrors: null,
+  launchCompletedAt: undefined,
   campaignSentAt: undefined,
   estimatedDeliveryTime: undefined,
   startedAt: undefined,

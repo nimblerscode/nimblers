@@ -86,6 +86,16 @@ const initialState: CreateOrganizationActionState = {
   organization: null,
 };
 
+// Helper function to generate slug from organization name
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+}
+
 export function CreateOrganization() {
   const [organizationName, setOrganizationName] = useState("");
   const [selectedPlan, setSelectedPlan] = useState(PRICING_PLANS[1]);
@@ -93,6 +103,9 @@ export function CreateOrganization() {
     createOrganizationAction,
     initialState,
   );
+
+  // Generate slug from organization name
+  const organizationSlug = generateSlug(organizationName);
 
   if (state.success) {
     window.location.href = `/organization/${state.organization?.slug}`;
@@ -148,12 +161,13 @@ export function CreateOrganization() {
                   value={organizationName}
                   onChange={(e) => setOrganizationName(e)}
                 />
+                {/* Hidden input field for the auto-generated slug */}
+                <input type="hidden" name="slug" value={organizationSlug} />
                 {organizationName ? (
                   <Text fontSize="sm" color="content.secondary">
                     Your organization URL will be:{" "}
                     <Text as="span" fontWeight="bold">
-                      nimblers.co/
-                      {organizationName.toLowerCase().replace(/ /g, "-")}
+                      nimblers.co/{organizationSlug}
                     </Text>
                   </Text>
                 ) : null}
@@ -176,7 +190,7 @@ export function CreateOrganization() {
                   onChange={(value) =>
                     setSelectedPlan(
                       PRICING_PLANS.find((plan) => plan.id === value) ||
-                        PRICING_PLANS[0],
+                      PRICING_PLANS[0],
                     )
                   }
                 >

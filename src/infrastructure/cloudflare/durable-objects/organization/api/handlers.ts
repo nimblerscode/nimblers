@@ -34,6 +34,7 @@ import {
   SegmentLayerLive,
   SegmentCustomerLayerLive,
 } from "@/config/layers";
+
 import { Tracing } from "@/tracing";
 import { OrganizationApiSchemas } from "./schemas";
 
@@ -148,6 +149,15 @@ const listCampaigns = HttpApiEndpoint.get("listCampaigns", "/campaigns")
   .addSuccess(OrganizationApiSchemas.listCampaigns.response)
   .addError(HttpApiError.NotFound);
 
+const launchCampaign = HttpApiEndpoint.post(
+  "launchCampaign",
+  "/campaigns/:campaignId/launch"
+)
+  .setPath(OrganizationApiSchemas.launchCampaign.path)
+  .setPayload(OrganizationApiSchemas.launchCampaign.request)
+  .addSuccess(OrganizationApiSchemas.launchCampaign.response)
+  .addError(HttpApiError.BadRequest);
+
 // Segment endpoints
 const createSegment = HttpApiEndpoint.post("createSegment", "/segments")
   .setPayload(OrganizationApiSchemas.createSegment.request)
@@ -245,6 +255,7 @@ const organizationsGroup = HttpApiGroup.make("organizations")
   .add(disconnectStore)
   .add(createCampaign)
   .add(listCampaigns)
+  .add(launchCampaign)
   .add(createSegment)
   .add(listSegments)
   .add(getSegment)
@@ -766,6 +777,33 @@ const organizationsGroupLive = () =>
             attributes: {
               "api.endpoint": "/campaigns",
               "api.method": "GET",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("launchCampaign", ({ path: { campaignId }, payload }) => {
+        return Effect.gen(function* () {
+          const campaignService = yield* CampaignUseCase;
+          const result = yield* campaignService.launchCampaign({
+            campaignId,
+            organizationSlug: payload.organizationSlug,
+            dryRun: payload.dryRun,
+          });
+          return result;
+        }).pipe(
+          Effect.withSpan("OrganizationDO.launchCampaign", {
+            attributes: {
+              "campaign.id": campaignId,
+              "campaign.dryRun": payload.dryRun || false,
+              "api.endpoint": "/campaigns/:campaignId/launch",
+              "api.method": "POST",
             },
           }),
           Effect.mapError(

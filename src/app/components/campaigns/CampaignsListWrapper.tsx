@@ -3,6 +3,7 @@
 import { Container, VStack, Heading, Text, Button, HStack, Card, CardContent } from "@/app/design-system";
 import { MainLayout } from "@/app/components/layout/MainLayout";
 import { Link } from "@/app/design-system/Link";
+import { LaunchCampaignButton } from "@/app/components/campaigns/LaunchCampaignButton";
 import type { SerializableCampaign } from "@/app/actions/campaigns/list";
 
 interface CampaignsListWrapperProps {
@@ -100,6 +101,16 @@ export function CampaignsListWrapper({ user, organizationSlug, campaigns, hasMor
                         <Text>•</Text>
                         <Text>Segments: {campaign.segmentIds.length}</Text>
                       </HStack>
+
+                      {/* Launch Campaign Actions */}
+                      {campaign.status === "draft" && (
+                        <HStack gap="3" justifyContent="flex-end">
+                          <LaunchCampaignButton
+                            campaignId={campaign.id as any}
+                            organizationSlug={organizationSlug as any}
+                          />
+                        </HStack>
+                      )}
                     </VStack>
                   </CardContent>
                 </Card>

@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { MessageRepo } from "@/domain/tenant/conversations/service";
-import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
+import { ConversationDrizzleDOClient } from "@/infrastructure/persistence/conversation/sqlite/drizzle";
 import { message } from "@/infrastructure/persistence/conversation/sqlite/schema";
 import type {
   Message,
@@ -20,7 +20,7 @@ import { unsafeMessageId } from "@/domain/tenant/shared/branded-types";
 export const MessageRepoLive = Layer.effect(
   MessageRepo,
   Effect.gen(function* () {
-    const drizzleClient = yield* DrizzleDOClient;
+    const drizzleClient = yield* ConversationDrizzleDOClient;
 
     return {
       create: (data: Omit<Message, "id" | "createdAt">) =>

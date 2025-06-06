@@ -31,6 +31,7 @@ import {
 
 // === Request Schemas ===
 export const CreateConversationRequestSchema = Schema.Struct({
+  id: Schema.optional(ConversationId),
   organizationSlug: OrganizationSlug,
   campaignId: Schema.NullOr(CampaignId),
   customerPhone: PhoneNumber,
@@ -130,9 +131,32 @@ export const ConversationUseCaseLive = () =>
               CreateConversationRequestSchema
             )(data);
 
-            const conversation = yield* conversationRepo.create({
-              ...validatedData,
+            // Log the input data
+            yield* Effect.logInfo("Creating conversation with data", {
+              input: validatedData,
+            });
+
+            // Create conversation data - remove the id from the base data and handle it separately
+            const { id, ...baseData } = validatedData;
+            const conversationData = {
+              ...baseData,
               lastMessageAt: null,
+              ...(id && { id }),
+            } as Parameters<typeof conversationRepo.create>[0];
+
+            const conversation = yield* conversationRepo.create(
+              conversationData
+            );
+
+            // Log the created conversation before returning
+            yield* Effect.logInfo("Conversation created successfully", {
+              conversation: {
+                id: conversation.id,
+                lastMessageAt: conversation.lastMessageAt,
+                createdAt: conversation.createdAt,
+                lastMessageAtType: typeof conversation.lastMessageAt,
+                createdAtType: typeof conversation.createdAt,
+              },
             });
 
             return conversation;

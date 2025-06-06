@@ -67,6 +67,19 @@ export const campaign = sqliteTable("campaign", {
   // Targeting
   segmentIds: text("segmentIds"), // JSON array of segment IDs
 
+  // Message Content
+  messageContent: text("messageContent").notNull(), // The actual message content
+  messageSubject: text("messageSubject"), // For email/whatsapp
+  messageMediaUrls: text("messageMediaUrls"), // JSON array of media URLs
+
+  // Launch Progress Tracking (Overall campaign execution)
+  isLaunching: text("isLaunching").notNull().default("false"), // Boolean as text
+  launchedAt: normalizeDateNullable("launchedAt"), // When launch started
+  totalCustomers: text("totalCustomers").default("0"), // Number as text
+  conversationsCreated: text("conversationsCreated").default("0"), // Number as text
+  launchErrors: text("launchErrors"), // JSON array of error messages
+  launchCompletedAt: normalizeDateNullable("launchCompletedAt"), // When launch finished
+
   // Campaign-level execution timestamps
   campaignSentAt: normalizeDateNullable("campaignSentAt"), // When the campaign was executed
   estimatedDeliveryTime: normalizeDateNullable("estimatedDeliveryTime"), // Expected completion time

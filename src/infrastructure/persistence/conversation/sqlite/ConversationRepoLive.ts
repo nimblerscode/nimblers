@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 import { eq, desc, and, gt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { ConversationRepo } from "@/domain/tenant/conversations/service";
-import { DrizzleDOClient } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
+import { ConversationDrizzleDOClient } from "@/infrastructure/persistence/conversation/sqlite/drizzle";
 import { conversation } from "@/infrastructure/persistence/conversation/sqlite/schema";
 import type {
   Conversation,
@@ -31,8 +31,8 @@ function mapDbRowToConversation(row: any): Conversation {
     customerPhone: unsafePhoneNumber(row.customerPhone),
     storePhone: unsafePhoneNumber(row.storePhone),
     status: row.status as Conversation["status"],
-    lastMessageAt: row.lastMessageAt ?? null,
-    createdAt: row.createdAt,
+    lastMessageAt: row.lastMessageAt ? new Date(row.lastMessageAt) : null,
+    createdAt: new Date(row.createdAt),
     metadata: row.metadata ?? null,
   };
 }
@@ -40,7 +40,7 @@ function mapDbRowToConversation(row: any): Conversation {
 export const ConversationRepoLive = Layer.effect(
   ConversationRepo,
   Effect.gen(function* () {
-    const drizzleClient = yield* DrizzleDOClient;
+    const drizzleClient = yield* ConversationDrizzleDOClient;
 
     return {
       get: (conversationId: ConversationId) =>
@@ -67,9 +67,11 @@ export const ConversationRepoLive = Layer.effect(
           return mapDbRowToConversation(result);
         }),
 
-      create: (data: Omit<Conversation, "id" | "createdAt">) =>
+      create: (
+        data: Omit<Conversation, "createdAt"> & { id?: ConversationId }
+      ) =>
         Effect.gen(function* () {
-          const conversationId = nanoid();
+          const conversationId = data.id ?? nanoid();
           const now = new Date();
 
           // Build insert data with proper null handling for Drizzle
@@ -85,12 +87,32 @@ export const ConversationRepoLive = Layer.effect(
             metadata: data.metadata ?? undefined,
           } as const;
 
-          const result = yield* Effect.tryPromise({
+          const insertResult = yield* Effect.tryPromise({
             try: async () => {
               await drizzleClient.db.insert(conversation).values(insertData);
-              return insertData;
+              // After insert, fetch the created conversation to get all computed values
+              const results = await drizzleClient.db
+                .select()
+                .from(conversation)
+                .where(eq(conversation.id, conversationId))
+                .limit(1);
+
+              if (results.length > 0) {
+                console.log("Repository: Found conversation after insert:", {
+                  id: results[0].id,
+                  lastMessageAt: results[0].lastMessageAt,
+                  createdAt: results[0].createdAt,
+                  lastMessageAtType: typeof results[0].lastMessageAt,
+                  createdAtType: typeof results[0].createdAt,
+                });
+              } else {
+                console.log("Repository: No conversation found after insert");
+              }
+
+              return results.length > 0 ? results[0] : null;
             },
             catch: (error) => {
+              console.log("Repository: Error in create operation:", error);
               // Check if it's a constraint violation or other specific error
               const errorMessage =
                 error instanceof Error ? error.message : String(error);
@@ -106,17 +128,27 @@ export const ConversationRepoLive = Layer.effect(
             },
           });
 
-          if (result instanceof ConversationCreationError) {
-            return yield* Effect.fail(result);
+          if (insertResult instanceof ConversationCreationError) {
+            return yield* Effect.fail(insertResult);
           }
 
-          return mapDbRowToConversation({
-            ...result,
-            // Ensure nullable fields are converted from undefined to null for domain consistency
-            campaignId: result.campaignId ?? null,
-            lastMessageAt: result.lastMessageAt ?? null,
-            metadata: result.metadata ?? null,
+          if (!insertResult) {
+            console.log("Repository: No insert result returned");
+            return yield* Effect.fail(
+              new ConversationCreationError({
+                reason: "Failed to retrieve created conversation",
+              })
+            );
+          }
+
+          console.log("Repository: About to map conversation");
+          const mappedResult = mapDbRowToConversation(insertResult);
+          console.log("Repository: Mapped conversation successfully:", {
+            id: mappedResult.id,
+            lastMessageAt: mappedResult.lastMessageAt,
+            createdAt: mappedResult.createdAt,
           });
+          return mappedResult;
         }),
 
       updateStatus: (

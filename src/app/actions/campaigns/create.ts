@@ -90,6 +90,8 @@ const validateFormData = (formData: FormData) => {
   const campaignType = formData.get("campaignType") as CampaignType;
   const timezone = formData.get("timezone") as string;
   const organizationSlug = formData.get("organizationSlug") as string;
+  const messageContent = formData.get("messageContent") as string;
+  const messageSubject = formData.get("messageSubject") as string;
 
   // Extract segment IDs from form data
   const segmentIds: string[] = [];
@@ -142,6 +144,14 @@ const validateFormData = (formData: FormData) => {
     });
   }
 
+  if (!messageContent || messageContent.trim().length === 0) {
+    throw new ValidationError({
+      message: "Message content is required",
+      code: "MISSING_MESSAGE_CONTENT",
+      field: "messageContent",
+    });
+  }
+
   const validCampaignTypes = ["sms", "email", "whatsapp", "push_notification"];
   if (!validCampaignTypes.includes(campaignType)) {
     throw new ValidationError({
@@ -158,6 +168,14 @@ const validateFormData = (formData: FormData) => {
     timezone,
     organizationSlug,
     segmentIds,
+    message: {
+      content: messageContent.trim(),
+      subject:
+        messageSubject && messageSubject.trim()
+          ? messageSubject.trim()
+          : undefined,
+      mediaUrls: undefined, // TODO: Add media upload support later
+    },
   };
 };
 
@@ -181,6 +199,7 @@ export async function createCampaignAction(
       timezone,
       organizationSlug,
       segmentIds,
+      message,
     } = validateFormData(formData);
 
     // Use the proper Effect-TS pattern like other organization actions
@@ -196,6 +215,7 @@ export async function createCampaignAction(
         campaignType,
         timezone: unsafeTimezone(timezone),
         segmentIds: segmentIds.map((id) => id as any), // Cast to SegmentId branded type
+        message,
         scheduledAt: undefined, // Change from null to undefined
         metadata: {},
       };

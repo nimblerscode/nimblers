@@ -47,6 +47,18 @@ const MessageSchema = Schema.Struct({
 
 // API endpoint schemas
 export const ConversationApiSchemas = {
+  createConversation: {
+    request: Schema.Struct({
+      organizationSlug: OrganizationSlug,
+      campaignId: Schema.NullOr(CampaignId),
+      customerPhone: PhoneNumber,
+      storePhone: PhoneNumber,
+      status: ConversationStatus,
+      metadata: Schema.NullOr(Schema.String),
+    }),
+    response: ConversationSchema,
+  },
+
   getConversation: {
     response: ConversationSchema,
   },

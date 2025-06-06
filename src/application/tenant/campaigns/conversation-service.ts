@@ -1,18 +1,18 @@
-import { Effect, Layer } from "effect";
 import {
-  CampaignConversationUseCase,
-  CampaignConversationRepo,
-  CampaignConversationError,
   CampaignConversationNotFoundError,
+  CampaignConversationRepo,
+  CampaignConversationUseCase,
 } from "@/domain/tenant/campaigns/conversation-service";
 import type {
-  CreateCampaignConversationInput,
-  UpdateCampaignConversationInput,
-  ListCampaignConversationsInput,
   CampaignId,
-  ConversationId,
+  CreateCampaignConversationInput,
+  ListCampaignConversationsInput,
+  PhoneNumber,
+  UpdateCampaignConversationInput,
 } from "@/domain/tenant/campaigns/models";
 import { unsafeConversationId } from "@/domain/tenant/shared/branded-types";
+import { Effect, Layer } from "effect";
+import { nanoid } from "nanoid";
 
 export const CampaignConversationUseCaseLive = Layer.effect(
   CampaignConversationUseCase,
@@ -24,8 +24,7 @@ export const CampaignConversationUseCaseLive = Layer.effect(
         Effect.gen(function* () {
           // Generate conversation ID if not provided
           const conversationId =
-            input.conversationId ||
-            unsafeConversationId(`conv-${crypto.randomUUID()}`);
+            input.conversationId || unsafeConversationId(nanoid());
 
           const conversationData = {
             ...input,
@@ -97,10 +96,8 @@ export const CampaignConversationUseCaseLive = Layer.effect(
           const conversationInputs: CreateCampaignConversationInput[] =
             customerPhones.map((phone) => ({
               campaignId,
-              conversationId: unsafeConversationId(
-                `conv-${campaignId}-${phone.replace(/\D/g, "")}`
-              ), // Create deterministic conversation ID
-              customerPhone: phone as any, // Cast to PhoneNumber branded type
+              conversationId: nanoid(), // Create deterministic conversation ID
+              customerPhone: phone as PhoneNumber, // Cast to PhoneNumber branded type
               metadata: {
                 source: "campaign_creation",
                 createdAt: new Date().toISOString(),

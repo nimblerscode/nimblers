@@ -5,6 +5,7 @@ import type {
   CampaignId,
   CreateCampaignInput,
   ExecuteCampaignInput,
+  LaunchCampaignInput,
   UpdateCampaignInput,
 } from "./models";
 
@@ -139,6 +140,15 @@ export abstract class CampaignUseCase extends Context.Tag(
     readonly getCampaignAnalytics: (
       campaignId: CampaignId
     ) => Effect.Effect<CampaignAnalytics, CampaignUseCaseError>;
+    readonly launchCampaign: (data: LaunchCampaignInput) => Effect.Effect<
+      {
+        success: boolean;
+        totalCustomers: number;
+        conversationsCreated: number;
+        errors: string[];
+      },
+      CampaignUseCaseError
+    >;
   }
 >() {}
 
@@ -179,6 +189,15 @@ export abstract class CampaignDOService extends Context.Tag(
       data: ExecuteCampaignInput
     ) => Effect.Effect<
       { success: boolean; messagesSent: number },
+      CampaignDOError
+    >;
+    readonly launchCampaign: (data: LaunchCampaignInput) => Effect.Effect<
+      {
+        success: boolean;
+        totalCustomers: number;
+        conversationsCreated: number;
+        errors: string[];
+      },
       CampaignDOError
     >;
   }

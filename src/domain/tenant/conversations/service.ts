@@ -30,7 +30,7 @@ export abstract class ConversationRepo extends Context.Tag(
       conversationId: ConversationId
     ) => Effect.Effect<Conversation, ConversationNotFoundError>;
     readonly create: (
-      data: Omit<Conversation, "id" | "createdAt">
+      data: Omit<Conversation, "createdAt"> & { id?: ConversationId }
     ) => Effect.Effect<Conversation, ConversationCreationError>;
     readonly updateStatus: (
       conversationId: ConversationId,

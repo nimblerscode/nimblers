@@ -16,6 +16,7 @@ import { routes as shopifyOAuthRoutes } from "@/app/pages/shopify/routes";
 import { routes as campaignRoutes } from "@/app/pages/organization/slug/campaigns/routes";
 import { routes as segmentRoutes } from "@/app/pages/organization/slug/segments/routes";
 import { routes as customerRoutes } from "@/app/pages/organization/slug/customers/routes";
+import { routes as legalRoutes } from "@/app/pages/legal/routes";
 import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
 import {
   authResponse,
@@ -115,6 +116,8 @@ export const allRoutes = [
     route("/login", [redirectAuthenticatedUsers, LoginLayout]),
     route("/signup", [redirectAuthenticatedUsers, SignUpLayout]),
     route("/profile", [sessionHandler, ProfileLayout]), // Add profile route
+    // Legal/compliance pages (unauthenticated)
+    ...legalRoutes,
     // Add other UI routes within Document here if needed
     // route("/*", NotFoundPage), // Example: Needs NotFoundPage component
   ]),

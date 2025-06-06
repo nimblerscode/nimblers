@@ -59,6 +59,27 @@ export const CampaignSchedule = S.Struct({
 });
 export type CampaignSchedule = S.Schema.Type<typeof CampaignSchedule>;
 
+// === Campaign Message Content ===
+export const CampaignMessage = S.Struct({
+  content: S.String.pipe(S.minLength(1), S.maxLength(1600)), // SMS limit
+  subject: S.optional(S.String.pipe(S.maxLength(200))), // For email/whatsapp
+  mediaUrls: S.optional(S.Array(S.String)), // For images/attachments
+});
+export type CampaignMessage = S.Schema.Type<typeof CampaignMessage>;
+
+// === Campaign Launch Progress Tracking ===
+export const CampaignLaunchProgress = S.Struct({
+  isLaunching: S.Boolean,
+  launchedAt: S.optional(S.Date),
+  totalCustomers: S.Number.pipe(S.int(), S.greaterThanOrEqualTo(0)),
+  conversationsCreated: S.Number.pipe(S.int(), S.greaterThanOrEqualTo(0)),
+  errors: S.Array(S.String), // List of error messages during launch
+  completedAt: S.optional(S.Date),
+});
+export type CampaignLaunchProgress = S.Schema.Type<
+  typeof CampaignLaunchProgress
+>;
+
 // === Campaign Settings ===
 export const CampaignSettings = S.Struct({
   rateLimitPerMinute: S.optional(S.Number.pipe(S.int(), S.greaterThan(0))),
@@ -77,7 +98,9 @@ export const CampaignSchema = S.Struct({
   status: CampaignStatus,
   schedule: CampaignSchedule,
   segmentIds: S.Array(SegmentId),
+  message: CampaignMessage,
   execution: CampaignExecution,
+  launchProgress: S.optional(CampaignLaunchProgress),
   settings: S.optional(CampaignSettings),
   metadata: S.optional(S.Record({ key: S.String, value: S.Unknown })),
   createdAt: S.Date,
@@ -93,6 +116,7 @@ export const CreateCampaignInputSchema = S.Struct({
   scheduledAt: S.optional(S.Date),
   timezone: Timezone,
   segmentIds: S.Array(SegmentId),
+  message: CampaignMessage,
   settings: S.optional(CampaignSettings),
   metadata: S.optional(S.Record({ key: S.String, value: S.Unknown })),
 });
@@ -108,6 +132,8 @@ export const UpdateCampaignInputSchema = S.Struct({
   scheduledAt: S.optional(S.Date),
   timezone: S.optional(Timezone),
   segmentIds: S.optional(S.Array(SegmentId)),
+  message: S.optional(CampaignMessage),
+  launchProgress: S.optional(CampaignLaunchProgress),
   settings: S.optional(CampaignSettings),
   metadata: S.optional(S.Record({ key: S.String, value: S.Unknown })),
 });
@@ -123,6 +149,16 @@ export const ExecuteCampaignInputSchema = S.Struct({
 });
 export type ExecuteCampaignInput = S.Schema.Type<
   typeof ExecuteCampaignInputSchema
+>;
+
+// === Campaign Launch Input ===
+export const LaunchCampaignInputSchema = S.Struct({
+  campaignId: CampaignId,
+  organizationSlug: S.String, // Required for conversation DO routing
+  dryRun: S.optional(S.Boolean), // Test run without actually sending
+});
+export type LaunchCampaignInput = S.Schema.Type<
+  typeof LaunchCampaignInputSchema
 >;
 
 // === Campaign Analytics (calculated on-demand) ===
@@ -256,6 +292,30 @@ export class CampaignExecutionError extends Data.TaggedError(
   readonly message: string;
 }> {}
 
+export class CampaignLaunchError extends Data.TaggedError(
+  "CampaignLaunchError"
+)<{
+  readonly campaignId: CampaignId;
+  readonly reason: string;
+  readonly message: string;
+  readonly cause?: unknown;
+}> {}
+
+export class CampaignLaunchInProgressError extends Data.TaggedError(
+  "CampaignLaunchInProgressError"
+)<{
+  readonly campaignId: CampaignId;
+  readonly message: string;
+}> {}
+
+export class CampaignOptInValidationError extends Data.TaggedError(
+  "CampaignOptInValidationError"
+)<{
+  readonly campaignId: CampaignId;
+  readonly customerCount: number;
+  readonly message: string;
+}> {}
+
 export class ConversationNotFoundError extends Data.TaggedError(
   "ConversationNotFoundError"
 )<{
@@ -281,6 +341,9 @@ export type CampaignError =
   | EmptySegmentListError
   | CampaignAlreadyExecutedError
   | CampaignExecutionError
+  | CampaignLaunchError
+  | CampaignLaunchInProgressError
+  | CampaignOptInValidationError
   | ConversationNotFoundError
   | ConversationSyncError;
 

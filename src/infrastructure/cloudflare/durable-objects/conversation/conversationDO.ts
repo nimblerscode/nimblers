@@ -2,7 +2,7 @@ import {
   type ConversationId,
   unsafeConversationId,
 } from "@/domain/tenant/shared/branded-types";
-import { EffectDurableObjectBase } from "../base/EffectDurableObjectBase";
+import { ConversationDurableObjectBase } from "../base/ConversationDurableObjectBase";
 import { getConversationHandler } from "./api/handlers";
 
 // Simple logging utility that can be easily replaced with a proper logger
@@ -31,7 +31,7 @@ const logger = {
   },
 };
 
-export class ConversationDurableObject extends EffectDurableObjectBase {
+export class ConversationDurableObject extends ConversationDurableObjectBase {
   async fetch(request: Request): Promise<Response> {
     const startTime = Date.now();
     const url = new URL(request.url);
