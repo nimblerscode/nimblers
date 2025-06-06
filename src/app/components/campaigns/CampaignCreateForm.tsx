@@ -18,6 +18,7 @@ import {
   type CreateCampaignState,
 } from "@/app/actions/campaigns/create";
 import { CAMPAIGN_TYPES, TIMEZONES } from "./timezones";
+import { SegmentSelector } from "./SegmentSelector";
 
 interface CampaignCreateFormProps {
   organizationSlug: string;
@@ -38,6 +39,7 @@ export function CampaignCreateForm({ organizationSlug }: CampaignCreateFormProps
 
   const [selectedCampaignType, setSelectedCampaignType] = useState<string>("sms");
   const [selectedTimezone, setSelectedTimezone] = useState<string>("America/New_York");
+  const [selectedSegmentIds, setSelectedSegmentIds] = useState<string[]>([]);
 
   return (
     <Card>
@@ -50,6 +52,11 @@ export function CampaignCreateForm({ organizationSlug }: CampaignCreateFormProps
           <VStack gap="6" alignItems="stretch">
             {/* Hidden field for organization slug */}
             <input type="hidden" name="organizationSlug" value={organizationSlug} />
+
+            {/* Hidden fields for selected segments */}
+            {selectedSegmentIds.map((segmentId, index) => (
+              <input key={segmentId} type="hidden" name={`segmentIds[${index}]`} value={segmentId} />
+            ))}
 
             {/* Success Message */}
             {state.success && (
@@ -127,6 +134,14 @@ export function CampaignCreateForm({ organizationSlug }: CampaignCreateFormProps
               </Select>
               <input type="hidden" name="timezone" value={selectedTimezone} />
             </VStack>
+
+            {/* Segment Selection */}
+            <SegmentSelector
+              organizationSlug={organizationSlug}
+              selectedSegmentIds={selectedSegmentIds}
+              onSelectionChange={setSelectedSegmentIds}
+              disabled={pending}
+            />
 
             {/* Submit Button */}
             <Button

@@ -17,6 +17,11 @@ export type CampaignId = Schema.Schema.Type<typeof CampaignId>;
 export const SegmentId = Schema.String.pipe(Schema.brand("SegmentId"));
 export type SegmentId = Schema.Schema.Type<typeof SegmentId>;
 
+export const CampaignSegmentId = Schema.String.pipe(
+  Schema.brand("CampaignSegmentId")
+);
+export type CampaignSegmentId = Schema.Schema.Type<typeof CampaignSegmentId>;
+
 export const EventId = Schema.String.pipe(Schema.brand("EventId"));
 export type EventId = Schema.Schema.Type<typeof EventId>;
 
@@ -268,6 +273,19 @@ export const makeEventId = (
       }),
   });
 
+export const makeCampaignSegmentId = (
+  value: string
+): Effect.Effect<CampaignSegmentId, BrandedTypeValidationError> =>
+  Effect.try({
+    try: () => Schema.decodeSync(CampaignSegmentId)(value),
+    catch: (error) =>
+      new BrandedTypeValidationError({
+        type: "CampaignSegmentId",
+        value,
+        reason: String(error),
+      }),
+  });
+
 export const makeExternalMessageId = (
   value: string
 ): Effect.Effect<ExternalMessageId, BrandedTypeValidationError> =>
@@ -304,6 +322,8 @@ export const unsafeTimezone = (value: string): Timezone => value as Timezone;
 export const unsafeMemberRole = (value: string): MemberRole =>
   value as MemberRole;
 export const unsafeEventId = (value: string): EventId => value as EventId;
+export const unsafeCampaignSegmentId = (value: string): CampaignSegmentId =>
+  value as CampaignSegmentId;
 export const unsafeExternalMessageId = (value: string): ExternalMessageId =>
   value as ExternalMessageId;
 export const unsafeFailureReason = (value: string): FailureReason =>

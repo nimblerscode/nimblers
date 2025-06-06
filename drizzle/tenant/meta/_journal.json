@@ -15,6 +15,13 @@
       "when": 1749061710431,
       "tag": "0001_skinny_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1749065565274,
+      "tag": "0002_neat_arclight",
+      "breakpoints": true
     }
   ]
 }

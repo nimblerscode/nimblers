@@ -10,7 +10,7 @@ import {
 } from "@effect/platform";
 import { Effect, Layer, Schema } from "effect";
 import { OrganizationUseCaseLive } from "@/application/tenant/organization/service.live";
-import { InvitationLayerLive } from "@/config/layers";
+import { InvitationLayerLive, CustomerLayerLive } from "@/config/layers";
 import { InvitationUseCase } from "@/domain/tenant/invitations/service";
 import { MemberRepo } from "@/domain/tenant/member/service";
 import {
@@ -19,6 +19,9 @@ import {
   OrgService,
 } from "@/domain/tenant/organization/service";
 import { CampaignUseCase } from "@/domain/tenant/campaigns/service";
+import { SegmentUseCase } from "@/domain/tenant/segments/service";
+import { CustomerUseCase } from "@/domain/tenant/customers/service";
+import { SegmentCustomerUseCase } from "@/domain/tenant/segment-customers/service";
 import { ConnectedStoreRepoLive } from "@/infrastructure/persistence/tenant/sqlite/ConnectedStoreRepoLive";
 import {
   DrizzleDOClientLive,
@@ -26,7 +29,11 @@ import {
 } from "@/infrastructure/persistence/tenant/sqlite/drizzle";
 import { MemberRepoLive } from "@/infrastructure/persistence/tenant/sqlite/MemberRepoLive";
 import { OrgRepoLive } from "@/infrastructure/persistence/tenant/sqlite/OrgRepoLive";
-import { CampaignLayerLive } from "@/config/layers";
+import {
+  CampaignLayerLive,
+  SegmentLayerLive,
+  SegmentCustomerLayerLive,
+} from "@/config/layers";
 import { Tracing } from "@/tracing";
 import { OrganizationApiSchemas } from "./schemas";
 
@@ -141,6 +148,88 @@ const listCampaigns = HttpApiEndpoint.get("listCampaigns", "/campaigns")
   .addSuccess(OrganizationApiSchemas.listCampaigns.response)
   .addError(HttpApiError.NotFound);
 
+// Segment endpoints
+const createSegment = HttpApiEndpoint.post("createSegment", "/segments")
+  .setPayload(OrganizationApiSchemas.createSegment.request)
+  .addSuccess(OrganizationApiSchemas.createSegment.response)
+  .addError(HttpApiError.BadRequest);
+
+const listSegments = HttpApiEndpoint.get("listSegments", "/segments")
+  .addSuccess(OrganizationApiSchemas.listSegments.response)
+  .addError(HttpApiError.NotFound);
+
+const getSegment = HttpApiEndpoint.get("getSegment", "/segments/:segmentId")
+  .setPath(OrganizationApiSchemas.getSegment.path)
+  .addSuccess(OrganizationApiSchemas.getSegment.response)
+  .addError(HttpApiError.NotFound);
+
+// Customer endpoints
+const createCustomer = HttpApiEndpoint.post("createCustomer", "/customers")
+  .setPayload(OrganizationApiSchemas.createCustomer.request)
+  .addSuccess(OrganizationApiSchemas.createCustomer.response)
+  .addError(HttpApiError.BadRequest);
+
+const listCustomers = HttpApiEndpoint.get("listCustomers", "/customers")
+  .setUrlParams(OrganizationApiSchemas.listCustomers.urlParams)
+  .addSuccess(OrganizationApiSchemas.listCustomers.response)
+  .addError(HttpApiError.NotFound);
+
+const getCustomer = HttpApiEndpoint.get("getCustomer", "/customers/:customerId")
+  .setPath(OrganizationApiSchemas.getCustomer.path)
+  .addSuccess(OrganizationApiSchemas.getCustomer.response)
+  .addError(HttpApiError.NotFound);
+
+const updateCustomer = HttpApiEndpoint.patch(
+  "updateCustomer",
+  "/customers/:customerId"
+)
+  .setPath(OrganizationApiSchemas.updateCustomer.path)
+  .setPayload(OrganizationApiSchemas.updateCustomer.request)
+  .addSuccess(OrganizationApiSchemas.updateCustomer.response)
+  .addError(HttpApiError.NotFound);
+
+const deleteCustomer = HttpApiEndpoint.del(
+  "deleteCustomer",
+  "/customers/:customerId"
+)
+  .setPath(OrganizationApiSchemas.deleteCustomer.path)
+  .addSuccess(OrganizationApiSchemas.deleteCustomer.response)
+  .addError(HttpApiError.NotFound);
+
+const searchCustomers = HttpApiEndpoint.get(
+  "searchCustomers",
+  "/customers/search"
+)
+  .setUrlParams(OrganizationApiSchemas.searchCustomers.urlParams)
+  .addSuccess(OrganizationApiSchemas.searchCustomers.response)
+  .addError(HttpApiError.NotFound);
+
+// Segment-Customer endpoints
+const addCustomersToSegment = HttpApiEndpoint.post(
+  "addCustomersToSegment",
+  "/segments/customers/add"
+)
+  .setPayload(OrganizationApiSchemas.addCustomersToSegment.request)
+  .addSuccess(OrganizationApiSchemas.addCustomersToSegment.response)
+  .addError(HttpApiError.BadRequest);
+
+const removeCustomersFromSegment = HttpApiEndpoint.post(
+  "removeCustomersFromSegment",
+  "/segments/customers/remove"
+)
+  .setPayload(OrganizationApiSchemas.removeCustomersFromSegment.request)
+  .addSuccess(OrganizationApiSchemas.removeCustomersFromSegment.response)
+  .addError(HttpApiError.BadRequest);
+
+const listSegmentCustomers = HttpApiEndpoint.get(
+  "listSegmentCustomers",
+  "/segments/:segmentId/customers"
+)
+  .setPath(OrganizationApiSchemas.listSegmentCustomers.path)
+  .setUrlParams(OrganizationApiSchemas.listSegmentCustomers.urlParams)
+  .addSuccess(OrganizationApiSchemas.listSegmentCustomers.response)
+  .addError(HttpApiError.NotFound);
+
 // Group all user-related endpoints
 const organizationsGroup = HttpApiGroup.make("organizations")
   // .add(getOrganizations)
@@ -156,6 +245,18 @@ const organizationsGroup = HttpApiGroup.make("organizations")
   .add(disconnectStore)
   .add(createCampaign)
   .add(listCampaigns)
+  .add(createSegment)
+  .add(listSegments)
+  .add(getSegment)
+  .add(createCustomer)
+  .add(listCustomers)
+  .add(getCustomer)
+  .add(updateCustomer)
+  .add(deleteCustomer)
+  .add(searchCustomers)
+  .add(addCustomersToSegment)
+  .add(removeCustomersFromSegment)
+  .add(listSegmentCustomers)
   // .add(deleteOrganization)
   // .add(updateOrganization)
   .addError(Unauthorized, { status: 401 });
@@ -676,6 +777,357 @@ const organizationsGroupLive = () =>
           )
         );
       })
+      .handle("createSegment", ({ payload }) => {
+        return Effect.gen(function* () {
+          const segmentService = yield* SegmentUseCase;
+          const segment = yield* segmentService.createSegment(payload);
+          return segment;
+        }).pipe(
+          Effect.withSpan("OrganizationDO.createSegment", {
+            attributes: {
+              "segment.name": payload.name,
+              "segment.type": payload.type,
+              "api.endpoint": "/segments",
+              "api.method": "POST",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("listSegments", () => {
+        return Effect.gen(function* () {
+          const segmentService = yield* SegmentUseCase;
+          const segmentCustomerService = yield* SegmentCustomerUseCase;
+          const result = yield* segmentService.listSegments();
+
+          // Add customer counts to each segment
+          const segmentsWithCounts = yield* Effect.all(
+            result.segments.map((segment) =>
+              Effect.gen(function* () {
+                const customerCount =
+                  yield* segmentCustomerService.getSegmentCustomerCount(
+                    segment.id
+                  );
+                return {
+                  ...segment,
+                  customerCount,
+                };
+              })
+            )
+          );
+
+          return {
+            ...result,
+            segments: segmentsWithCounts,
+          };
+        }).pipe(
+          Effect.withSpan("OrganizationDO.listSegments", {
+            attributes: {
+              "api.endpoint": "/segments",
+              "api.method": "GET",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("getSegment", ({ path: { segmentId } }) => {
+        return Effect.gen(function* () {
+          const segmentService = yield* SegmentUseCase;
+          const segmentCustomerService = yield* SegmentCustomerUseCase;
+          const segment = yield* segmentService.getSegment(segmentId);
+
+          // Add customer count to the segment
+          const customerCount =
+            yield* segmentCustomerService.getSegmentCustomerCount(segmentId);
+
+          return {
+            ...segment,
+            customerCount,
+          };
+        }).pipe(
+          Effect.withSpan("OrganizationDO.getSegment", {
+            attributes: {
+              "segment.id": segmentId,
+              "api.endpoint": "/segments/:segmentId",
+              "api.method": "GET",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("createCustomer", ({ payload }) => {
+        return Effect.gen(function* () {
+          const customerService = yield* CustomerUseCase;
+          const customer = yield* customerService.createCustomer(payload);
+          return customer;
+        }).pipe(
+          Effect.withSpan("OrganizationDO.createCustomer", {
+            attributes: {
+              "customer.email": payload.email,
+              "api.endpoint": "/customers",
+              "api.method": "POST",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("listCustomers", ({ urlParams }) => {
+        return Effect.gen(function* () {
+          const customerService = yield* CustomerUseCase;
+          const customers = yield* customerService.listCustomers({
+            limit: urlParams.limit,
+            offset: urlParams.offset,
+            status: urlParams.status,
+          });
+          const total = yield* customerService.getCustomerCount();
+
+          const limit = urlParams.limit || 50;
+          const offset = urlParams.offset || 0;
+          const hasMore = offset + customers.length < total;
+
+          return {
+            customers,
+            hasMore,
+            total,
+          };
+        }).pipe(
+          Effect.withSpan("OrganizationDO.listCustomers", {
+            attributes: {
+              "api.endpoint": "/customers",
+              "api.method": "GET",
+            },
+          }),
+          Effect.mapError((error) => {
+            return new HttpApiError.HttpApiDecodeError({
+              message: error.message || String(error),
+              issues: [],
+            });
+          })
+        );
+      })
+      .handle("getCustomer", ({ path: { customerId } }) => {
+        return Effect.gen(function* () {
+          const customerService = yield* CustomerUseCase;
+          const customer = yield* customerService.getCustomer(customerId);
+          return customer;
+        }).pipe(
+          Effect.withSpan("OrganizationDO.getCustomer", {
+            attributes: {
+              "customer.id": customerId,
+              "api.endpoint": "/customers/:customerId",
+              "api.method": "GET",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("updateCustomer", ({ path: { customerId }, payload }) => {
+        return Effect.gen(function* () {
+          const customerService = yield* CustomerUseCase;
+          const customer = yield* customerService.updateCustomer(
+            customerId,
+            payload
+          );
+          return customer;
+        }).pipe(
+          Effect.withSpan("OrganizationDO.updateCustomer", {
+            attributes: {
+              "customer.id": customerId,
+              "api.endpoint": "/customers/:customerId",
+              "api.method": "PATCH",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("deleteCustomer", ({ path: { customerId } }) => {
+        return Effect.gen(function* () {
+          const customerService = yield* CustomerUseCase;
+          yield* customerService.deleteCustomer(customerId);
+          return { success: true };
+        }).pipe(
+          Effect.withSpan("OrganizationDO.deleteCustomer", {
+            attributes: {
+              "customer.id": customerId,
+              "api.endpoint": "/customers/:customerId",
+              "api.method": "DELETE",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("searchCustomers", ({ urlParams }) => {
+        return Effect.gen(function* () {
+          const customerService = yield* CustomerUseCase;
+          const customers = yield* customerService.searchCustomers({
+            query: urlParams.query,
+            tags: urlParams.tags ? urlParams.tags.split(",") : undefined,
+            status: urlParams.status,
+            limit: urlParams.limit,
+            offset: urlParams.offset,
+          });
+          const total = yield* customerService.getCustomerCount();
+
+          const limit = urlParams.limit || 50;
+          const offset = urlParams.offset || 0;
+          const hasMore = offset + customers.length < total;
+
+          return {
+            customers,
+            hasMore,
+            total,
+          };
+        }).pipe(
+          Effect.withSpan("OrganizationDO.searchCustomers", {
+            attributes: {
+              "search.query": urlParams.query,
+              "api.endpoint": "/customers/search",
+              "api.method": "GET",
+            },
+          }),
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("addCustomersToSegment", ({ payload }) => {
+        return Effect.gen(function* () {
+          const segmentCustomerService = yield* SegmentCustomerUseCase;
+          const results =
+            yield* segmentCustomerService.bulkAddCustomersToSegment(
+              payload.segmentId,
+              Array.from(payload.customerIds),
+              undefined, // addedBy - can be set to current user if needed
+              payload.source || "manual"
+            );
+          return {
+            success: true,
+            message: `Successfully added ${results.length} customers to segment`,
+            addedCount: results.length,
+          };
+        }).pipe(
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("removeCustomersFromSegment", ({ payload }) => {
+        return Effect.gen(function* () {
+          const segmentCustomerService = yield* SegmentCustomerUseCase;
+          yield* segmentCustomerService.bulkRemoveCustomersFromSegment(
+            payload.segmentId,
+            Array.from(payload.customerIds)
+          );
+          return {
+            success: true,
+            message: `Successfully removed ${payload.customerIds.length} customers from segment`,
+            removedCount: payload.customerIds.length,
+          };
+        }).pipe(
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
+      .handle("listSegmentCustomers", ({ path, urlParams }) => {
+        return Effect.gen(function* () {
+          const segmentCustomerService = yield* SegmentCustomerUseCase;
+          const customerService = yield* CustomerUseCase;
+
+          // Get segment-customer relationships
+          const segmentCustomers =
+            yield* segmentCustomerService.listSegmentCustomers({
+              segmentId: path.segmentId,
+              limit: urlParams.limit,
+              offset: urlParams.offset,
+            });
+
+          // Get full customer data for each relationship
+          const customers = yield* Effect.all(
+            segmentCustomers.map((segmentCustomer) =>
+              customerService.getCustomer(segmentCustomer.customerId)
+            )
+          );
+
+          // Get total count for pagination
+          const totalCount =
+            yield* segmentCustomerService.getSegmentCustomerCount(
+              path.segmentId
+            );
+
+          const limit = urlParams.limit || 50;
+          const offset = urlParams.offset || 0;
+          const hasMore = offset + customers.length < totalCount;
+
+          return {
+            customers,
+            hasMore,
+            totalCount,
+          };
+        }).pipe(
+          Effect.mapError(
+            (error) =>
+              new HttpApiError.HttpApiDecodeError({
+                message: error.message || String(error),
+                issues: [],
+              })
+          )
+        );
+      })
   );
 
 export function getOrgHandler(
@@ -713,6 +1165,15 @@ export function getOrgHandler(
     DORepoLayer
   );
   const CampaignLayer = Layer.provide(CampaignLayerLive(), DrizzleDOClientLive);
+  const SegmentLayer = Layer.provide(
+    SegmentLayerLive(organizationDoId),
+    DrizzleDOClientLive
+  );
+  const CustomerLayer = Layer.provide(CustomerLayerLive(), DrizzleDOClientLive);
+  const SegmentCustomerLayer = Layer.provide(
+    SegmentCustomerLayerLive(organizationDoId),
+    DrizzleDOClientLive
+  );
   const finalLayer = Layer.provide(
     Layer.mergeAll(
       OrgServiceLayer,
@@ -720,7 +1181,10 @@ export function getOrgHandler(
       MemberServiceLayer,
       ConnectedStoreLayer,
       OrganizationUseCaseLayer,
-      CampaignLayer
+      CampaignLayer,
+      SegmentLayer,
+      CustomerLayer,
+      SegmentCustomerLayer
     ),
     DORepoLayer
   );

@@ -1,4 +1,5 @@
 import { Effect, Layer, Option } from "effect";
+import { nanoid } from "nanoid";
 import {
   SegmentRepo,
   SegmentRepositoryError,
@@ -91,7 +92,7 @@ export const SegmentRepoLive = Layer.effect(
         Effect.gen(function* () {
           const insertData = convertToInsertSegment(data);
           const now = new Date();
-          const id = crypto.randomUUID();
+          const id = nanoid();
 
           const result = yield* Effect.tryPromise({
             try: () =>

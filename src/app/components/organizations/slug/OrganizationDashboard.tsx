@@ -97,6 +97,36 @@ export function OrganizationDashboard({
         })}
       />
 
+      {/* Segments Section */}
+      <VStack gap="4" alignItems="stretch">
+        <HStack justifyContent="space-between" alignItems="center">
+          <Heading as="h2">Segments</Heading>
+          <Link href={`/organization/${organization.slug}/segments/create`}>
+            <Button variant="primary" size="md">
+              Create Segment
+            </Button>
+          </Link>
+        </HStack>
+
+        {/* Segment quick actions */}
+        <HStack gap="4">
+          <Link href={`/organization/${organization.slug}/segments`}>
+            <Button variant="outline" size="md">
+              View All Segments
+            </Button>
+          </Link>
+        </HStack>
+      </VStack>
+
+      {/* Visual Separator */}
+      <div
+        className={css({
+          borderTop: "1px solid",
+          borderColor: "border.strong",
+          mx: "0",
+        })}
+      />
+
       {/* Team Members Section */}
       <VStack gap="4" alignItems="stretch">
         <Grid

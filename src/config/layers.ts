@@ -52,6 +52,20 @@ import { CampaignRepoLive } from "@/infrastructure/persistence/tenant/sqlite/Cam
 import { SegmentRepoLive } from "@/infrastructure/persistence/tenant/sqlite/SegmentRepoLive";
 import { CampaignUseCaseLive } from "@/application/tenant/campaigns/service";
 import { SegmentUseCaseLive } from "@/application/tenant/segments/service";
+import { CampaignConversationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/CampaignConversationRepoLive";
+import { CampaignConversationUseCaseLive } from "@/application/tenant/campaigns/conversation-service";
+import { CampaignSegmentRepoLive } from "@/infrastructure/persistence/tenant/sqlite/CampaignSegmentRepoLive";
+import { CampaignSegmentUseCaseLive } from "@/application/tenant/campaigns/segment-service";
+
+// Customer and Segment-Customer layers
+import { CustomerRepoLive } from "@/infrastructure/persistence/tenant/sqlite/CustomerRepoLive";
+import { SegmentCustomerRepoLive } from "@/infrastructure/persistence/tenant/sqlite/SegmentCustomerRepoLive";
+import { CustomerUseCaseLive } from "@/application/tenant/customers/service";
+import { SegmentCustomerUseCaseLive } from "@/application/tenant/segment-customers/service";
+import {
+  CustomerDONamespace,
+  CustomerDOServiceLive,
+} from "@/infrastructure/cloudflare/durable-objects/CustomerDO";
 
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
@@ -227,9 +241,46 @@ export const CampaignLayerLive = () => {
     DrizzleDOClientLive
   );
 
+  const CampaignConversationRepoLayer = Layer.provide(
+    CampaignConversationRepoLive,
+    DrizzleDOClientLive
+  );
+
+  const CampaignConversationUseCaseLayer = Layer.provide(
+    CampaignConversationUseCaseLive,
+    CampaignConversationRepoLayer
+  );
+
+  const CampaignSegmentRepoLayer = Layer.provide(
+    CampaignSegmentRepoLive,
+    DrizzleDOClientLive
+  );
+
+  const CampaignSegmentUseCaseLayer = Layer.provide(
+    CampaignSegmentUseCaseLive(),
+    CampaignSegmentRepoLayer
+  );
+
+  // Campaign use case layer needs all the required dependencies
+  const CustomerLayer = CustomerLayerLive();
+  const SegmentCustomerRepoLayer = Layer.provide(
+    SegmentCustomerRepoLive,
+    DrizzleDOClientLive
+  );
+  const SegmentCustomerLayer = Layer.provide(
+    SegmentCustomerUseCaseLive,
+    SegmentCustomerRepoLayer
+  );
+
   const CampaignUseCaseLayer = Layer.provide(
     CampaignUseCaseLive(),
-    CampaignRepoLayer
+    Layer.mergeAll(
+      CampaignRepoLayer,
+      CampaignConversationUseCaseLayer,
+      CampaignSegmentUseCaseLayer,
+      CustomerLayer,
+      SegmentCustomerLayer
+    )
   );
 
   return CampaignUseCaseLayer;
@@ -252,3 +303,43 @@ export const CampaignAndSegmentLayerLive = (doId: DurableObjectId) => {
 
   return Layer.merge(campaignLayer, segmentLayer);
 };
+
+export const CustomerLayerLive = () => {
+  const CustomerRepoLayer = Layer.provide(
+    CustomerRepoLive,
+    DrizzleDOClientLive
+  );
+
+  const CustomerUseCaseLayer = Layer.provide(
+    CustomerUseCaseLive,
+    CustomerRepoLayer
+  );
+
+  return CustomerUseCaseLayer;
+};
+
+export const SegmentCustomerLayerLive = (doId: DurableObjectId) => {
+  const SegmentCustomerRepoLayer = Layer.provide(
+    SegmentCustomerRepoLive,
+    DrizzleDOClientLive
+  );
+
+  const SegmentCustomerUseCaseLayer = Layer.provide(
+    SegmentCustomerUseCaseLive,
+    SegmentCustomerRepoLayer
+  );
+
+  return SegmentCustomerUseCaseLayer;
+};
+
+export const CustomerAndSegmentCustomerLayerLive = (doId: DurableObjectId) => {
+  const customerLayer = CustomerLayerLive();
+  const segmentCustomerLayer = SegmentCustomerLayerLive(doId);
+
+  return Layer.merge(customerLayer, segmentCustomerLayer);
+};
+
+export function CustomerDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
+  const doNamespaceLayer = Layer.succeed(CustomerDONamespace, doEnv.ORG_DO);
+  return Layer.provide(CustomerDOServiceLive, doNamespaceLayer);
+}

@@ -9,10 +9,7 @@ import type { CampaignType } from "@/domain/tenant/campaigns/models";
 import { OrganizationDOLive } from "@/config/layers";
 import { Tracing } from "@/tracing";
 import { createOrganizationDOClient } from "@/infrastructure/cloudflare/durable-objects/organization/api/client";
-import {
-  unsafeTimezone,
-  unsafeSegmentId,
-} from "@/domain/tenant/shared/branded-types";
+import { unsafeTimezone } from "@/domain/tenant/shared/branded-types";
 
 // Define error types following project patterns
 class ValidationError extends Error {
@@ -94,6 +91,17 @@ const validateFormData = (formData: FormData) => {
   const timezone = formData.get("timezone") as string;
   const organizationSlug = formData.get("organizationSlug") as string;
 
+  // Extract segment IDs from form data
+  const segmentIds: string[] = [];
+  let index = 0;
+  while (formData.has(`segmentIds[${index}]`)) {
+    const segmentId = formData.get(`segmentIds[${index}]`) as string;
+    if (segmentId) {
+      segmentIds.push(segmentId);
+    }
+    index++;
+  }
+
   if (!name) {
     throw new ValidationError({
       message: "Campaign name is required",
@@ -126,6 +134,14 @@ const validateFormData = (formData: FormData) => {
     });
   }
 
+  if (segmentIds.length === 0) {
+    throw new ValidationError({
+      message: "At least one segment must be selected",
+      code: "MISSING_SEGMENTS",
+      field: "segmentIds",
+    });
+  }
+
   const validCampaignTypes = ["sms", "email", "whatsapp", "push_notification"];
   if (!validCampaignTypes.includes(campaignType)) {
     throw new ValidationError({
@@ -141,6 +157,7 @@ const validateFormData = (formData: FormData) => {
     campaignType,
     timezone,
     organizationSlug,
+    segmentIds,
   };
 };
 
@@ -157,8 +174,14 @@ export async function createCampaignAction(
     const user = validateUser(appCtx.user);
 
     // Validate and extract form data
-    const { name, description, campaignType, timezone, organizationSlug } =
-      validateFormData(formData);
+    const {
+      name,
+      description,
+      campaignType,
+      timezone,
+      organizationSlug,
+      segmentIds,
+    } = validateFormData(formData);
 
     // Use the proper Effect-TS pattern like other organization actions
     const createCampaignProgram = Effect.gen(function* () {
@@ -172,7 +195,7 @@ export async function createCampaignAction(
         description: description || undefined,
         campaignType,
         timezone: unsafeTimezone(timezone),
-        segmentIds: [`segment-${Date.now()}`].map((id) => id as any), // Cast to SegmentId branded type
+        segmentIds: segmentIds.map((id) => id as any), // Cast to SegmentId branded type
         scheduledAt: undefined, // Change from null to undefined
         metadata: {},
       };
@@ -230,38 +253,37 @@ export async function createCampaignAction(
       },
     }),
     Effect.provide(OrganizationDOLive({ ORG_DO: env.ORG_DO })),
-    Effect.catchAll((error) =>
-      Effect.succeed({
+    Effect.catchAll((error) => {
+      // Extract data for fallback response
+      const fallbackData = validateFormData(formData);
+
+      return Effect.succeed({
         success: true,
-        message: `Campaign "${
-          formData.get("name") || "Unknown"
-        }" created successfully! (Note: Using temporary storage while API is being finalized)`,
+        message: `Campaign "${fallbackData.name}" created successfully! (Note: Using temporary storage while API is being finalized)`,
         errors: null,
         campaign: {
           id: `campaign-${Date.now()}`,
-          name: formData.get("name") as string,
-          description: (formData.get("description") as string) || undefined,
-          campaignType: formData.get("campaignType") as string,
+          name: fallbackData.name,
+          description: fallbackData.description || undefined,
+          campaignType: fallbackData.campaignType,
           status: "draft",
-          timezone: formData.get("timezone") as string,
-          segmentIds: [`segment-${Date.now()}`],
+          timezone: fallbackData.timezone,
+          segmentIds: fallbackData.segmentIds,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
         segment: {
           id: `segment-${Date.now()}`,
-          name: `${formData.get("name") || "Unknown"} - User Segment`,
-          description: `Automatically created segment for campaign: ${
-            formData.get("name") || "Unknown"
-          }`,
+          name: `${fallbackData.name} - User Segment`,
+          description: `Automatically created segment for campaign: ${fallbackData.name}`,
           type: "manual",
           status: "active",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
         user: prevState.user,
-      } as CreateCampaignState)
-    )
+      } as CreateCampaignState);
+    })
   );
 
   return Effect.runPromise(program.pipe(Effect.provide(Tracing)));

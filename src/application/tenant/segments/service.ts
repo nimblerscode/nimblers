@@ -145,8 +145,49 @@ export const SegmentUseCaseLive = (doId: DurableObjectId) =>
 
         listSegments: (options) =>
           Effect.gen(function* () {
+            yield* Effect.log("SegmentUseCase.listSegments - Starting", {
+              options,
+            });
+
             const result = yield* segmentRepo.list(options);
-            return result;
+
+            yield* Effect.log("SegmentUseCase.listSegments - Raw repo result", {
+              segmentsCount: result.segments.length,
+              hasMore: result.hasMore,
+              cursor: result.cursor,
+              firstSegment: result.segments[0]
+                ? {
+                    id: result.segments[0].id,
+                    name: result.segments[0].name,
+                    hasCustomerCount: "customerCount" in result.segments[0],
+                  }
+                : null,
+            });
+
+            // TODO: Add customer count calculation here
+            // The schema expects customerCount but the repository doesn't provide it
+            const segmentsWithCustomerCount = result.segments.map(
+              (segment) => ({
+                ...segment,
+                customerCount: 0, // Temporary fix - should calculate actual count
+              })
+            );
+
+            const finalResult = {
+              ...result,
+              segments: segmentsWithCustomerCount,
+            };
+
+            yield* Effect.log(
+              "SegmentUseCase.listSegments - Final result with customer counts",
+              {
+                segmentsCount: finalResult.segments.length,
+                firstSegmentCustomerCount:
+                  finalResult.segments[0]?.customerCount,
+              }
+            );
+
+            return finalResult;
           }).pipe(
             Effect.withSpan("SegmentUseCase.listSegments"),
             Effect.mapError((error) =>

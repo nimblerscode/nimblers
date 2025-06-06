@@ -5,11 +5,13 @@ import {
   ConversationId,
   PhoneNumber,
   Timezone,
+  CampaignSegmentId,
   type CampaignId as CampaignIdType,
   type SegmentId as SegmentIdType,
   type ConversationId as ConversationIdType,
   type PhoneNumber as PhoneNumberType,
   type Timezone as TimezoneType,
+  type CampaignSegmentId as CampaignSegmentIdType,
 } from "@/domain/tenant/shared/branded-types";
 
 // Re-export branded types for convenience
@@ -19,6 +21,7 @@ export type {
   ConversationIdType as ConversationId,
   PhoneNumberType as PhoneNumber,
   TimezoneType as Timezone,
+  CampaignSegmentIdType as CampaignSegmentId,
 };
 
 // === Campaign Enums ===
@@ -324,3 +327,36 @@ export const CAMPAIGN_TYPE_CONFIG: Record<
     requiresSegments: true,
   },
 } as const;
+
+// Campaign Segment Models
+export interface CampaignSegment {
+  id: CampaignSegmentId;
+  campaignId: CampaignId;
+  segmentId: SegmentId;
+  createdAt: Date;
+}
+
+export interface CreateCampaignSegmentInput {
+  campaignId: CampaignId;
+  segmentId: SegmentId;
+}
+
+// Campaign Segment Errors
+export class CampaignSegmentNotFoundError extends Data.TaggedError(
+  "CampaignSegmentNotFoundError"
+)<{
+  message: string;
+  campaignId?: CampaignId;
+  segmentId?: SegmentId;
+}> {}
+
+export class CampaignSegmentDbError extends Data.TaggedError(
+  "CampaignSegmentDbError"
+)<{
+  message: string;
+  cause?: unknown;
+}> {}
+
+export type CampaignSegmentRepositoryError =
+  | CampaignSegmentNotFoundError
+  | CampaignSegmentDbError;

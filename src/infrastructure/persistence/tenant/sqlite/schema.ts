@@ -158,6 +158,70 @@ export const connectedStore = sqliteTable("connected_store", {
   createdAt: normalizeDate("createdAt").notNull(),
 });
 
+// Customer table - for storing shoppers/customers that can be targeted in segments
+export const customer = sqliteTable("customer", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull(),
+  phone: text("phone"), // Optional phone number
+  firstName: text("firstName"),
+  lastName: text("lastName"),
+
+  // Integration IDs for syncing with external platforms
+  shopifyCustomerId: text("shopifyCustomerId"), // Shopify customer ID
+  externalCustomerId: text("externalCustomerId"), // Other platform customer ID
+
+  // Customer status and preferences
+  status: text("status").notNull().default("active"), // 'active', 'inactive', 'unsubscribed'
+  optInSMS: text("optInSMS").notNull().default("false"), // SMS marketing consent
+  optInEmail: text("optInEmail").notNull().default("false"), // Email marketing consent
+  optInWhatsApp: text("optInWhatsApp").notNull().default("false"), // WhatsApp marketing consent
+
+  // Customer attributes for segmentation
+  tags: text("tags"), // JSON array of customer tags
+  totalSpent: text("totalSpent"), // Total amount spent (stored as string for precision)
+  orderCount: text("orderCount").default("0"), // Total number of orders
+  lastOrderAt: normalizeDateNullable("lastOrderAt"), // Date of last order
+
+  // Timestamps
+  createdAt: normalizeDate("createdAt").notNull(),
+  updatedAt: normalizeDate("updatedAt").notNull(),
+  lastSyncAt: normalizeDateNullable("lastSyncAt"), // Last time synced from external platform
+
+  // Additional customer data
+  metadata: text("metadata"), // JSON for custom customer attributes
+});
+
+// Create unique index on email for this organization
+export const uniqueCustomerEmailIndex = uniqueIndex("unique_customer_email").on(
+  customer.email
+);
+
+// Junction table for segment-customer relationships (many-to-many)
+export const segmentCustomer = sqliteTable("segment_customer", {
+  id: text("id").primaryKey(),
+  segmentId: text("segmentId")
+    .notNull()
+    .references(() => segment.id, { onDelete: "cascade" }),
+  customerId: text("customerId")
+    .notNull()
+    .references(() => customer.id, { onDelete: "cascade" }),
+
+  // Tracking who added the customer and how
+  addedBy: text("addedBy"), // User ID who manually added this customer
+  source: text("source").notNull().default("manual"), // 'manual', 'automatic', 'shopify_sync', 'import'
+
+  // Timestamps
+  addedAt: normalizeDate("addedAt").notNull(),
+
+  // Optional: conditions that qualified this customer (for automatic segments)
+  qualificationMetadata: text("qualificationMetadata"), // JSON with criteria that qualified them
+});
+
+// Ensure unique customer-segment pairs
+export const uniqueSegmentCustomerIndex = uniqueIndex(
+  "unique_segment_customer"
+).on(segmentCustomer.segmentId, segmentCustomer.customerId);
+
 // Member table (aligned with better-auth) - organization members
 export const member = sqliteTable("member", {
   id: text("id").primaryKey(),

@@ -14,6 +14,8 @@ import { Layout as OrganizationSlugLayout } from "@/app/pages/organization/slug/
 import { Layout as ProfileLayout } from "@/app/pages/profile/Layout";
 import { routes as shopifyOAuthRoutes } from "@/app/pages/shopify/routes";
 import { routes as campaignRoutes } from "@/app/pages/organization/slug/campaigns/routes";
+import { routes as segmentRoutes } from "@/app/pages/organization/slug/segments/routes";
+import { routes as customerRoutes } from "@/app/pages/organization/slug/customers/routes";
 import { Layout as SignUpLayout } from "@/app/pages/signup/Layout";
 import {
   authResponse,
@@ -92,6 +94,8 @@ const getOrganizationStoresRoute = async (requestInfo: RequestInfo) => {
 export const organizationRoutes = [
   route("/create", [sessionHandler, OrganizationCreateLayout]), // Use the wrapper page
   ...prefix("/:orgSlug/campaigns", campaignRoutes), // More specific routes first
+  ...prefix("/:orgSlug/segments", segmentRoutes), // Segments routes
+  ...prefix("/:orgSlug/customers", customerRoutes), // Customers routes
   route("/:orgSlug", [sessionHandler, OrganizationSlugLayout]), // General route last
 ];
 

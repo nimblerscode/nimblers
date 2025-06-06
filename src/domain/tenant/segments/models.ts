@@ -211,3 +211,6 @@ export const SHOPIFY_SEGMENT_FIELDS = [
 ] as const;
 
 export type ShopifySegmentField = (typeof SHOPIFY_SEGMENT_FIELDS)[number];
+
+// Note: Customer models moved to src/domain/tenant/customers/models.ts
+// for better organization and to avoid schema complexity

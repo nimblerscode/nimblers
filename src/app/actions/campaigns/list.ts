@@ -3,6 +3,7 @@
 import { Data } from "effect";
 import { requestInfo } from "rwsdk/worker";
 import type { AppContext } from "@/infrastructure/cloudflare/worker";
+import type { OrganizationSlug } from "@/domain/tenant/shared/branded-types";
 
 // Define Effect-TS branded error types following project patterns
 export class AuthenticationError extends Data.TaggedError(
@@ -78,7 +79,7 @@ const convertToSerializableError = (
 };
 
 export async function listCampaignsAction(
-  organizationSlug: string,
+  organizationSlug: OrganizationSlug,
   options?: {
     limit?: number;
     cursor?: string;

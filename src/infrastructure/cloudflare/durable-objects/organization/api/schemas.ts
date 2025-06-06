@@ -17,6 +17,26 @@ import {
   CampaignSchema,
   CreateCampaignInputSchema,
 } from "@/domain/tenant/campaigns/models";
+import {
+  SegmentSchema,
+  CreateSegmentInputSchema,
+  SegmentId,
+} from "@/domain/tenant/segments/models";
+import {
+  CustomerSchema,
+  CustomerId,
+  CreateCustomerInputSchema,
+  UpdateCustomerInputSchema,
+} from "@/domain/tenant/customers/models";
+
+// Extended schema for segments with customer count
+const SegmentWithCustomerCountSchema = Schema.Struct({
+  ...SegmentSchema.fields,
+  customerCount: Schema.Number.pipe(
+    Schema.int(),
+    Schema.greaterThanOrEqualTo(0)
+  ),
+});
 
 /**
  * Shared API schemas for Organization Durable Object
@@ -158,6 +178,135 @@ export const OrganizationApiSchemas = {
       cursor: Schema.NullOr(Schema.String),
     }),
   },
+
+  // Create Segment
+  createSegment: {
+    request: CreateSegmentInputSchema,
+    response: SegmentSchema,
+  },
+
+  // List Segments
+  listSegments: {
+    response: Schema.Struct({
+      segments: Schema.Array(SegmentWithCustomerCountSchema),
+      hasMore: Schema.Boolean,
+      cursor: Schema.NullOr(Schema.String),
+    }),
+  },
+
+  // Get Segment
+  getSegment: {
+    path: Schema.Struct({
+      segmentId: SegmentId,
+    }),
+    response: SegmentWithCustomerCountSchema,
+  },
+
+  // Create Customer
+  createCustomer: {
+    request: CreateCustomerInputSchema,
+    response: CustomerSchema,
+  },
+
+  // List Customers
+  listCustomers: {
+    urlParams: Schema.Struct({
+      limit: Schema.optional(Schema.NumberFromString),
+      offset: Schema.optional(Schema.NumberFromString),
+      status: Schema.optional(Schema.String),
+    }),
+    response: Schema.Struct({
+      customers: Schema.Array(CustomerSchema),
+      hasMore: Schema.Boolean,
+      total: Schema.Number,
+    }),
+  },
+
+  // Get Customer
+  getCustomer: {
+    path: Schema.Struct({
+      customerId: CustomerId,
+    }),
+    response: CustomerSchema,
+  },
+
+  // Update Customer
+  updateCustomer: {
+    path: Schema.Struct({
+      customerId: CustomerId,
+    }),
+    request: UpdateCustomerInputSchema,
+    response: CustomerSchema,
+  },
+
+  // Delete Customer
+  deleteCustomer: {
+    path: Schema.Struct({
+      customerId: CustomerId,
+    }),
+    response: Schema.Struct({
+      success: Schema.Boolean,
+    }),
+  },
+
+  // Search Customers
+  searchCustomers: {
+    urlParams: Schema.Struct({
+      query: Schema.optional(Schema.String),
+      tags: Schema.optional(Schema.String), // comma-separated tags
+      status: Schema.optional(Schema.String),
+      limit: Schema.optional(Schema.NumberFromString),
+      offset: Schema.optional(Schema.NumberFromString),
+    }),
+    response: Schema.Struct({
+      customers: Schema.Array(CustomerSchema),
+      hasMore: Schema.Boolean,
+      total: Schema.Number,
+    }),
+  },
+
+  // Add Customers to Segment
+  addCustomersToSegment: {
+    request: Schema.Struct({
+      segmentId: SegmentId,
+      customerIds: Schema.Array(CustomerId),
+      source: Schema.optional(Schema.Literal("manual")),
+    }),
+    response: Schema.Struct({
+      success: Schema.Boolean,
+      message: Schema.String,
+      addedCount: Schema.Number,
+    }),
+  },
+
+  // Remove Customers from Segment
+  removeCustomersFromSegment: {
+    request: Schema.Struct({
+      segmentId: SegmentId,
+      customerIds: Schema.Array(CustomerId),
+    }),
+    response: Schema.Struct({
+      success: Schema.Boolean,
+      message: Schema.String,
+      removedCount: Schema.Number,
+    }),
+  },
+
+  // List Segment Customers
+  listSegmentCustomers: {
+    path: Schema.Struct({
+      segmentId: SegmentId,
+    }),
+    urlParams: Schema.Struct({
+      limit: Schema.optional(Schema.NumberFromString),
+      offset: Schema.optional(Schema.NumberFromString),
+    }),
+    response: Schema.Struct({
+      customers: Schema.Array(CustomerSchema),
+      hasMore: Schema.Boolean,
+      totalCount: Schema.Number,
+    }),
+  },
 } as const;
 
 // Type exports for use in implementations
@@ -211,4 +360,86 @@ export type GetMembersResponse = Schema.Schema.Type<
 
 export type GetInvitationsResponse = Schema.Schema.Type<
   typeof OrganizationApiSchemas.getInvitations.response
+>;
+
+export type CreateSegmentRequest = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.createSegment.request
+>;
+export type CreateSegmentResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.createSegment.response
+>;
+
+export type ListSegmentsResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.listSegments.response
+>;
+
+// Customer API Types
+export type CreateCustomerRequest = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.createCustomer.request
+>;
+export type CreateCustomerResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.createCustomer.response
+>;
+
+export type ListCustomersUrlParams = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.listCustomers.urlParams
+>;
+export type ListCustomersResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.listCustomers.response
+>;
+
+export type SearchCustomersUrlParams = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.searchCustomers.urlParams
+>;
+export type SearchCustomersResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.searchCustomers.response
+>;
+
+// Segment-Customer API Types
+export type AddCustomersToSegmentRequest = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.addCustomersToSegment.request
+>;
+export type AddCustomersToSegmentResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.addCustomersToSegment.response
+>;
+
+export type RemoveCustomersFromSegmentRequest = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.removeCustomersFromSegment.request
+>;
+export type RemoveCustomersFromSegmentResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.removeCustomersFromSegment.response
+>;
+
+export type ListSegmentCustomersPath = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.listSegmentCustomers.path
+>;
+export type ListSegmentCustomersUrlParams = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.listSegmentCustomers.urlParams
+>;
+export type ListSegmentCustomersResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.listSegmentCustomers.response
+>;
+
+export type GetCustomerPath = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.getCustomer.path
+>;
+export type GetCustomerResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.getCustomer.response
+>;
+
+export type UpdateCustomerPath = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.updateCustomer.path
+>;
+export type UpdateCustomerRequest = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.updateCustomer.request
+>;
+export type UpdateCustomerResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.updateCustomer.response
+>;
+
+export type DeleteCustomerPath = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.deleteCustomer.path
+>;
+export type DeleteCustomerResponse = Schema.Schema.Type<
+  typeof OrganizationApiSchemas.deleteCustomer.response
 >;

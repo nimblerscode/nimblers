@@ -5,6 +5,10 @@ import {
   CampaignRepo,
   CampaignRepositoryError,
 } from "@/domain/tenant/campaigns/service";
+import { CampaignConversationUseCase } from "@/domain/tenant/campaigns/conversation-service";
+import { CampaignSegmentUseCase } from "@/domain/tenant/campaigns/segment-service";
+import { SegmentCustomerUseCase } from "@/domain/tenant/segment-customers/service";
+import { CustomerUseCase } from "@/domain/tenant/customers/service";
 import type {
   CampaignId,
   CreateCampaignInput,
@@ -18,6 +22,10 @@ export const CampaignUseCaseLive = () =>
     CampaignUseCase,
     Effect.gen(function* () {
       const campaignRepo = yield* CampaignRepo;
+      const campaignConversationUseCase = yield* CampaignConversationUseCase;
+      const campaignSegmentUseCase = yield* CampaignSegmentUseCase;
+      const segmentCustomerUseCase = yield* SegmentCustomerUseCase;
+      const customerUseCase = yield* CustomerUseCase;
 
       // Helper function to map repository errors to use case errors
       const mapRepositoryError = (
@@ -70,16 +78,15 @@ export const CampaignUseCaseLive = () =>
             }
 
             // Business rule: Validate timezone format
-            try {
-              new Date().toLocaleString("en-US", { timeZone: data.timezone });
-            } catch {
-              return yield* Effect.fail(
+            yield* Effect.try({
+              try: () =>
+                new Date().toLocaleString("en-US", { timeZone: data.timezone }),
+              catch: () =>
                 new CampaignUseCaseError({
                   message: "Invalid timezone provided",
                   operation: "createCampaign",
-                })
-              );
-            }
+                }),
+            });
 
             // Business rule: If scheduled, must be in the future
             if (data.scheduledAt && data.scheduledAt <= new Date()) {
@@ -91,7 +98,92 @@ export const CampaignUseCaseLive = () =>
               );
             }
 
+            // Create the campaign first
             const campaign = yield* campaignRepo.create(data);
+
+            // Create campaign-segment relationships
+            yield* campaignSegmentUseCase
+              .createCampaignSegments(
+                campaign.id,
+                [...data.segmentIds] // Convert readonly array to mutable array
+              )
+              .pipe(
+                Effect.mapError(
+                  (segmentError) =>
+                    new CampaignUseCaseError({
+                      message: segmentError.message,
+                      campaignId: campaign.id,
+                      operation: "createCampaign",
+                      cause: segmentError,
+                    })
+                )
+              );
+
+            // Get all customers from the selected segments and create conversations
+            // Wrap this in a separate effect that catches all errors to avoid changing the interface
+            const createConversationsEffect = Effect.gen(function* () {
+              // Get all segment customers in parallel
+              const segmentCustomerLists = yield* Effect.all(
+                data.segmentIds.map((segmentId) =>
+                  segmentCustomerUseCase.listSegmentCustomers({
+                    segmentId,
+                    limit: 1000, // TODO: Handle pagination for large segments
+                  })
+                ),
+                { concurrency: 5 }
+              );
+
+              // Flatten the results and get unique customer IDs
+              const allSegmentCustomers = segmentCustomerLists.flat();
+              const uniqueCustomerIds = [
+                ...new Set(allSegmentCustomers.map((sc) => sc.customerId)),
+              ];
+
+              if (uniqueCustomerIds.length > 0) {
+                // Get customer details to get phone numbers
+                const customers = yield* Effect.all(
+                  uniqueCustomerIds.map((customerId) =>
+                    customerUseCase.getCustomer(customerId as any).pipe(
+                      Effect.catchAll(() => Effect.succeed(null)) // Skip customers that don't exist
+                    )
+                  ),
+                  { concurrency: 10 }
+                );
+
+                // Filter out null customers and those without phone numbers
+                const validCustomers = customers.filter(
+                  (customer) => customer && customer.phone
+                );
+                const customerPhones = validCustomers.map(
+                  (customer) => customer!.phone!
+                );
+
+                if (customerPhones.length > 0) {
+                  // Create conversations for all customers
+                  yield* campaignConversationUseCase.createConversationsForCustomers(
+                    campaign.id,
+                    customerPhones
+                  );
+                }
+              }
+            }).pipe(
+              Effect.catchAll((conversationError) =>
+                Effect.gen(function* () {
+                  // Log the error but don't fail the campaign creation
+                  yield* Effect.logWarning(
+                    "Failed to create campaign conversations",
+                    {
+                      campaignId: campaign.id,
+                      error: conversationError,
+                    }
+                  );
+                })
+              )
+            );
+
+            // Run the conversation creation effect without waiting for it to complete
+            yield* Effect.fork(createConversationsEffect);
+
             return campaign;
           }).pipe(
             Effect.withSpan("CampaignUseCase.createCampaign"),
