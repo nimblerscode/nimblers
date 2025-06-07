@@ -94,15 +94,26 @@ export const CampaignConversationUseCaseLive = Layer.effect(
         Effect.gen(function* () {
           // Create conversation inputs for all customers
           const conversationInputs: CreateCampaignConversationInput[] =
-            customerPhones.map((phone) => ({
-              campaignId,
-              conversationId: nanoid(), // Create deterministic conversation ID
-              customerPhone: phone as PhoneNumber, // Cast to PhoneNumber branded type
-              metadata: {
-                source: "campaign_creation",
-                createdAt: new Date().toISOString(),
-              },
-            }));
+            customerPhones.map((phone) => {
+              const conversationId = nanoid();
+
+              // Validate conversation ID generation
+              if (!conversationId || conversationId.trim().length === 0) {
+                throw new Error(
+                  `Failed to generate conversation ID for customer ${phone}`
+                );
+              }
+
+              return {
+                campaignId,
+                conversationId: unsafeConversationId(conversationId), // Create deterministic conversation ID
+                customerPhone: phone as PhoneNumber, // Cast to PhoneNumber branded type
+                metadata: {
+                  source: "campaign_creation",
+                  createdAt: new Date().toISOString(),
+                },
+              };
+            });
 
           // Bulk create all conversations
           const conversations = yield* campaignConversationRepo.bulkCreate(

@@ -9,6 +9,7 @@ import {
   HttpServer,
 } from "@effect/platform";
 import { Effect, Layer, Schema } from "effect";
+import { env } from "cloudflare:workers";
 import { OrganizationUseCaseLive } from "@/application/tenant/organization/service.live";
 import { InvitationLayerLive, CustomerLayerLive } from "@/config/layers";
 import { InvitationUseCase } from "@/domain/tenant/invitations/service";
@@ -33,6 +34,7 @@ import {
   CampaignLayerLive,
   SegmentLayerLive,
   SegmentCustomerLayerLive,
+  ConversationDOLive,
 } from "@/config/layers";
 
 import { Tracing } from "@/tracing";
@@ -198,6 +200,25 @@ const updateCustomer = HttpApiEndpoint.patch(
   .addSuccess(OrganizationApiSchemas.updateCustomer.response)
   .addError(HttpApiError.NotFound);
 
+// Conversation lookup endpoint for Twilio webhook
+const lookupConversation = HttpApiEndpoint.get(
+  "lookupConversation",
+  "/conversations/lookup"
+)
+  .setUrlParams(
+    Schema.Struct({
+      customerPhone: Schema.String,
+      storePhone: Schema.String,
+    })
+  )
+  .addSuccess(
+    Schema.Struct({
+      conversationId: Schema.String,
+      shopifyStoreDomain: Schema.optional(Schema.String),
+    })
+  )
+  .addError(HttpApiError.NotFound);
+
 const deleteCustomer = HttpApiEndpoint.del(
   "deleteCustomer",
   "/customers/:customerId"
@@ -268,6 +289,7 @@ const organizationsGroup = HttpApiGroup.make("organizations")
   .add(addCustomersToSegment)
   .add(removeCustomersFromSegment)
   .add(listSegmentCustomers)
+  .add(lookupConversation)
   // .add(deleteOrganization)
   // .add(updateOrganization)
   .addError(Unauthorized, { status: 401 });
@@ -1166,11 +1188,27 @@ const organizationsGroupLive = () =>
           )
         );
       })
+      .handle("lookupConversation", ({ urlParams }) => {
+        return Effect.gen(function* () {
+          // This endpoint looks up existing conversations by phone numbers
+          // It's called by the Twilio webhook to find the correct conversation ID
+          // and associated Shopify store domain for MCP integration
+
+          // Here we would query the conversations directly from the organization's database
+          // For now, let's implement a simple lookup that searches for conversations
+          // TODO: Implement actual conversation lookup logic when ConversationRepo is available
+
+          // For MVP, we'll return a not found error and let the webhook create a new conversation
+          // This ensures the system still works while we implement the full lookup
+          return yield* Effect.fail(new HttpApiError.NotFound());
+        });
+      })
   );
 
 export function getOrgHandler(
   doState: DurableObjectState,
-  organizationSlug: string
+  organizationSlug: string,
+  conversationDOBinding: typeof env.CONVERSATION_DO
 ) {
   // Use the provided organization slug instead of relying on doState.id.name
   if (!organizationSlug || organizationSlug.trim().length === 0) {
@@ -1202,7 +1240,15 @@ export function getOrgHandler(
     InvitationLayerLive(organizationDoId),
     DORepoLayer
   );
-  const CampaignLayer = Layer.provide(CampaignLayerLive(), DrizzleDOClientLive);
+  // Create ConversationDOService layer - required for campaign messaging
+  const conversationDOServiceLayer = ConversationDOLive({
+    CONVERSATION_DO: conversationDOBinding,
+  });
+
+  const CampaignLayer = Layer.provide(
+    CampaignLayerLive(conversationDOServiceLayer),
+    DrizzleDOClientLive
+  );
   const SegmentLayer = Layer.provide(
     SegmentLayerLive(organizationDoId),
     DrizzleDOClientLive

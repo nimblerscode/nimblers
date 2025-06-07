@@ -9,6 +9,12 @@ import { CampaignConversationUseCase } from "@/domain/tenant/campaigns/conversat
 import { CampaignSegmentUseCase } from "@/domain/tenant/campaigns/segment-service";
 import { SegmentCustomerUseCase } from "@/domain/tenant/segment-customers/service";
 import { CustomerUseCase } from "@/domain/tenant/customers/service";
+import { ConversationDOService } from "@/infrastructure/cloudflare/durable-objects/conversation/service";
+import {
+  unsafeMessageContent,
+  unsafeOrganizationSlug,
+  unsafePhoneNumber,
+} from "@/domain/tenant/shared/branded-types";
 
 import type {
   CampaignId,
@@ -28,6 +34,7 @@ export const CampaignUseCaseLive = () =>
       const campaignSegmentUseCase = yield* CampaignSegmentUseCase;
       const segmentCustomerUseCase = yield* SegmentCustomerUseCase;
       const customerUseCase = yield* CustomerUseCase;
+      const conversationDOService = yield* ConversationDOService;
 
       // Helper function to map repository errors to use case errors
       const mapRepositoryError = (
@@ -543,12 +550,12 @@ export const CampaignUseCaseLive = () =>
               },
             });
 
-            // Get all customers from campaign segments with deduplication
-            const errors: string[] = [];
-            let totalCustomers = 0;
-            let conversationsCreated = 0;
+            // Get all customers from campaign segments with deduplication using Effect-TS error handling
+            const launchResult = yield* Effect.gen(function* () {
+              const errors: string[] = [];
+              let totalCustomers = 0;
+              let conversationsCreated = 0;
 
-            try {
               // Get all segment customers in parallel
               const segmentCustomerLists = yield* Effect.all(
                 campaign.segmentIds.map((segmentId) =>
@@ -591,7 +598,7 @@ export const CampaignUseCaseLive = () =>
                 // Get customer details to get phone numbers
                 const customers = yield* Effect.all(
                   uniqueCustomerIds.map((customerId) =>
-                    customerUseCase.getCustomer(customerId as any).pipe(
+                    customerUseCase.getCustomer(customerId).pipe(
                       Effect.withSpan("launchCampaign.getCustomer", {
                         attributes: { customerId },
                       }),
@@ -657,116 +664,140 @@ export const CampaignUseCaseLive = () =>
 
                   conversationsCreated = campaignConversations.length;
 
-                  // Send initial campaign messages via conversation DOs
+                  // Create actual conversations in ConversationDOs and send initial messages
                   if (campaignConversations.length > 0) {
                     yield* Effect.logInfo(
-                      "Campaign launch: sending initial messages",
+                      "Campaign launch: creating conversations and sending initial messages",
                       {
                         campaignId: data.campaignId,
                         messageContent: campaign.message.content,
-                        conversationsToMessage: campaignConversations.length,
+                        conversationsToCreate: campaignConversations.length,
                       }
                     );
 
-                    // Send messages to all conversations in parallel using direct HTTP calls
+                    // Create conversations and send messages in sequence for each customer
                     yield* Effect.all(
                       campaignConversations.map((conversation) =>
                         Effect.gen(function* () {
-                          // Get CONVERSATION_DO binding from environment
-                          const { env } = yield* Effect.promise(
-                            () => import("cloudflare:workers")
-                          );
-
-                          // Create conversation DO stub
-                          const doId = env.CONVERSATION_DO.idFromName(
-                            conversation.conversationId
-                          );
-                          const stub = env.CONVERSATION_DO.get(doId);
-
-                          // Step 1: Create conversation in the conversation DO
-                          const createConversationResponse =
-                            yield* Effect.tryPromise({
-                              try: () =>
-                                stub.fetch("http://internal/conversation", {
-                                  method: "POST",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                  },
-                                  body: JSON.stringify({
-                                    organizationSlug: data.organizationSlug,
-                                    campaignId: data.campaignId,
-                                    customerPhone: conversation.customerPhone,
-                                    storePhone: env.TWILIO_FROM_NUMBER, // Use Twilio configured phone number
-                                    status: "active",
-                                    metadata: null,
-                                  }),
-                                }),
-                              catch: (error) => error,
-                            });
-
-                          if (!createConversationResponse.ok) {
-                            const errorText = yield* Effect.tryPromise({
-                              try: () => createConversationResponse.text(),
-                              catch: () => "Unknown error",
-                            });
-                            throw new Error(
-                              `Failed to create conversation - HTTP ${createConversationResponse.status}: ${errorText}`
-                            );
-                          }
-
-                          // Step 2: Send message via HTTP to conversation DO
-                          const response = yield* Effect.tryPromise({
-                            try: () =>
-                              stub.fetch("http://internal/messages", {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                  content: campaign.message.content,
-                                  messageType: "text",
-                                }),
-                              }),
-                            catch: (error) => error,
-                          });
-
-                          if (!response.ok) {
-                            const errorText = yield* Effect.tryPromise({
-                              try: () => response.text(),
-                              catch: () => "Unknown error",
-                            });
-                            throw new Error(
-                              `Failed to send message - HTTP ${response.status}: ${errorText}`
-                            );
-                          }
-
-                          return yield* Effect.tryPromise({
-                            try: () => response.json(),
-                            catch: (error) => error,
-                          });
-                        }).pipe(
-                          Effect.withSpan("launchCampaign.sendInitialMessage", {
-                            attributes: {
+                          // Step 1: Create the actual conversation in the ConversationDO
+                          yield* Effect.logInfo(
+                            "Creating conversation in ConversationDO",
+                            {
                               conversationId: conversation.conversationId,
-                              campaignId: data.campaignId,
                               customerPhone: conversation.customerPhone,
-                            },
-                          }),
-                          Effect.catchAll((error: unknown) => {
-                            errors.push(
-                              `Failed to send message to ${
-                                conversation.customerPhone
-                              }: ${
-                                error instanceof Error
-                                  ? error.message
-                                  : String(error)
-                              }`
-                            );
-                            return Effect.succeed(null);
-                          })
-                        )
+                            }
+                          );
+
+                          // Create conversation payload with proper branded types
+                          const createConversationPayload = {
+                            organizationSlug:
+                              unsafeOrganizationSlug("nimblers-org"), // TODO: Get from context
+                            campaignId: data.campaignId,
+                            customerPhone: conversation.customerPhone,
+                            storePhone: unsafePhoneNumber("+15392823029"), // TODO: Get from organization config
+                            status: "active" as const,
+                            metadata: null, // ConversationDO expects string | null, not object
+                          };
+
+                          // Create conversation first
+                          const conversationResult =
+                            yield* conversationDOService
+                              .createConversation(
+                                conversation.conversationId,
+                                createConversationPayload
+                              )
+                              .pipe(
+                                Effect.withSpan(
+                                  "launchCampaign.createConversation",
+                                  {
+                                    attributes: {
+                                      conversationId:
+                                        conversation.conversationId,
+                                      customerPhone: conversation.customerPhone,
+                                    },
+                                  }
+                                ),
+                                Effect.tap((result) =>
+                                  Effect.logInfo(
+                                    "Conversation creation result",
+                                    {
+                                      conversationId:
+                                        conversation.conversationId,
+                                      resultId: result?.id,
+                                      hasResult: !!result,
+                                    }
+                                  )
+                                ),
+                                Effect.catchAll((error: unknown) => {
+                                  const errorMessage =
+                                    error instanceof Error
+                                      ? error.message
+                                      : String(error);
+                                  errors.push(
+                                    `Failed to create conversation for ${conversation.customerPhone}: ${errorMessage}`
+                                  );
+                                  return Effect.gen(function* () {
+                                    yield* Effect.logError(
+                                      "Conversation creation failed",
+                                      {
+                                        conversationId:
+                                          conversation.conversationId,
+                                        customerPhone:
+                                          conversation.customerPhone,
+                                        error: errorMessage,
+                                      }
+                                    );
+                                    return null;
+                                  });
+                                })
+                              );
+
+                          // Step 2: Send initial message if conversation was created successfully
+                          if (conversationResult) {
+                            const messageResult = yield* conversationDOService
+                              .sendMessage(
+                                conversation.conversationId,
+                                unsafeMessageContent(campaign.message.content)
+                              )
+                              .pipe(
+                                Effect.withSpan(
+                                  "launchCampaign.sendInitialMessage",
+                                  {
+                                    attributes: {
+                                      conversationId:
+                                        conversation.conversationId,
+                                      campaignId: data.campaignId,
+                                      customerPhone: conversation.customerPhone,
+                                    },
+                                  }
+                                ),
+                                Effect.catchAll((error: unknown) => {
+                                  errors.push(
+                                    `Failed to send message to ${
+                                      conversation.customerPhone
+                                    }: ${
+                                      error instanceof Error
+                                        ? error.message
+                                        : String(error)
+                                    }`
+                                  );
+                                  return Effect.succeed(null);
+                                })
+                              );
+
+                            return messageResult
+                              ? {
+                                  conversationId: conversation.conversationId,
+                                  messageId: messageResult.message.id,
+                                  success: true,
+                                }
+                              : null;
+                          }
+
+                          return null;
+                        })
                       ),
-                      { concurrency: 5 } // Limit concurrency to avoid overwhelming Twilio
+                      { concurrency: 3 } // Lower concurrency for conversation creation + messaging
                     );
 
                     yield* Effect.logInfo(
@@ -791,13 +822,24 @@ export const CampaignUseCaseLive = () =>
                   }
                 }
               }
-            } catch (error) {
-              errors.push(
-                `Unexpected error during launch: ${
-                  error instanceof Error ? error.message : String(error)
-                }`
-              );
-            }
+
+              return { totalCustomers, conversationsCreated, errors };
+            }).pipe(
+              Effect.catchAll((error: unknown) =>
+                Effect.succeed({
+                  totalCustomers: 0,
+                  conversationsCreated: 0,
+                  errors: [
+                    `Unexpected error during launch: ${
+                      error instanceof Error ? error.message : String(error)
+                    }`,
+                  ],
+                })
+              )
+            );
+
+            const { totalCustomers, conversationsCreated, errors } =
+              launchResult;
 
             // Update campaign with final launch progress
             const completedAt = new Date();

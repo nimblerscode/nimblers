@@ -24,8 +24,8 @@ const ConversationSchema = Schema.Struct({
   customerPhone: PhoneNumber,
   storePhone: PhoneNumber,
   status: ConversationStatus,
-  lastMessageAt: Schema.NullOr(Schema.DateFromSelf),
-  createdAt: Schema.DateFromSelf,
+  lastMessageAt: Schema.NullOr(Schema.DateFromString),
+  createdAt: Schema.DateFromString,
   metadata: Schema.NullOr(Schema.String),
 });
 
@@ -36,12 +36,12 @@ const MessageSchema = Schema.Struct({
   status: MessageStatus,
   messageType: MessageType,
   externalMessageId: Schema.NullOr(ExternalMessageId),
-  sentAt: Schema.NullOr(Schema.DateFromSelf),
-  deliveredAt: Schema.NullOr(Schema.DateFromSelf),
-  readAt: Schema.NullOr(Schema.DateFromSelf),
-  failedAt: Schema.NullOr(Schema.DateFromSelf),
+  sentAt: Schema.NullOr(Schema.DateFromString),
+  deliveredAt: Schema.NullOr(Schema.DateFromString),
+  readAt: Schema.NullOr(Schema.DateFromString),
+  failedAt: Schema.NullOr(Schema.DateFromString),
   failureReason: Schema.NullOr(Schema.String),
-  createdAt: Schema.DateFromSelf,
+  createdAt: Schema.DateFromString,
   metadata: Schema.optional(Schema.NullOr(Schema.String)),
 });
 
@@ -101,13 +101,13 @@ export const ConversationApiSchemas = {
     response: Schema.Struct({
       id: ConversationId,
       status: ConversationStatus,
-      lastMessageAt: Schema.DateFromSelf,
+      lastMessageAt: Schema.DateFromString,
       messageCount: Schema.Number,
       lastMessage: Schema.Struct({
         id: MessageId,
         direction: MessageDirection,
         content: MessageContent,
-        createdAt: Schema.DateFromSelf,
+        createdAt: Schema.DateFromString,
       }),
     }),
   },

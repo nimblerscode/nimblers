@@ -42,6 +42,7 @@ import type { PhoneNumber } from "@/domain/global/messaging/models";
 import {
   ConversationDONamespace,
   ConversationDOAdapterLive,
+  ConversationDOService,
 } from "@/infrastructure/cloudflare/durable-objects/conversation/service";
 import { ConversationRepoLive } from "@/infrastructure/persistence/conversation/sqlite/ConversationRepoLive";
 import { MessageRepoLive } from "@/infrastructure/persistence/conversation/sqlite/MessageRepoLive";
@@ -66,6 +67,14 @@ import {
   CustomerDONamespace,
   CustomerDOServiceLive,
 } from "@/infrastructure/cloudflare/durable-objects/CustomerDO";
+
+// Add Shopify MCP imports
+import {
+  ShopifyMCPServiceLive,
+  createShopifyMCPConfig,
+} from "@/infrastructure/shopify/mcp/client";
+import { ConversationMCPServiceLive } from "@/application/shopify/mcp/service";
+import { unsafeMCPStoreDomain } from "@/domain/shopify/mcp/models";
 
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
@@ -235,7 +244,9 @@ export const ConversationLayerLive = () => {
   return ConversationUseCaseLayer;
 };
 
-export const CampaignLayerLive = () => {
+export const CampaignLayerLive = (
+  conversationDOService: Layer.Layer<ConversationDOService>
+) => {
   const CampaignRepoLayer = Layer.provide(
     CampaignRepoLive,
     DrizzleDOClientLive
@@ -272,16 +283,17 @@ export const CampaignLayerLive = () => {
     SegmentCustomerRepoLayer
   );
 
-  const CampaignUseCaseLayer = Layer.provide(
-    CampaignUseCaseLive(),
-    Layer.mergeAll(
-      CampaignRepoLayer,
-      CampaignConversationUseCaseLayer,
-      CampaignSegmentUseCaseLayer,
-      CustomerLayer,
-      SegmentCustomerLayer
-    )
+  // All layers including required ConversationDOService
+  const allLayers = Layer.mergeAll(
+    CampaignRepoLayer,
+    CampaignConversationUseCaseLayer,
+    CampaignSegmentUseCaseLayer,
+    CustomerLayer,
+    SegmentCustomerLayer,
+    conversationDOService
   );
+
+  const CampaignUseCaseLayer = Layer.provide(CampaignUseCaseLive(), allLayers);
 
   return CampaignUseCaseLayer;
 };
@@ -297,8 +309,11 @@ export const SegmentLayerLive = (doId: DurableObjectId) => {
   return SegmentUseCaseLayer;
 };
 
-export const CampaignAndSegmentLayerLive = (doId: DurableObjectId) => {
-  const campaignLayer = CampaignLayerLive();
+export const CampaignAndSegmentLayerLive = (
+  doId: DurableObjectId,
+  conversationDOService: Layer.Layer<ConversationDOService>
+) => {
+  const campaignLayer = CampaignLayerLive(conversationDOService);
   const segmentLayer = SegmentLayerLive(doId);
 
   return Layer.merge(campaignLayer, segmentLayer);
@@ -343,3 +358,31 @@ export function CustomerDOLive(doEnv: { ORG_DO: typeof env.ORG_DO }) {
   const doNamespaceLayer = Layer.succeed(CustomerDONamespace, doEnv.ORG_DO);
   return Layer.provide(CustomerDOServiceLive, doNamespaceLayer);
 }
+
+// Add Shopify MCP layer configuration
+export const ShopifyMCPLayer = (storeDomain: string) => {
+  const mcpConfig = createShopifyMCPConfig({
+    storeDomain: unsafeMCPStoreDomain(storeDomain),
+    mcpEndpoint: `https://${storeDomain}/api/mcp`, // Correct Shopify MCP endpoint with /api/ prefix
+  });
+
+  return Layer.provide(
+    ConversationMCPServiceLive,
+    Layer.provide(ShopifyMCPServiceLive, mcpConfig)
+  );
+};
+
+// Enhanced conversation layer that includes MCP capabilities
+export const ConversationLayerWithMCP = (
+  doId: DurableObjectId,
+  storeDomain?: string
+) => {
+  const baseConversationLayer = ConversationLayerLive();
+
+  if (storeDomain) {
+    const mcpLayer = ShopifyMCPLayer(storeDomain);
+    return Layer.provide(baseConversationLayer, mcpLayer);
+  }
+
+  return baseConversationLayer;
+};

@@ -55,20 +55,90 @@ export class ConversationDurableObject extends ConversationDurableObjectBase {
 
       logger.info("Getting handler from getConversationHandler");
 
-      if (!this.state.id.name) {
+      // DEBUG: Add comprehensive state debugging
+      logger.info("ConversationDO state debugging", {
+        "state.id": this.state.id ? "exists" : "null",
+        "state.id.name": this.state.id?.name || "undefined",
+        "state.id.toString": this.state.id?.toString() || "undefined",
+        "this.doId": this.doId,
+        "state.storage": this.state.storage ? "exists" : "null",
+        environment: this.env.ENVIRONMENT || "undefined",
+        stateIdType: typeof this.state.id,
+        stateIdNameType: typeof this.state.id?.name,
+      });
+
+      // Extract conversation ID from multiple sources (same pattern as OrganizationDO)
+      let conversationId: string | null = null;
+
+      // Method 1: Try state.id.name first (works in development)
+      if (this.state.id.name) {
+        conversationId = this.state.id.name;
+        logger.info("Found conversation ID from state.id.name", {
+          conversationId,
+        });
+      }
+
+      // Method 2: Extract from request headers
+      if (!conversationId) {
+        conversationId = request.headers.get("X-Conversation-ID");
+        if (conversationId) {
+          logger.info("Found conversation ID from X-Conversation-ID header", {
+            conversationId,
+          });
+        }
+      }
+
+      // Method 3: For conversation creation, extract from request body
+      if (
+        !conversationId &&
+        url.pathname === "/conversation" &&
+        method === "POST"
+      ) {
+        try {
+          const body = (await request.clone().json()) as {
+            id?: string;
+            organizationSlug?: string;
+          };
+          if (body?.id) {
+            conversationId = body.id;
+            logger.info("Found conversation ID from request body", {
+              conversationId,
+            });
+          }
+        } catch (parseError) {
+          logger.error("Failed to parse request body for conversation ID", {
+            parseError,
+          });
+        }
+      }
+
+      // Method 4: Use DO ID as fallback (production fix - what actually works)
+      if (!conversationId) {
+        // In production, this.state.id.name is undefined but this.state.id.toString() contains the conversation ID
+        // The campaign calls env.CONVERSATION_DO.idFromName(conversation.conversationId)
+        // which means this.state.id.toString() should contain the original conversation ID
+        conversationId = this.state.id.toString();
+        logger.info("Using DO ID as conversation ID fallback", {
+          conversationId,
+        });
+      }
+
+      if (!conversationId) {
         logger.error("No conversation ID found in any source", {
-          doIdName: this.state.id.name,
           headers: Object.fromEntries(request.headers),
           pathname: url.pathname,
+          method,
         });
         return new Response("Conversation ID not found", { status: 400 });
       }
 
-      const conversationId: ConversationId = unsafeConversationId(
-        this.state.id.name
-      );
+      const finalConversationId: ConversationId =
+        unsafeConversationId(conversationId);
 
-      logger.info("Conversation ID resolved", { conversationId });
+      logger.info("Conversation ID resolved", {
+        conversationId: finalConversationId,
+        source: this.state.id.name ? "state.id.name" : "fallback",
+      });
 
       // Get Twilio configuration from environment
       const messagingConfig = {
@@ -78,11 +148,25 @@ export class ConversationDurableObject extends ConversationDurableObjectBase {
         twilioWebhookUrl: this.env.TWILIO_WEBHOOK_URL,
       };
 
-      // Get handler with the resolved conversation ID and Twilio config
+      // Get Shopify store domain from request header (caller should provide this)
+      const shopifyStoreDomain =
+        request.headers.get("X-Shopify-Store-Domain") ||
+        "default-store.myshopify.com";
+      const shopifyConfig = { storeDomain: shopifyStoreDomain };
+
+      logger.info("Using Shopify store domain", {
+        storeDomain: shopifyStoreDomain,
+        source: request.headers.get("X-Shopify-Store-Domain")
+          ? "header"
+          : "default",
+      });
+
+      // Get handler with the resolved conversation ID, Twilio config, and Shopify config
       const { handler } = getConversationHandler(
         this.state,
-        conversationId,
-        messagingConfig
+        finalConversationId,
+        messagingConfig,
+        shopifyConfig
       );
 
       logger.info("Handler obtained, calling with request");

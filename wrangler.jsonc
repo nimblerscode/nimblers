@@ -17,7 +17,7 @@
     {
       "binding": "DB",
       "database_name": "nimblers-registry",
-      "database_id": "de1e9746-fe00-4fea-b4e3-31bf02ef251d",
+      "database_id": "51180a5e-41bb-4d5d-9a32-b5bf472d431d",
       "migrations_dir": "drizzle/gateway"
     }
   ],
@@ -68,7 +68,7 @@
   },
 
   "vars": {
-    "SESSION_SECRET": "your-secret-key",
+    "SESSION_SECRET": "p757FAw8BL7gRwhF_bi4F",
     "ENVIRONMENT": "development",
     "SHOPIFY_WEBHOOK_SECRET": "7d6c7135aff1ed2b8962541c0462b8ca",
     "SHOPIFY_CLIENT_ID": "f665ecacb8ebb0109bd7994468b79d14",

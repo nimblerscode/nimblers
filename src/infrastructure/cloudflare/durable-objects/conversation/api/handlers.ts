@@ -22,6 +22,11 @@ import {
   unsafeExternalMessageId,
   unsafePhoneNumber,
   unsafeProvider,
+  PhoneNumber as PhoneNumberSchema,
+  OrganizationSlug as OrganizationSlugSchema,
+  MessageContent as MessageContentSchema,
+  ExternalMessageId as ExternalMessageIdSchema,
+  ConversationId as ConversationIdSchema,
 } from "@/domain/tenant/shared/branded-types";
 import { Tracing } from "@/tracing";
 import {
@@ -34,6 +39,8 @@ import {
 } from "@effect/platform";
 import { Effect, Layer, Schema } from "effect";
 import { ConversationApiSchemas } from "./schemas";
+import { ConversationMCPService } from "@/application/shopify/mcp/service";
+import { ShopifyMCPLayer } from "@/config/layers";
 
 class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
@@ -87,6 +94,31 @@ const receiveMessage = HttpApiEndpoint.post(
   .addSuccess(ConversationApiSchemas.receiveMessage.response)
   .addError(HttpApiError.BadRequest);
 
+// SMS webhook endpoint for incoming messages from Twilio
+const handleIncomingSMS = HttpApiEndpoint.post(
+  "handleIncomingSMS",
+  "/sms/incoming"
+)
+  .setPayload(
+    Schema.Struct({
+      From: PhoneNumberSchema,
+      To: PhoneNumberSchema,
+      Body: MessageContentSchema,
+      MessageSid: ExternalMessageIdSchema,
+      conversationId: ConversationIdSchema,
+      organizationSlug: OrganizationSlugSchema,
+      shopifyStoreDomain: Schema.optional(Schema.String),
+    })
+  )
+  .addSuccess(
+    Schema.Struct({
+      success: Schema.Boolean,
+      responseMessage: Schema.optional(MessageContentSchema),
+    })
+  )
+  .addError(HttpApiError.BadRequest)
+  .addError(HttpApiError.InternalServerError);
+
 // Group all conversation-related endpoints
 const conversationsGroup = HttpApiGroup.make("conversations")
   .add(getConversation)
@@ -96,6 +128,7 @@ const conversationsGroup = HttpApiGroup.make("conversations")
   .add(updateConversationStatus)
   .add(getConversationSummary)
   .add(receiveMessage)
+  .add(handleIncomingSMS)
   .addError(Unauthorized, { status: 401 });
 
 // Combine the groups into one API
@@ -430,6 +463,119 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
           )
         );
       })
+      .handle("handleIncomingSMS", ({ payload }) => {
+        return Effect.gen(function* () {
+          // Parse incoming SMS data with Shopify context
+          const {
+            From: customerPhone,
+            To: storePhone,
+            Body: messageContent,
+            MessageSid: externalMessageId,
+            conversationId,
+            organizationSlug,
+            shopifyStoreDomain,
+          } = payload;
+
+          yield* Effect.logInfo("Processing incoming SMS", {
+            conversationId,
+            customerPhone,
+            storePhone,
+            messageContent,
+            externalMessageId,
+            organizationSlug,
+            shopifyStoreDomain,
+          });
+
+          // Get conversation use case for sending response
+          const conversationUseCase = yield* ConversationUseCase;
+
+          let responseMessage: string;
+
+          if (shopifyStoreDomain) {
+            // Use MCP service for intelligent Shopify-powered responses
+            const mcpResponse = yield* Effect.gen(function* () {
+              const mcpService = yield* ConversationMCPService;
+
+              // Create context from the conversation and store information
+              const context = `Customer is messaging store: ${shopifyStoreDomain}. Organization: ${organizationSlug}. Conversation: ${conversationId}`;
+
+              // Process message with MCP to get intelligent response
+              return yield* mcpService.processMessage(
+                conversationId,
+                messageContent,
+                context
+              );
+            }).pipe(
+              Effect.catchAll((mcpError) => {
+                return Effect.gen(function* () {
+                  yield* Effect.logInfo(
+                    "MCP service failed, using fallback response",
+                    {
+                      error: String(mcpError),
+                      conversationId,
+                      shopifyStoreDomain,
+                    }
+                  );
+
+                  // Return a structured fallback response
+                  return {
+                    type: "general_response" as const,
+                    message: `Hi! I received your message: "${messageContent}". I can help you with products from our store. What are you looking for?`,
+                  };
+                });
+              })
+            );
+
+            yield* Effect.logInfo("MCP response generated", {
+              conversationId,
+              responseType: mcpResponse.type,
+            });
+
+            // Use the response from MCP
+            responseMessage = mcpResponse.message;
+          } else {
+            // Simple response for non-Shopify conversations
+            responseMessage = `Hi! I received your message: "${messageContent}". How can I help you today?`;
+          }
+
+          // Send the response message back to the customer
+          const outgoingPayload = {
+            to: unsafePhoneNumber(customerPhone),
+            content: unsafeMessageContent(responseMessage),
+            messageType: unsafeMessageType("text"),
+          };
+
+          const sentMessage = yield* conversationUseCase.sendMessage(
+            conversationId,
+            outgoingPayload
+          );
+
+          yield* Effect.logInfo("Response sent successfully", {
+            conversationId,
+            messageId: sentMessage.id,
+            responseLength: responseMessage.length,
+            hasShopifyIntegration: !!shopifyStoreDomain,
+          });
+
+          return {
+            success: true,
+            responseMessage: unsafeMessageContent(responseMessage),
+            sentMessageId: sentMessage.id,
+          } as const;
+        }).pipe(
+          Effect.catchAll((error) => {
+            return Effect.gen(function* () {
+              yield* Effect.logError("Failed to process incoming SMS", {
+                error: String(error),
+                customerPhone: payload.From,
+                messageContent: payload.Body,
+              });
+
+              return yield* Effect.fail(new HttpApiError.InternalServerError());
+            });
+          })
+        );
+      })
   );
 
 export function getConversationHandler(
@@ -440,6 +586,9 @@ export function getConversationHandler(
     twilioAuthToken: string;
     twilioFromNumber: string;
     twilioWebhookUrl?: string;
+  },
+  shopifyConfig: {
+    storeDomain: string;
   }
 ) {
   // Validate conversation ID
@@ -493,14 +642,21 @@ export function getConversationHandler(
     MessagingServiceLayer
   );
 
-  // Use case layer that depends on all repositories and services - ConversationUseCaseLive takes no parameters
+  // Use case layer that depends on all repositories and services
   const ConversationUseCaseLayer = Layer.provide(
     ConversationUseCaseLive(),
     AllRepoLayers
   );
 
-  // Final layer combining all dependencies
-  const FinalLayer = Layer.mergeAll(AllRepoLayers, ConversationUseCaseLayer);
+  // Always provide real Shopify MCP service since config is mandatory
+  const MCPLayer = ShopifyMCPLayer(shopifyConfig.storeDomain);
+
+  // Final layer with all required services
+  const FinalLayer = Layer.mergeAll(
+    AllRepoLayers,
+    ConversationUseCaseLayer,
+    MCPLayer
+  );
 
   // Conversations group layer with all dependencies
   const conversationsGroupLayerLive = Layer.provide(
@@ -510,7 +666,7 @@ export function getConversationHandler(
 
   // API layer with all required dependencies provided
   const ConversationApiLive = HttpApiBuilder.api(api).pipe(
-    Layer.provide(Layer.mergeAll(conversationsGroupLayerLive, FinalLayer))
+    Layer.provide(conversationsGroupLayerLive)
   );
 
   // Final handler

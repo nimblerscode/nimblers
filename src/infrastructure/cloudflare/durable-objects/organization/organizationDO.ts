@@ -94,8 +94,12 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
 
       logger.info("Organization slug resolved", { slug: organizationSlug });
 
-      // Get handler with the resolved slug
-      const { handler } = getOrgHandler(this.state, organizationSlug);
+      // Get handler with the resolved slug and CONVERSATION_DO binding
+      const { handler } = getOrgHandler(
+        this.state,
+        organizationSlug,
+        this.env.CONVERSATION_DO
+      );
 
       logger.info("Handler obtained, calling with request");
       const response = await handler(request);
@@ -139,7 +143,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 200,
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
     } catch (error) {
       return new Response(
@@ -152,7 +156,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 503,
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
     }
   }
@@ -181,7 +185,7 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
         {
           status: 500,
           headers: { "Content-Type": "application/json" },
-        },
+        }
       );
     }
   }

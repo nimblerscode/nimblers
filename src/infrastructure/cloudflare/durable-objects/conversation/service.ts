@@ -39,6 +39,17 @@ export abstract class ConversationDOService extends Context.Tag(
     readonly getConversation: (
       conversationId: ConversationId
     ) => Effect.Effect<ConversationType, ConversationNotFoundError>;
+    readonly createConversation: (
+      conversationId: ConversationId,
+      payload: Schema.Schema.Type<
+        typeof ConversationApiSchemas.createConversation.request
+      >
+    ) => Effect.Effect<
+      Schema.Schema.Type<
+        typeof ConversationApiSchemas.createConversation.response
+      >,
+      ConversationUpdateError
+    >;
     readonly sendMessage: (
       conversationId: ConversationId,
       content: MessageContent
@@ -97,6 +108,63 @@ export const ConversationDOAdapterLive = Layer.effect(
         );
 
         return conversation;
+      }).pipe(
+        // Provide the HttpClient layer needed by the client
+        Effect.provide(FetchHttpClient.layer)
+      );
+    };
+
+    const createConversationDO = (
+      conversationId: ConversationId,
+      payload: Schema.Schema.Type<
+        typeof ConversationApiSchemas.createConversation.request
+      >
+    ) => {
+      return Effect.gen(function* () {
+        yield* Effect.log("CREATE CONVERSATION DO START").pipe(
+          Effect.annotateLogs({
+            conversationId,
+            customerPhone: payload.customerPhone,
+            timestamp: new Date().toISOString(),
+          })
+        );
+
+        // Validate conversation ID
+        if (!conversationId || conversationId.trim().length === 0) {
+          return yield* Effect.fail(
+            new ConversationUpdateError({
+              reason: "Conversation ID is required",
+              conversationId,
+            })
+          );
+        }
+
+        const doId = conversationDONamespace.idFromName(conversationId);
+        const stub = conversationDONamespace.get(doId);
+
+        // Create type-safe client using TypeOnce.dev pattern
+        const client = yield* createConversationDOClient(stub);
+
+        // Use auto-generated method with perfect type safety!
+        const result = yield* client.conversations
+          .createConversation({ payload })
+          .pipe(
+            Effect.mapError((error) => {
+              return new ConversationUpdateError({
+                reason: `Failed to create conversation: ${String(error)}`,
+                conversationId,
+              });
+            })
+          );
+
+        yield* Effect.log("Conversation created successfully via DO").pipe(
+          Effect.annotateLogs({
+            conversationId: result.id,
+            customerPhone: result.customerPhone,
+          })
+        );
+
+        return result;
       }).pipe(
         // Provide the HttpClient layer needed by the client
         Effect.provide(FetchHttpClient.layer)
@@ -238,6 +306,7 @@ export const ConversationDOAdapterLive = Layer.effect(
 
     return {
       getConversation: getConversationDO,
+      createConversation: createConversationDO,
       sendMessage: sendMessageDO,
       receiveMessage: receiveMessageDO,
     };

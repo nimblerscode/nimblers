@@ -3,7 +3,8 @@ import type { RequestInfo } from "rwsdk/worker";
 import { acceptInvitationAction } from "@/app/actions/invitations/accept";
 import { getOrganizationConnectedStores } from "@/app/actions/organization/getStoreConnections";
 import { handleShopifyComplianceWebhook } from "@/app/actions/shopify/compliance";
-import { handleTwilioWebhook } from "@/app/actions/messaging/twilio-webhook";
+import { POST as twilioWebhookHandler } from "@/app/api/webhooks/twilio/route";
+
 // import CreateOrganizationForm from "@/app/components/CreateOrganizationForm"; // No longer directly used here
 import { Document } from "@/app/Document";
 import InvitationsPage from "@/app/pages/InvitationsPage";
@@ -36,6 +37,11 @@ const handleCustomerDataErasure = async ({ request }: RequestInfo) => {
 
 const handleShopDataErasure = async ({ request }: RequestInfo) => {
   return handleShopifyComplianceWebhook("shop-data-erasure", request);
+};
+
+// Twilio webhook handler wrapper
+const handleTwilioWebhook = async ({ request }: RequestInfo) => {
+  return twilioWebhookHandler(request);
 };
 
 // Wrapper for the invitation accept API
@@ -100,11 +106,6 @@ export const organizationRoutes = [
   route("/:orgSlug", [sessionHandler, OrganizationSlugLayout]), // General route last
 ];
 
-// Twilio webhook handler wrapper
-const handleTwilioWebhookRoute = async (requestInfo: RequestInfo) => {
-  return handleTwilioWebhook(requestInfo.request);
-};
-
 // Combine all routes into a single array
 export const allRoutes = [
   render(Document, [
@@ -132,9 +133,7 @@ export const allRoutes = [
     sessionHandler,
     getOrganizationStoresRoute,
   ]),
-
-  // Twilio Webhook
-  route("/api/webhooks/twilio", handleTwilioWebhookRoute),
+  route("/api/webhooks/twilio", handleTwilioWebhook),
 
   // Shopify Compliance Webhooks
   route("/shopify/privacy/customers-data-request", handleCustomerDataRequest),
