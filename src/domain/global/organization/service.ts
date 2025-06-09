@@ -20,20 +20,20 @@ export abstract class OrgD1Repo extends Context.Tag("@core/OrgD1Repo")<
   OrgD1Repo,
   {
     readonly create: (
-      organization: NewOrganizationD1,
+      organization: NewOrganizationD1
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
     readonly getOrgById: (
-      id: string,
+      id: string
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
     readonly getOrgBySlug: (
-      slug: OrganizationSlug,
+      slug: OrganizationSlug
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
     readonly verifyUserOrgMembership: (
       slug: OrganizationSlug,
-      userId: UserId,
+      userId: UserId
     ) => Effect.Effect<OrganizationSlug, OrgDbError>;
     readonly getOrganizationsForUser: (
-      userId: UserId,
+      userId: UserId
     ) => Effect.Effect<OrganizationWithMembership[], OrgDbError>;
   }
 >() {}
@@ -43,30 +43,30 @@ export abstract class OrgD1Service extends Context.Tag("@core/OrgD1Service")<
   OrgD1Service,
   {
     readonly create: (
-      organization: NewOrganizationD1,
+      organization: NewOrganizationD1
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
     readonly getOrgById: (
-      id: string,
+      id: string
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
     readonly getOrgBySlug: (
-      slug: OrganizationSlug,
+      slug: OrganizationSlug
     ) => Effect.Effect<OrganizationD1, OrgDbError>;
     readonly verifyUserOrgMembership: (
       slug: OrganizationSlug,
-      userId: UserId,
+      userId: UserId
     ) => Effect.Effect<OrganizationSlug, OrgDbError>;
     readonly getOrganizationsForUser: (
-      userId: UserId,
+      userId: UserId
     ) => Effect.Effect<OrganizationWithMembership[], OrgDbError>;
+    readonly lookupOrganizationByStorePhone: (
+      storePhone: string
+    ) => Effect.Effect<OrganizationSlug, OrgDbError>;
   }
 >() {}
 
 // Database error for infrastructure layer
 export class GlobalDbError extends Error {
-  constructor(
-    message: string,
-    public cause?: unknown,
-  ) {
+  constructor(message: string, public cause?: unknown) {
     super(message);
     this.name = "GlobalDbError";
   }
@@ -74,45 +74,45 @@ export class GlobalDbError extends Error {
 
 // === Global Shop Connection Repository ===
 export abstract class GlobalShopConnectionRepo extends Context.Tag(
-  "@global/organization/ShopConnectionRepo",
+  "@global/organization/ShopConnectionRepo"
 )<
   GlobalShopConnectionRepo,
   {
     readonly create: (
-      connection: NewShopConnection,
+      connection: NewShopConnection
     ) => Effect.Effect<ShopConnection, GlobalDbError>;
     readonly getByShopDomain: (
-      shopDomain: ShopDomain,
+      shopDomain: ShopDomain
     ) => Effect.Effect<ShopConnection | null, GlobalDbError>;
     readonly deleteByShopDomain: (
-      shopDomain: ShopDomain,
+      shopDomain: ShopDomain
     ) => Effect.Effect<boolean, GlobalDbError>;
     readonly getByOrganizationSlug: (
-      organizationSlug: OrganizationSlug,
+      organizationSlug: OrganizationSlug
     ) => Effect.Effect<ShopConnection[], GlobalDbError>;
   }
 >() {}
 
 // === Global Shop Connection Use Case ===
 export abstract class GlobalShopConnectionUseCase extends Context.Tag(
-  "@global/organization/ShopConnectionUseCase",
+  "@global/organization/ShopConnectionUseCase"
 )<
   GlobalShopConnectionUseCase,
   {
     readonly connectShop: (
-      connection: NewShopConnection,
+      connection: NewShopConnection
     ) => Effect.Effect<
       ShopConnection,
       ShopAlreadyConnectedError | ShopConnectionError
     >;
     readonly disconnectShop: (
-      shopDomain: ShopDomain,
+      shopDomain: ShopDomain
     ) => Effect.Effect<boolean, ShopConnectionError>;
     readonly checkShopConnection: (
-      shopDomain: ShopDomain,
+      shopDomain: ShopDomain
     ) => Effect.Effect<ShopConnection | null, ShopConnectionError>;
     readonly getOrganizationShops: (
-      organizationSlug: OrganizationSlug,
+      organizationSlug: OrganizationSlug
     ) => Effect.Effect<ShopConnection[], ShopConnectionError>;
   }
 >() {}

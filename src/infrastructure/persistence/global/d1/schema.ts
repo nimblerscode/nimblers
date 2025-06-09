@@ -67,6 +67,7 @@ export const organization = sqliteTable("organization", {
   id: text("id").primaryKey().notNull(), // Matches DO name/ID
   slug: text("slug").notNull().unique(),
   status: text("status").default("active").notNull(), // 'active', 'archived', etc.
+  smsFromNumber: text("smsFromNumber"), // Twilio phone number for SMS routing
   ...timestamp,
 });
 

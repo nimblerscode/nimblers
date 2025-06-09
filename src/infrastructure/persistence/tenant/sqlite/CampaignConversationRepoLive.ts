@@ -11,6 +11,7 @@ import type {
   ListCampaignConversationsInput,
   CampaignId,
   ConversationId,
+  PhoneNumber,
 } from "@/domain/tenant/campaigns/models";
 import { DrizzleDOClient } from "./drizzle";
 import { campaignConversation } from "./schema";
@@ -238,6 +239,28 @@ export const CampaignConversationRepoLive = Layer.effect(
                 cause: error,
                 table: "campaign_conversation",
                 operation: "bulk_insert",
+              }),
+          });
+
+          return result.map(convertToDomainCampaignConversation);
+        }),
+
+      findByCustomerPhone: (customerPhone: PhoneNumber) =>
+        Effect.gen(function* () {
+          const result = yield* Effect.tryPromise({
+            try: () =>
+              drizzleClient.db
+                .select()
+                .from(campaignConversation)
+                .where(eq(campaignConversation.customerPhone, customerPhone))
+                .orderBy(desc(campaignConversation.createdAt)), // Most recent first
+            catch: (error) =>
+              new CampaignConversationDbError({
+                message:
+                  "Failed to find campaign conversations by customer phone",
+                cause: error,
+                table: "campaign_conversation",
+                operation: "select",
               }),
           });
 

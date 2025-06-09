@@ -34,6 +34,10 @@
       {
         "name": "CONVERSATION_DO",
         "class_name": "ConversationDurableObject"
+      },
+      {
+        "name": "CONVERSATION_AGENT",
+        "class_name": "ConversationAgent"
       }
     ]
   },
@@ -48,6 +52,10 @@
     {
       "tag": "v2",
       "new_sqlite_classes": ["ConversationDurableObject"]
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["ConversationAgent"]
     }
   ],
 
@@ -87,6 +95,10 @@
     "TWILIO_AUTH_TOKEN": "026fbf41a09ac7d9646a238139037839",
     "TWILIO_FROM_NUMBER": "+15392823029",
     "TWILIO_WEBHOOK_URL": "https://nimblers.co/api/webhooks/twilio"
+  },
+
+  "ai": {
+    "binding": "AI"
   },
 
   "routes": [

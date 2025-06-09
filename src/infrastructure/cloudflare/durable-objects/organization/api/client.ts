@@ -22,7 +22,7 @@ import { organizationApi } from "./handlers";
  * ```typescript
  * const doId = orgDONamespace.idFromName(organizationSlug);
  * const stub = orgDONamespace.get(doId);
- * const client = yield* createOrganizationDOClient(stub);
+ * const client = yield* createOrganizationDOClient(stub, organizationSlug);
  *
  * // Auto-generated methods with perfect type safety!
  * const org = yield* client.organizations.getOrganization({
@@ -37,7 +37,10 @@ import { organizationApi } from "./handlers";
  * });
  * ```
  */
-export const createOrganizationDOClient = (stub: DurableObjectStub) =>
+export const createOrganizationDOClient = (
+  stub: DurableObjectStub,
+  organizationSlug?: string
+) =>
   Effect.gen(function* () {
     // Custom fetcher that routes requests to the Durable Object
     const doFetcher = (input: RequestInfo | URL, init?: RequestInit) => {
@@ -47,20 +50,29 @@ export const createOrganizationDOClient = (stub: DurableObjectStub) =>
         Match.when(Match.string, (str) => str),
         Match.when(
           (input): input is URL => input instanceof URL,
-          (url) => url.toString(),
+          (url) => url.toString()
         ),
         Match.when(
           (input): input is Request => input instanceof Request,
-          (request) => request.url,
+          (request) => request.url
         ),
-        Match.exhaustive, // Ensures all cases are handled at compile time
+        Match.exhaustive // Ensures all cases are handled at compile time
       );
 
       // Rewrite the URL to use the internal DO protocol
       const parsedUrl = new URL(url);
       const internalUrl = `http://internal${parsedUrl.pathname}${parsedUrl.search}`;
 
-      return stub.fetch(internalUrl, init);
+      // Add organization slug header if provided
+      const headers = new Headers(init?.headers);
+      if (organizationSlug) {
+        headers.set("X-Organization-Slug", organizationSlug);
+      }
+
+      return stub.fetch(internalUrl, {
+        ...init,
+        headers,
+      });
     };
 
     // Create the HTTP client using the shared API definition
@@ -69,7 +81,7 @@ export const createOrganizationDOClient = (stub: DurableObjectStub) =>
       baseUrl: "http://internal",
     }).pipe(
       // Provide our custom DO fetcher
-      Effect.provide(Layer.succeed(FetchHttpClient.Fetch, doFetcher)),
+      Effect.provide(Layer.succeed(FetchHttpClient.Fetch, doFetcher))
     );
   });
 

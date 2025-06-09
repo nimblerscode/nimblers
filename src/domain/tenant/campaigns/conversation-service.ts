@@ -6,6 +6,7 @@ import type {
   ListCampaignConversationsInput,
   CampaignId,
   ConversationId,
+  PhoneNumber,
 } from "./models";
 
 // Error Types
@@ -71,6 +72,10 @@ export abstract class CampaignConversationRepo extends Context.Tag(
     readonly bulkCreate: (
       inputs: CreateCampaignConversationInput[]
     ) => Effect.Effect<CampaignConversation[], CampaignConversationDbError>;
+
+    readonly findByCustomerPhone: (
+      customerPhone: PhoneNumber
+    ) => Effect.Effect<CampaignConversation[], CampaignConversationDbError>;
   }
 >() {}
 
@@ -104,6 +109,10 @@ export abstract class CampaignConversationUseCase extends Context.Tag(
     readonly createConversationsForCustomers: (
       campaignId: CampaignId,
       customerPhones: string[]
+    ) => Effect.Effect<CampaignConversation[], CampaignConversationError>;
+
+    readonly findConversationsByCustomerPhone: (
+      customerPhone: PhoneNumber
     ) => Effect.Effect<CampaignConversation[], CampaignConversationError>;
   }
 >() {}

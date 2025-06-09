@@ -80,3 +80,6 @@ export default defineApp([
 export { OrganizationDurableObject } from "./durable-objects/organization/organizationDO";
 export { ShopifyOAuthDurableObject } from "./durable-objects/shopify/oauth/shopifyOAuthDO";
 export { ConversationDurableObject } from "./durable-objects/conversation/conversationDO";
+
+// Export the ConversationAgent for Cloudflare Agents
+export { ConversationAgent } from "./agents/ConversationAgent";

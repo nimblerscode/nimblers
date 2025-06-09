@@ -22,7 +22,7 @@ import { conversationApi } from "./handlers";
  * ```typescript
  * const doId = conversationDONamespace.idFromName(conversationId);
  * const stub = conversationDONamespace.get(doId);
- * const client = yield* createConversationDOClient(stub);
+ * const client = yield* createConversationDOClient(stub, conversationId);
  *
  * // Auto-generated methods with perfect type safety!
  * const conversation = yield* client.conversations.getConversation();
@@ -54,7 +54,11 @@ import { conversationApi } from "./handlers";
  * });
  * ```
  */
-export const createConversationDOClient = (stub: DurableObjectStub) =>
+export const createConversationDOClient = (
+  stub: DurableObjectStub,
+  conversationId?: string,
+  shopifyStoreDomain?: string
+) =>
   Effect.gen(function* () {
     // Custom fetcher that routes requests to the Durable Object
     const doFetcher = (input: RequestInfo | URL, init?: RequestInit) => {
@@ -77,7 +81,19 @@ export const createConversationDOClient = (stub: DurableObjectStub) =>
       const parsedUrl = new URL(url);
       const internalUrl = `http://internal${parsedUrl.pathname}${parsedUrl.search}`;
 
-      return stub.fetch(internalUrl, init);
+      // Add headers if provided (follows OrganizationDO pattern)
+      const headers = new Headers(init?.headers);
+      if (conversationId) {
+        headers.set("X-Conversation-ID", conversationId);
+      }
+      if (shopifyStoreDomain) {
+        headers.set("X-Shopify-Store-Domain", shopifyStoreDomain);
+      }
+
+      return stub.fetch(internalUrl, {
+        ...init,
+        headers,
+      });
     };
 
     // Create the HTTP client using the shared API definition

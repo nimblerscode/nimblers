@@ -8,6 +8,8 @@ import {
 import type { ShopDomain } from "@/domain/shopify/oauth/models";
 import { ShopifyStoreService as DomainStoreConnectionService } from "@/domain/shopify/store/service";
 import { createOrganizationDOClient } from "@/infrastructure/cloudflare/durable-objects/organization/api/client";
+import { HttpApiClient } from "@effect/platform";
+import { organizationApi } from "@/infrastructure/cloudflare/durable-objects/organization/api/handlers";
 
 export interface ConnectStoreResult {
   success: boolean;
@@ -19,7 +21,7 @@ export interface ConnectStoreResult {
 
 // Environment dependencies for OrganizationDO access
 export abstract class ConnectStoreEnv extends Context.Tag(
-  "@application/shopify/ConnectStoreEnv",
+  "@application/shopify/ConnectStoreEnv"
 )<
   ConnectStoreEnv,
   {
@@ -29,7 +31,7 @@ export abstract class ConnectStoreEnv extends Context.Tag(
 
 // === Connect Store Application Service ===
 export abstract class ConnectStoreApplicationService extends Context.Tag(
-  "@application/shopify/ConnectStoreApplicationService",
+  "@application/shopify/ConnectStoreApplicationService"
 )<
   ConnectStoreApplicationService,
   {
@@ -67,9 +69,9 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
             .pipe(
               Effect.catchAll((_error) =>
                 Effect.fail(
-                  new Error(`Organization not found: ${organizationSlug}`),
-                ),
-              ),
+                  new Error(`Organization not found: ${organizationSlug}`)
+                )
+              )
             );
 
           const organizationId = organization.id;
@@ -99,7 +101,7 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
                 shopDomain,
                 existingOrganizationSlug: existingConnection.organizationSlug,
                 newOrganizationSlug: organizationSlug,
-              },
+              }
             );
           }
 
@@ -111,11 +113,11 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
                 // Log error but continue with connection attempt
                 return Effect.gen(function* () {
                   yield* Effect.log(
-                    `Failed to check connection status: ${error}`,
+                    `Failed to check connection status: ${error}`
                   );
                   return { connected: false };
                 });
-              }),
+              })
             );
 
           if (connectionStatus.connected) {
@@ -147,9 +149,9 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
                 Effect.catchAll((error) => {
                   // Log error but don't fail the entire operation
                   return Effect.logError(
-                    `Failed to ${action.toLowerCase()} global shop connection record: ${error}`,
+                    `Failed to ${action.toLowerCase()} global shop connection record: ${error}`
                   );
-                }),
+                })
               );
           }
 
@@ -163,7 +165,10 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
           const storeResult = yield* Effect.gen(function* () {
             const doId = env.ORG_DO.idFromName(organizationSlug);
             const stub = env.ORG_DO.get(doId);
-            const client = yield* createOrganizationDOClient(stub);
+            const client = yield* createOrganizationDOClient(
+              stub,
+              organizationSlug
+            );
 
             // Call the connectStore endpoint to create the connected_store record
             const result = yield* client.organizations
@@ -177,8 +182,8 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
               .pipe(
                 Effect.mapError(
                   (error) =>
-                    new Error(`Failed to connect store in DO: ${error}`),
-                ),
+                    new Error(`Failed to connect store in DO: ${error}`)
+                )
               );
 
             yield* Effect.log("🔗 Connected store in OrganizationDO", {
@@ -195,19 +200,19 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
               // Log error but don't fail the entire operation
               return Effect.gen(function* () {
                 yield* Effect.logError(
-                  `Failed to create connected store in OrganizationDO: ${error}`,
+                  `Failed to create connected store in OrganizationDO: ${error}`
                 );
                 // Return a minimal success response for backwards compatibility
                 return {
                   id: `store-${organizationSlug}-${shopDomain.replace(
                     ".myshopify.com",
-                    "",
+                    ""
                   )}`,
                   shopDomain,
                   status: "active" as const,
                 };
               });
-            }),
+            })
           );
 
           return {
@@ -224,10 +229,10 @@ export const ConnectStoreApplicationServiceLive = Layer.effect(
                 error instanceof Error ? error.message : String(error)
               }`,
               error: "UNEXPECTED_ERROR",
-            }),
+            })
           ),
-          Effect.withSpan("ConnectStoreApplicationService.connectShopifyStore"),
+          Effect.withSpan("ConnectStoreApplicationService.connectShopifyStore")
         ),
     };
-  }),
+  })
 );

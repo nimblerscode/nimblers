@@ -13,7 +13,7 @@ const mapToOrgDbError = (error: unknown): OrgDbError => {
 };
 
 export const makeOrgD1EffectAdapter = (
-  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>,
+  drizzleAdapter: ReturnType<typeof makeOrgD1DrizzleAdapter>
 ) => ({
   create: (organizationData: NewOrganizationD1) =>
     Effect.gen(function* () {
@@ -23,7 +23,7 @@ export const makeOrgD1EffectAdapter = (
       });
       if (!orgResult) {
         return yield* Effect.fail(
-          mapToOrgDbError("Insert returned no results"),
+          mapToOrgDbError("Insert returned no results")
         );
       }
       return orgResult;
@@ -50,6 +50,19 @@ export const makeOrgD1EffectAdapter = (
       }
       return orgResult;
     }),
+  lookupOrganizationByStorePhone: (storePhone: string) =>
+    Effect.gen(function* () {
+      const result = yield* Effect.tryPromise({
+        try: () => drizzleAdapter.lookupOrganizationByStorePhone(storePhone),
+        catch: mapToOrgDbError,
+      });
+      if (!result) {
+        return yield* Effect.fail(
+          mapToOrgDbError("Lookup returned no results")
+        );
+      }
+      return result;
+    }),
   verifyUserOrgMembership: (slug: OrganizationSlug, userId: UserId) => {
     return Effect.gen(function* () {
       const orgSlug = yield* Effect.tryPromise({
@@ -65,7 +78,7 @@ export const makeOrgD1EffectAdapter = (
     });
   },
   getOrganizationsForUser: (
-    userId: UserId,
+    userId: UserId
   ): Effect.Effect<OrganizationWithMembership[], OrgDbError> =>
     Effect.gen(function* () {
       const organizations = yield* Effect.tryPromise({

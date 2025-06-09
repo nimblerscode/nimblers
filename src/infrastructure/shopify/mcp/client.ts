@@ -176,16 +176,30 @@ export const ShopifyMCPServiceLive = Layer.effect(
             },
           });
 
+          // Parse the JSON response from MCP server
+          const responseData = JSON.parse(
+            result.content?.[0]?.text || '{"products":[]}'
+          );
+
           // Transform raw result to typed result
-          const products = (result.content || []).map((item: any) => ({
-            name: item.name || item.title || "Unknown Product",
-            price: item.price || "0.00",
-            currency: item.currency || "USD",
-            variantId: item.variantId || item.variant_id || item.id,
-            productUrl: item.productUrl || item.url || "#",
-            imageUrl: item.imageUrl || item.image,
-            description: item.description,
-          }));
+          const products = (responseData.products || []).map((item: any) => {
+            // Get the first variant for pricing and variant ID
+            const firstVariant = item.variants?.[0];
+
+            return {
+              name: item.title || item.name || "Unknown Product",
+              price: firstVariant?.price || item.price || "0.00",
+              currency: firstVariant?.currency || item.currency || "USD",
+              variantId:
+                firstVariant?.variant_id ||
+                item.variant_id ||
+                item.id ||
+                "unknown",
+              productUrl: item.productUrl || item.url || "#",
+              imageUrl: item.image_url || item.imageUrl || item.image,
+              description: item.description,
+            };
+          });
 
           // Validate each product result
           return yield* Effect.forEach(

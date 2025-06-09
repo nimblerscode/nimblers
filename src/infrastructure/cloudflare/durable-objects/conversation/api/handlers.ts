@@ -41,6 +41,7 @@ import { Effect, Layer, Schema } from "effect";
 import { ConversationApiSchemas } from "./schemas";
 import { ConversationMCPService } from "@/application/shopify/mcp/service";
 import { ShopifyMCPLayer } from "@/config/layers";
+import { WorkersAI } from "@/domain/global/ai/service";
 
 class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
@@ -464,7 +465,19 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
         );
       })
       .handle("handleIncomingSMS", ({ payload }) => {
+        // Add console.log for immediate visibility
+        console.log("🚨 HANDLER CALLED: handleIncomingSMS", {
+          payload,
+          timestamp: new Date().toISOString(),
+        });
+
         return Effect.gen(function* () {
+          console.log("🚨 EFFECT CHAIN STARTED");
+
+          yield* Effect.logInfo("=== HANDLE INCOMING SMS START ===", {
+            timestamp: new Date().toISOString(),
+          });
+
           // Parse incoming SMS data with Shopify context
           const {
             From: customerPhone,
@@ -486,18 +499,52 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             shopifyStoreDomain,
           });
 
+          yield* Effect.logInfo(
+            "=== ATTEMPTING TO GET CONVERSATION USE CASE ==="
+          );
+
           // Get conversation use case for sending response
           const conversationUseCase = yield* ConversationUseCase;
+
+          yield* Effect.logInfo("=== CONVERSATION USE CASE OBTAINED ===");
 
           let responseMessage: string;
 
           if (shopifyStoreDomain) {
+            console.log("🚨 SHOPIFY DOMAIN PROVIDED - USING MCP", {
+              shopifyStoreDomain,
+            });
+
+            yield* Effect.logInfo(
+              "=== SHOPIFY DOMAIN PROVIDED - USING MCP ===",
+              {
+                shopifyStoreDomain,
+              }
+            );
+
             // Use MCP service for intelligent Shopify-powered responses
             const mcpResponse = yield* Effect.gen(function* () {
+              yield* Effect.logInfo("=== ATTEMPTING TO GET MCP SERVICE ===");
+
+              // Add debugging for dependency injection
+              yield* Effect.logInfo("=== CHECKING CONTEXT AVAILABILITY ===");
+
               const mcpService = yield* ConversationMCPService;
+              yield* Effect.logInfo(
+                "=== MCP SERVICE OBTAINED SUCCESSFULLY ==="
+              );
+
+              // Add more debugging before processing
+              yield* Effect.logInfo(
+                "=== MCP SERVICE READY, STARTING PROCESSING ==="
+              );
 
               // Create context from the conversation and store information
               const context = `Customer is messaging store: ${shopifyStoreDomain}. Organization: ${organizationSlug}. Conversation: ${conversationId}`;
+
+              yield* Effect.logInfo("=== CALLING MCP PROCESS MESSAGE ===", {
+                context,
+              });
 
               // Process message with MCP to get intelligent response
               return yield* mcpService.processMessage(
@@ -508,6 +555,12 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             }).pipe(
               Effect.catchAll((mcpError) => {
                 return Effect.gen(function* () {
+                  console.log("🚨 MCP SERVICE FAILED - FALLBACK", {
+                    error: String(mcpError),
+                    conversationId,
+                    shopifyStoreDomain,
+                  });
+
                   yield* Effect.logInfo(
                     "MCP service failed, using fallback response",
                     {
@@ -534,9 +587,16 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             // Use the response from MCP
             responseMessage = mcpResponse.message;
           } else {
+            yield* Effect.logInfo(
+              "=== NO SHOPIFY DOMAIN - USING SIMPLE RESPONSE ==="
+            );
             // Simple response for non-Shopify conversations
             responseMessage = `Hi! I received your message: "${messageContent}". How can I help you today?`;
           }
+
+          yield* Effect.logInfo("=== PREPARING TO SEND RESPONSE MESSAGE ===", {
+            responseMessage,
+          });
 
           // Send the response message back to the customer
           const outgoingPayload = {
@@ -544,6 +604,10 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             content: unsafeMessageContent(responseMessage),
             messageType: unsafeMessageType("text"),
           };
+
+          yield* Effect.logInfo(
+            "=== CALLING CONVERSATION USE CASE SEND MESSAGE ==="
+          );
 
           const sentMessage = yield* conversationUseCase.sendMessage(
             conversationId,
@@ -557,6 +621,8 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             hasShopifyIntegration: !!shopifyStoreDomain,
           });
 
+          yield* Effect.logInfo("=== HANDLE INCOMING SMS COMPLETE ===");
+
           return {
             success: true,
             responseMessage: unsafeMessageContent(responseMessage),
@@ -565,10 +631,14 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
         }).pipe(
           Effect.catchAll((error) => {
             return Effect.gen(function* () {
-              yield* Effect.logError("Failed to process incoming SMS", {
+              yield* Effect.logError("=== HANDLE INCOMING SMS FAILED ===", {
                 error: String(error),
+                errorType: error?._tag,
+                errorMessage:
+                  error instanceof Error ? error.message : String(error),
                 customerPhone: payload.From,
                 messageContent: payload.Body,
+                stack: error instanceof Error ? error.stack : undefined,
               });
 
               return yield* Effect.fail(new HttpApiError.InternalServerError());
@@ -589,7 +659,8 @@ export function getConversationHandler(
   },
   shopifyConfig: {
     storeDomain: string;
-  }
+  },
+  env: Env
 ) {
   // Validate conversation ID
   if (!conversationId || conversationId.trim().length === 0) {
@@ -648,8 +719,15 @@ export function getConversationHandler(
     AllRepoLayers
   );
 
+  // Create Workers AI layer
+  const WorkersAILayer = Layer.succeed(WorkersAI, env.AI);
+
   // Always provide real Shopify MCP service since config is mandatory
-  const MCPLayer = ShopifyMCPLayer(shopifyConfig.storeDomain);
+  // This now includes the AI Intent Service as a dependency
+  const MCPLayer = Layer.provide(
+    ShopifyMCPLayer(shopifyConfig.storeDomain),
+    WorkersAILayer
+  );
 
   // Final layer with all required services
   const FinalLayer = Layer.mergeAll(

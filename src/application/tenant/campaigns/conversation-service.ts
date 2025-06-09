@@ -125,6 +125,17 @@ export const CampaignConversationUseCaseLive = Layer.effect(
             "CampaignConversationUseCase.createConversationsForCustomers"
           )
         ),
-    };
+
+      findConversationsByCustomerPhone: (customerPhone: PhoneNumber) =>
+        Effect.gen(function* () {
+          const conversations =
+            yield* campaignConversationRepo.findByCustomerPhone(customerPhone);
+          return conversations;
+        }).pipe(
+          Effect.withSpan(
+            "CampaignConversationUseCase.findConversationsByCustomerPhone"
+          )
+        ),
+    } as const;
   })
 );

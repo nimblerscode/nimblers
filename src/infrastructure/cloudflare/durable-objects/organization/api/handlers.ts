@@ -39,6 +39,14 @@ import {
 
 import { Tracing } from "@/tracing";
 import { OrganizationApiSchemas } from "./schemas";
+import { CampaignConversationUseCase } from "@/domain/tenant/campaigns/conversation-service";
+import {
+  PhoneNumber,
+  unsafePhoneNumber,
+  unsafeOrganizationSlug,
+} from "@/domain/tenant/shared/branded-types";
+import { CampaignConversationUseCaseLive } from "@/application/tenant/campaigns/conversation-service";
+import { CampaignConversationRepoLive } from "@/infrastructure/persistence/tenant/sqlite/CampaignConversationRepoLive";
 
 const idParam = HttpApiSchema.param("id", Schema.NumberFromString);
 
@@ -300,7 +308,7 @@ const api = HttpApi.make("organizationApi").add(organizationsGroup);
 // Export the API definition for client generation (TypeOnce.dev pattern)
 export { api as organizationApi };
 
-const organizationsGroupLive = () =>
+const organizationsGroupLive = (organizationSlug: string) =>
   HttpApiBuilder.group(api, "organizations", (handlers) =>
     handlers
       .handle("getOrganization", ({ path: { organizationSlug } }) => {
@@ -1190,18 +1198,84 @@ const organizationsGroupLive = () =>
       })
       .handle("lookupConversation", ({ urlParams }) => {
         return Effect.gen(function* () {
-          // This endpoint looks up existing conversations by phone numbers
-          // It's called by the Twilio webhook to find the correct conversation ID
-          // and associated Shopify store domain for MCP integration
+          // Parse and validate phone numbers
+          const { customerPhone, storePhone } = urlParams;
 
-          // Here we would query the conversations directly from the organization's database
-          // For now, let's implement a simple lookup that searches for conversations
-          // TODO: Implement actual conversation lookup logic when ConversationRepo is available
+          yield* Effect.logInfo("Looking up conversation by phone numbers", {
+            customerPhone,
+            storePhone,
+          });
 
-          // For MVP, we'll return a not found error and let the webhook create a new conversation
-          // This ensures the system still works while we implement the full lookup
-          return yield* Effect.fail(new HttpApiError.NotFound());
-        });
+          // Use the proper CampaignConversationUseCase following Clean Architecture
+          const campaignConversationService =
+            yield* CampaignConversationUseCase;
+
+          const conversations =
+            yield* campaignConversationService.findConversationsByCustomerPhone(
+              unsafePhoneNumber(customerPhone)
+            );
+
+          if (conversations.length === 0) {
+            yield* Effect.logInfo("No conversations found for customer phone", {
+              customerPhone,
+              storePhone,
+              resultCount: conversations.length,
+            });
+            return yield* Effect.fail(new HttpApiError.NotFound());
+          }
+
+          // Get the most recent conversation (already ordered by createdAt DESC in repo)
+          const conversation = conversations[0];
+
+          // Get connected Shopify stores - since this is a tenant DO, get organization first then stores
+          let shopifyStoreDomain: string | undefined;
+
+          try {
+            const repository = yield* OrgService;
+            const connectedStoreRepo = yield* ConnectedStoreRepo;
+
+            // Get the organization (there's only one in this tenant DO)
+            const org = yield* repository.get(
+              unsafeOrganizationSlug(organizationSlug)
+            );
+
+            // Get stores for this organization
+            const stores = yield* connectedStoreRepo.getByOrganizationId(
+              org.id
+            );
+            const activeStore = stores.find(
+              (store) => store.status === "active"
+            );
+            shopifyStoreDomain = activeStore?.shopDomain;
+
+            yield* Effect.logInfo("Found connected stores for conversation", {
+              totalStores: stores.length,
+              activeStore: activeStore?.shopDomain,
+              conversationId: conversation.conversationId,
+            });
+          } catch (error) {
+            yield* Effect.logWarning("Failed to fetch connected stores", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+            shopifyStoreDomain = undefined;
+          }
+
+          yield* Effect.logInfo("Found conversation for phone numbers", {
+            conversationId: conversation.conversationId,
+            campaignId: conversation.campaignId,
+            customerPhone,
+            storePhone,
+            shopifyStoreDomain,
+          });
+
+          return {
+            conversationId: conversation.conversationId,
+            shopifyStoreDomain,
+          };
+        }).pipe(
+          Effect.withSpan("OrganizationDO.lookupConversation"),
+          Effect.mapError(() => new HttpApiError.NotFound())
+        );
       })
   );
 
@@ -1258,6 +1332,17 @@ export function getOrgHandler(
     SegmentCustomerLayerLive(organizationDoId),
     DrizzleDOClientLive
   );
+
+  const CampaignConversationRepoLayer = Layer.provide(
+    CampaignConversationRepoLive,
+    DrizzleDOClientLive
+  );
+
+  const CampaignConversationUseCaseLayer = Layer.provide(
+    CampaignConversationUseCaseLive,
+    CampaignConversationRepoLayer
+  );
+
   const finalLayer = Layer.provide(
     Layer.mergeAll(
       OrgServiceLayer,
@@ -1268,19 +1353,22 @@ export function getOrgHandler(
       CampaignLayer,
       SegmentLayer,
       CustomerLayer,
-      SegmentCustomerLayer
+      SegmentCustomerLayer,
+      CampaignConversationRepoLayer,
+      CampaignConversationUseCaseLayer
     ),
     DORepoLayer
   );
   // Organizations group layer with all dependencies
   const organizationsGroupLayerLive = Layer.provide(
-    organizationsGroupLive(), // Pass the organization slug
+    organizationsGroupLive(organizationSlug), // Pass the organization slug
     finalLayer
   );
   // API layer with Swagger
   const OrganizationApiLive = HttpApiBuilder.api(api).pipe(
     Layer.provide(organizationsGroupLayerLive)
   );
+
   const SwaggerLayer = HttpApiSwagger.layer().pipe(
     Layer.provide(OrganizationApiLive)
   );

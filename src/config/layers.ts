@@ -75,6 +75,13 @@ import {
 } from "@/infrastructure/shopify/mcp/client";
 import { ConversationMCPServiceLive } from "@/application/shopify/mcp/service";
 import { unsafeMCPStoreDomain } from "@/domain/shopify/mcp/models";
+import { AIIntentServiceLive } from "@/infrastructure/ai/workers-ai/intent-service";
+
+// Add ConversationAgent imports
+import {
+  ConversationAgentNamespace,
+  ConversationAgentServiceLive,
+} from "@/application/tenant/conversations/agent-service";
 
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
@@ -368,7 +375,10 @@ export const ShopifyMCPLayer = (storeDomain: string) => {
 
   return Layer.provide(
     ConversationMCPServiceLive,
-    Layer.provide(ShopifyMCPServiceLive, mcpConfig)
+    Layer.mergeAll(
+      Layer.provide(ShopifyMCPServiceLive, mcpConfig),
+      AIIntentServiceLive
+    )
   );
 };
 
@@ -385,4 +395,22 @@ export const ConversationLayerWithMCP = (
   }
 
   return baseConversationLayer;
+};
+
+// ConversationAgent configuration layer following Clean Architecture
+function ConversationAgentDOLive(doEnv: {
+  CONVERSATION_AGENT: typeof env.CONVERSATION_AGENT;
+}) {
+  const doNamespaceLayer = Layer.succeed(
+    ConversationAgentNamespace,
+    doEnv.CONVERSATION_AGENT
+  );
+  return Layer.provide(ConversationAgentServiceLive, doNamespaceLayer);
+}
+
+// Full ConversationAgent layer that can be used in server actions
+export const ConversationAgentLayerLive = (doEnv: {
+  CONVERSATION_AGENT: typeof env.CONVERSATION_AGENT;
+}) => {
+  return ConversationAgentDOLive(doEnv);
 };

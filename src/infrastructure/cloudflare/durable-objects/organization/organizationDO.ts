@@ -77,9 +77,27 @@ export class OrganizationDurableObject extends EffectDurableObjectBase {
       if (!organizationSlug) {
         const pathSegments = url.pathname.split("/").filter(Boolean);
         // For requests like /test/invite, /test/stores, etc., the org slug is the first segment
-        if (pathSegments.length > 0) {
+        // BUT NOT for API endpoints like /conversations/lookup, /campaigns, etc.
+        const apiEndpoints = [
+          "conversations",
+          "campaigns",
+          "segments",
+          "customers",
+          "invitations",
+          "members",
+          "stores",
+        ];
+        const isApiEndpoint =
+          pathSegments.length > 0 && apiEndpoints.includes(pathSegments[0]);
+
+        if (pathSegments.length > 0 && !isApiEndpoint) {
           organizationSlug = pathSegments[0]; // First segment is the organization slug
           logger.info("Found slug from URL path", { slug: organizationSlug });
+        } else if (isApiEndpoint) {
+          logger.info("Skipping URL path parsing for API endpoint", {
+            firstSegment: pathSegments[0],
+            pathname: url.pathname,
+          });
         }
       }
 

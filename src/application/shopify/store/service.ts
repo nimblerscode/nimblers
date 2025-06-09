@@ -12,7 +12,7 @@ import { organization } from "@/infrastructure/persistence/global/d1/schema";
 
 // Environment dependencies
 export abstract class ShopifyStoreEnv extends Context.Tag(
-  "@infrastructure/shopify/store/Env",
+  "@infrastructure/shopify/store/Env"
 )<
   ShopifyStoreEnv,
   {
@@ -55,8 +55,8 @@ export const ShopifyStoreServiceLive = Layer.effect(
                 new StoreNotFoundError({
                   message: `Failed to lookup shop connection: ${error.message}`,
                   shopDomain,
-                }),
-            ),
+                })
+            )
           );
 
         if (!shopConnection) {
@@ -67,7 +67,7 @@ export const ShopifyStoreServiceLive = Layer.effect(
             new StoreNotFoundError({
               message: "Store not found in global registry",
               shopDomain,
-            }),
+            })
           );
         }
 
@@ -81,7 +81,7 @@ export const ShopifyStoreServiceLive = Layer.effect(
               message:
                 "Shop connection exists but organization slug is missing (stale record)",
               shopDomain,
-            }),
+            })
           );
         }
 
@@ -97,7 +97,7 @@ export const ShopifyStoreServiceLive = Layer.effect(
     // Store connection operations
     const checkConnectionStatus = (
       organizationSlug: OrganizationSlug,
-      shopDomain: ShopDomain,
+      shopDomain: ShopDomain
     ) =>
       Effect.gen(function* () {
         yield* Effect.log("🔍 Checking connection status", {
@@ -108,15 +108,18 @@ export const ShopifyStoreServiceLive = Layer.effect(
         const doId = env.ORG_DO.idFromName(organizationSlug);
         const stub = env.ORG_DO.get(doId);
 
-        const client = yield* createOrganizationDOClient(stub);
+        const client = yield* createOrganizationDOClient(
+          stub,
+          organizationSlug
+        );
         const stores = yield* client.organizations
           .getConnectedStores({
             path: { organizationSlug },
           })
           .pipe(
             Effect.mapError(
-              (error) => new Error(`Failed to get connected stores: ${error}`),
-            ),
+              (error) => new Error(`Failed to get connected stores: ${error}`)
+            )
           );
 
         const store = stores.find((s) => s.shopDomain === shopDomain);
@@ -144,15 +147,18 @@ export const ShopifyStoreServiceLive = Layer.effect(
         const doId = env.ORG_DO.idFromName(organizationSlug);
         const stub = env.ORG_DO.get(doId);
 
-        const client = yield* createOrganizationDOClient(stub);
+        const client = yield* createOrganizationDOClient(
+          stub,
+          organizationSlug
+        );
         const stores = yield* client.organizations
           .getConnectedStores({
             path: { organizationSlug },
           })
           .pipe(
             Effect.mapError(
-              (error) => new Error(`Failed to get connected stores: ${error}`),
-            ),
+              (error) => new Error(`Failed to get connected stores: ${error}`)
+            )
           );
 
         yield* Effect.log("📋 Retrieved connected stores", {
@@ -166,7 +172,7 @@ export const ShopifyStoreServiceLive = Layer.effect(
     // Unified store disconnection
     const disconnectStore = (
       organizationSlug: OrganizationSlug,
-      shopDomain: ShopDomain,
+      shopDomain: ShopDomain
     ) =>
       Effect.gen(function* () {
         yield* Effect.log("🔌 Disconnecting store", {
@@ -177,15 +183,18 @@ export const ShopifyStoreServiceLive = Layer.effect(
         const doId = env.ORG_DO.idFromName(organizationSlug);
         const stub = env.ORG_DO.get(doId);
 
-        const client = yield* createOrganizationDOClient(stub);
+        const client = yield* createOrganizationDOClient(
+          stub,
+          organizationSlug
+        );
         const result = yield* client.organizations
           .disconnectStore({
             path: { shopDomain },
           })
           .pipe(
             Effect.mapError(
-              (error) => new Error(`Failed to disconnect store: ${error}`),
-            ),
+              (error) => new Error(`Failed to disconnect store: ${error}`)
+            )
           );
 
         yield* Effect.log("🔌 Disconnect result", {
@@ -204,7 +213,7 @@ export const ShopifyStoreServiceLive = Layer.effect(
       getConnectedStores,
       disconnectStore,
     };
-  }),
+  })
 );
 
 // Complete webhook processing use case
@@ -212,7 +221,7 @@ export const WebhookProcessingUseCaseLive = Layer.effect(
   Context.GenericTag<{
     readonly processAppUninstallWebhook: (
       shopDomain: ShopDomain,
-      webhookId: string,
+      webhookId: string
     ) => Effect.Effect<
       {
         organizationSlug: string;
@@ -229,7 +238,7 @@ export const WebhookProcessingUseCaseLive = Layer.effect(
 
     const processAppUninstallWebhook = (
       shopDomain: ShopDomain,
-      webhookId: string,
+      webhookId: string
     ) =>
       Effect.gen(function* () {
         yield* Effect.log("🚀 Starting deferred webhook processing", {
@@ -241,8 +250,9 @@ export const WebhookProcessingUseCaseLive = Layer.effect(
         yield* Effect.log("🔍 Looking up organization for shop", {
           shopDomain,
         });
-        const organizationSlug =
-          yield* storeManagement.findOrganizationByShop(shopDomain);
+        const organizationSlug = yield* storeManagement.findOrganizationByShop(
+          shopDomain
+        );
         yield* Effect.log("✅ Found organization for shop", {
           shopDomain,
           organizationSlug,
@@ -255,7 +265,7 @@ export const WebhookProcessingUseCaseLive = Layer.effect(
         });
         const disconnectResult = yield* storeManagement.disconnectStore(
           organizationSlug,
-          shopDomain,
+          shopDomain
         );
         const disconnected = disconnectResult.success;
 
@@ -280,7 +290,7 @@ export const WebhookProcessingUseCaseLive = Layer.effect(
                 });
                 return false;
               });
-            }),
+            })
           );
 
         if (globalCleanupResult) {
@@ -311,13 +321,13 @@ export const WebhookProcessingUseCaseLive = Layer.effect(
           error instanceof Error
             ? error
             : new Error(
-                `Webhook processing failed: ${error._tag || String(error)}`,
-              ),
-        ),
+                `Webhook processing failed: ${error._tag || String(error)}`
+              )
+        )
       );
 
     return {
       processAppUninstallWebhook,
     };
-  }),
+  })
 );
