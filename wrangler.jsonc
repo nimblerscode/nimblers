@@ -94,7 +94,8 @@
     "TWILIO_ACCOUNT_SID": "ACc2e8beb2a51c4007783c0dd0c1b3b8ff",
     "TWILIO_AUTH_TOKEN": "026fbf41a09ac7d9646a238139037839",
     "TWILIO_FROM_NUMBER": "+15392823029",
-    "TWILIO_WEBHOOK_URL": "https://nimblers.co/api/webhooks/twilio"
+    "TWILIO_WEBHOOK_URL": "https://nimblers.co/api/webhooks/twilio",
+    "ANTHROPIC_API_KEY": "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"
   },
 
   "ai": {

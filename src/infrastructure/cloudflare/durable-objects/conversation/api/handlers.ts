@@ -39,8 +39,10 @@ import {
 } from "@effect/platform";
 import { Effect, Layer, Schema } from "effect";
 import { ConversationApiSchemas } from "./schemas";
-import { ConversationMCPService } from "@/application/shopify/mcp/service";
-import { ShopifyMCPLayer } from "@/config/layers";
+// TEMPORARY: Disabled for debugging
+import { ConversationAIService } from "@/domain/tenant/conversations/ai-service";
+import { ConversationAIServiceLive } from "@/application/tenant/conversations/ai-service";
+import { ShopifyMCPLayer, ConversationLayerWithMCP } from "@/config/layers";
 import { WorkersAI } from "@/domain/global/ai/service";
 
 class Unauthorized extends Schema.TaggedError<Unauthorized>()(
@@ -478,6 +480,32 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             timestamp: new Date().toISOString(),
           });
 
+          // Add debugging for service availability
+          console.log("🔍 DEBUG: Checking if ConversationUseCase is available");
+
+          try {
+            yield* Effect.logInfo(
+              "=== ATTEMPTING TO GET CONVERSATION USE CASE ==="
+            );
+            const conversationUseCase = yield* ConversationUseCase;
+            console.log("✅ ConversationUseCase obtained successfully");
+            yield* Effect.logInfo("=== CONVERSATION USE CASE OBTAINED ===");
+          } catch (error) {
+            console.error("❌ Failed to get ConversationUseCase:", error);
+            yield* Effect.logError("Failed to get ConversationUseCase", {
+              error: String(error),
+            });
+            return yield* Effect.fail(new HttpApiError.InternalServerError());
+          }
+
+          console.log(
+            "🔍 DEBUG: Checking if ConversationAIService is available"
+          );
+
+          // Get ConversationAI service for processing
+          const conversationAIService = yield* ConversationAIService;
+          console.log("✅ ConversationAIService obtained successfully");
+
           // Parse incoming SMS data with Shopify context
           const {
             From: customerPhone,
@@ -489,7 +517,7 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             shopifyStoreDomain,
           } = payload;
 
-          yield* Effect.logInfo("Processing incoming SMS", {
+          yield* Effect.logInfo("Processing incoming SMS with AI", {
             conversationId,
             customerPhone,
             storePhone,
@@ -499,100 +527,23 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             shopifyStoreDomain,
           });
 
-          yield* Effect.logInfo(
-            "=== ATTEMPTING TO GET CONVERSATION USE CASE ==="
-          );
-
           // Get conversation use case for sending response
           const conversationUseCase = yield* ConversationUseCase;
 
-          yield* Effect.logInfo("=== CONVERSATION USE CASE OBTAINED ===");
+          // Process message with AI
+          console.log("🤖 Processing message with ConversationAI service");
+          const aiResponse = yield* conversationAIService.processMessage({
+            conversationId,
+            messageContent,
+            organizationSlug,
+            shopifyStoreDomain,
+          });
 
-          let responseMessage: string;
-
-          if (shopifyStoreDomain) {
-            console.log("🚨 SHOPIFY DOMAIN PROVIDED - USING MCP", {
-              shopifyStoreDomain,
-            });
-
-            yield* Effect.logInfo(
-              "=== SHOPIFY DOMAIN PROVIDED - USING MCP ===",
-              {
-                shopifyStoreDomain,
-              }
-            );
-
-            // Use MCP service for intelligent Shopify-powered responses
-            const mcpResponse = yield* Effect.gen(function* () {
-              yield* Effect.logInfo("=== ATTEMPTING TO GET MCP SERVICE ===");
-
-              // Add debugging for dependency injection
-              yield* Effect.logInfo("=== CHECKING CONTEXT AVAILABILITY ===");
-
-              const mcpService = yield* ConversationMCPService;
-              yield* Effect.logInfo(
-                "=== MCP SERVICE OBTAINED SUCCESSFULLY ==="
-              );
-
-              // Add more debugging before processing
-              yield* Effect.logInfo(
-                "=== MCP SERVICE READY, STARTING PROCESSING ==="
-              );
-
-              // Create context from the conversation and store information
-              const context = `Customer is messaging store: ${shopifyStoreDomain}. Organization: ${organizationSlug}. Conversation: ${conversationId}`;
-
-              yield* Effect.logInfo("=== CALLING MCP PROCESS MESSAGE ===", {
-                context,
-              });
-
-              // Process message with MCP to get intelligent response
-              return yield* mcpService.processMessage(
-                conversationId,
-                messageContent,
-                context
-              );
-            }).pipe(
-              Effect.catchAll((mcpError) => {
-                return Effect.gen(function* () {
-                  console.log("🚨 MCP SERVICE FAILED - FALLBACK", {
-                    error: String(mcpError),
-                    conversationId,
-                    shopifyStoreDomain,
-                  });
-
-                  yield* Effect.logInfo(
-                    "MCP service failed, using fallback response",
-                    {
-                      error: String(mcpError),
-                      conversationId,
-                      shopifyStoreDomain,
-                    }
-                  );
-
-                  // Return a structured fallback response
-                  return {
-                    type: "general_response" as const,
-                    message: `Hi! I received your message: "${messageContent}". I can help you with products from our store. What are you looking for?`,
-                  };
-                });
-              })
-            );
-
-            yield* Effect.logInfo("MCP response generated", {
-              conversationId,
-              responseType: mcpResponse.type,
-            });
-
-            // Use the response from MCP
-            responseMessage = mcpResponse.message;
-          } else {
-            yield* Effect.logInfo(
-              "=== NO SHOPIFY DOMAIN - USING SIMPLE RESPONSE ==="
-            );
-            // Simple response for non-Shopify conversations
-            responseMessage = `Hi! I received your message: "${messageContent}". How can I help you today?`;
-          }
+          const responseMessage = String(aiResponse.responseMessage);
+          console.log(
+            "🤖 AI response generated:",
+            responseMessage.substring(0, 100) + "..."
+          );
 
           yield* Effect.logInfo("=== PREPARING TO SEND RESPONSE MESSAGE ===", {
             responseMessage,
@@ -662,9 +613,16 @@ export function getConversationHandler(
   },
   env: Env
 ) {
+  console.log("🔧 DEBUG: getConversationHandler called", {
+    conversationId,
+    shopifyStoreDomain: shopifyConfig.storeDomain,
+    hasEnvAI: !!env.AI,
+  });
+
   // Validate conversation ID
   if (!conversationId || conversationId.trim().length === 0) {
     const errorMessage = `Conversation ID parameter is required but was empty or undefined. Provided ID: "${conversationId}"`;
+    console.error("❌ Conversation ID validation failed:", errorMessage);
     throw new Error(errorMessage);
   }
 
@@ -720,20 +678,20 @@ export function getConversationHandler(
   );
 
   // Create Workers AI layer
+  console.log("🔧 DEBUG: Creating WorkersAI layer", { hasAI: !!env.AI });
   const WorkersAILayer = Layer.succeed(WorkersAI, env.AI);
 
-  // Always provide real Shopify MCP service since config is mandatory
-  // This now includes the AI Intent Service as a dependency
-  const MCPLayer = Layer.provide(
-    ShopifyMCPLayer(shopifyConfig.storeDomain),
-    WorkersAILayer
+  // Create ConversationAI service layer properly
+  const ConversationAIServiceLayer = Layer.provide(
+    ConversationAIServiceLive,
+    Layer.mergeAll(ConversationRepoLayer, MessageRepoLayer, WorkersAILayer)
   );
 
   // Final layer with all required services
   const FinalLayer = Layer.mergeAll(
     AllRepoLayers,
     ConversationUseCaseLayer,
-    MCPLayer
+    ConversationAIServiceLayer
   );
 
   // Conversations group layer with all dependencies
@@ -748,9 +706,15 @@ export function getConversationHandler(
   );
 
   // Final handler
-  const { dispose, handler } = HttpApiBuilder.toWebHandler(
-    Layer.mergeAll(ConversationApiLive, HttpServer.layerContext, Tracing)
-  );
-
-  return { dispose, handler };
+  console.log("🔧 DEBUG: Creating final handler");
+  try {
+    const { dispose, handler } = HttpApiBuilder.toWebHandler(
+      Layer.mergeAll(ConversationApiLive, HttpServer.layerContext, Tracing)
+    );
+    console.log("🔧 DEBUG: Handler created successfully");
+    return { dispose, handler };
+  } catch (error) {
+    console.error("❌ Failed to create handler:", error);
+    throw error;
+  }
 }

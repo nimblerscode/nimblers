@@ -83,6 +83,10 @@ import {
   ConversationAgentServiceLive,
 } from "@/application/tenant/conversations/agent-service";
 
+// Add ConversationAI imports
+import { ConversationAIServiceLive } from "@/application/tenant/conversations/ai-service";
+import { WorkersAI } from "@/domain/global/ai/service";
+
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
   const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
@@ -235,7 +239,7 @@ export function ConversationDOLive(doEnv: {
   return Layer.provide(ConversationDOAdapterLive, doNamespaceLayer);
 }
 
-export const ConversationLayerLive = () => {
+export const ConversationLayerLive = (aiBinding: Ai) => {
   const ConversationRepoLayer = Layer.provide(
     ConversationRepoLive,
     DrizzleDOClientLive
@@ -244,11 +248,21 @@ export const ConversationLayerLive = () => {
   // Import and provide MessageRepoLive
   const MessageRepoLayer = Layer.provide(MessageRepoLive, DrizzleDOClientLive);
 
+  // Provide AI binding
+  const AILayer = Layer.succeed(WorkersAI, aiBinding);
+
+  // Add AI service layer
+  const ConversationAIServiceLayer = Layer.provide(
+    ConversationAIServiceLive,
+    Layer.mergeAll(ConversationRepoLayer, MessageRepoLayer, AILayer)
+  );
+
   const ConversationUseCaseLayer = Layer.provide(
     ConversationUseCaseLive(),
     Layer.merge(ConversationRepoLayer, MessageRepoLayer)
   );
-  return ConversationUseCaseLayer;
+
+  return Layer.merge(ConversationUseCaseLayer, ConversationAIServiceLayer);
 };
 
 export const CampaignLayerLive = (
@@ -385,9 +399,10 @@ export const ShopifyMCPLayer = (storeDomain: string) => {
 // Enhanced conversation layer that includes MCP capabilities
 export const ConversationLayerWithMCP = (
   doId: DurableObjectId,
+  aiBinding: Ai,
   storeDomain?: string
 ) => {
-  const baseConversationLayer = ConversationLayerLive();
+  const baseConversationLayer = ConversationLayerLive(aiBinding);
 
   if (storeDomain) {
     const mcpLayer = ShopifyMCPLayer(storeDomain);

@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { MessageRepo } from "@/domain/tenant/conversations/service";
 import { ConversationDrizzleDOClient } from "@/infrastructure/persistence/conversation/sqlite/drizzle";
@@ -121,6 +121,7 @@ export const MessageRepoLive = Layer.effect(
               const results = await drizzleClient.db
                 .select()
                 .from(message)
+                .orderBy(asc(message.createdAt)) // Order by creation time for proper conversation flow
                 .limit(limit);
 
               return results;

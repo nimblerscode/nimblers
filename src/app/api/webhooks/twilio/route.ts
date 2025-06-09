@@ -15,9 +15,8 @@ import {
 import { createConversationDOClient } from "@/infrastructure/cloudflare/durable-objects/conversation/api/client";
 import { createOrganizationDOClient } from "@/infrastructure/cloudflare/durable-objects/organization/api/client";
 import { OrgD1Service } from "@/domain/global/organization/service";
-import { DatabaseLive, ConversationAgentLayerLive } from "@/config/layers";
+import { DatabaseLive } from "@/config/layers";
 import { OrgRepoD1LayerLive } from "@/infrastructure/persistence/global/d1/OrgD1RepoLive";
-import { ConversationAgentService } from "@/domain/tenant/conversations/agent-service";
 
 // Map Twilio status to our message status
 function mapTwilioStatus(twilioStatus: string): MessageStatus {
@@ -105,8 +104,8 @@ async function handleStatusCallback(formData: FormData): Promise<Response> {
   });
 }
 
-// Handle incoming message using ConversationAgent
-async function handleIncomingMessageWithAgent(
+// Handle incoming message using ConversationDO handler
+async function handleIncomingMessageWithDO(
   formData: FormData
 ): Promise<Response> {
   try {
@@ -281,75 +280,80 @@ async function handleIncomingMessageWithAgent(
           shopifyStoreDomain = connectedStore;
         }
 
-        // Now use ConversationAgent to process the message
-        yield* Effect.log("=== USING CONVERSATION AGENT ===", {
+        // Now use ConversationDO handler to process the message
+        yield* Effect.log("=== USING CONVERSATION DO HANDLER ===", {
           conversationId,
           organizationSlug,
           shopifyStoreDomain,
         });
 
-        const agentService = yield* ConversationAgentService;
+        // Use the conversation DO to handle the incoming SMS
+        const conversationDONamespace = env.CONVERSATION_DO;
+        const doId = conversationDONamespace.idFromName(conversationId);
+        const conversationDO = conversationDONamespace.get(doId);
+        const conversationClient = yield* createConversationDOClient(
+          conversationDO,
+          conversationId,
+          shopifyStoreDomain
+        );
 
-        const agentResponse = yield* agentService.processMessage({
-          conversationId: unsafeConversationId(conversationId),
-          customerPhone: twilioData.From,
-          storePhone: twilioData.To,
-          messageContent: twilioData.Body,
-          externalMessageId: twilioData.MessageSid,
-          organizationSlug,
-          shopifyStoreDomain,
+        const doResponse =
+          yield* conversationClient.conversations.handleIncomingSMS({
+            payload: {
+              From: twilioData.From,
+              To: twilioData.To,
+              Body: twilioData.Body,
+              MessageSid: twilioData.MessageSid,
+              conversationId: unsafeConversationId(conversationId),
+              organizationSlug,
+              shopifyStoreDomain,
+            },
+          });
+
+        yield* Effect.log("=== CONVERSATION DO RESPONSE RECEIVED ===", {
+          success: doResponse.success,
+          responseMessage: doResponse.responseMessage,
+          conversationId,
         });
 
-        yield* Effect.log("=== AGENT RESPONSE RECEIVED ===", {
-          messageId: agentResponse.messageId,
-          responseLength: agentResponse.responseMessage.length,
-          conversationId: agentResponse.conversationId,
-        });
-
-        console.log("🔍 Raw agent response details:", {
-          messageId: agentResponse.messageId,
-          responseMessageType: typeof agentResponse.responseMessage,
-          responseMessageLength: agentResponse.responseMessage.length,
-          responseMessagePreview: String(
-            agentResponse.responseMessage
-          ).substring(0, 200),
-        });
-
-        return agentResponse;
+        return doResponse;
       }),
       Effect.catchAll((error) =>
         Effect.gen(function* () {
-          yield* Effect.logError("Effect pipeline failed in agent processing", {
+          yield* Effect.logError("Effect pipeline failed in DO processing", {
             error,
             errorType: error?._tag,
             errorMessage:
               error instanceof Error ? error.message : String(error),
           });
           return yield* Effect.fail(
-            new Error("Failed to process message with agent")
+            new Error("Failed to process message with ConversationDO")
           );
         })
       )
     );
 
-    // Create the layer pipeline
+    // Create the layer pipeline (no agent layer needed)
     const dbLayer = DatabaseLive({ DB: env.DB });
     const orgServiceLayer = Layer.provide(OrgRepoD1LayerLive, dbLayer);
-    const agentLayer = ConversationAgentLayerLive({
-      CONVERSATION_AGENT: env.CONVERSATION_AGENT,
-    });
 
     const result = await Effect.runPromise(
       program.pipe(
         Effect.provide(FetchHttpClient.layer),
-        Effect.provide(orgServiceLayer),
-        Effect.provide(agentLayer)
+        Effect.provide(orgServiceLayer)
       )
     );
 
+    // Handle the response from ConversationDO
+    if (!result.success) {
+      throw new Error("ConversationDO failed to process message");
+    }
+
     // Truncate message if it's too long for SMS (1600 character limit for safety)
     const MAX_SMS_LENGTH = 1600;
-    let responseMessage = String(result.responseMessage);
+    let responseMessage = String(
+      result.responseMessage || "Thank you for your message!"
+    );
 
     // Check if the response looks like JSON and try to extract meaningful content
     if (
@@ -391,7 +395,7 @@ async function handleIncomingMessageWithAgent(
       responseMessage.substring(0, 100) + "..."
     );
 
-    // Return TwiML response with the agent's message
+    // Return TwiML response with the ConversationDO's message
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Message>${responseMessage}</Message>
@@ -404,294 +408,7 @@ async function handleIncomingMessageWithAgent(
       },
     });
   } catch (error) {
-    console.error("Agent webhook error:", error);
-
-    // Return fallback TwiML response
-    const errorResponse = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message>We received your message and will respond shortly.</Message>
-</Response>`;
-
-    return new Response(errorResponse, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/xml",
-      },
-    });
-  }
-}
-
-// Handle incoming message (legacy version - keeping for comparison)
-async function handleIncomingMessage(formData: FormData): Promise<Response> {
-  try {
-    // Parse the incoming message data using branded types
-    const twilioData = {
-      From: unsafePhoneNumber(formData.get("From") as string),
-      To: unsafePhoneNumber(formData.get("To") as string),
-      Body: unsafeMessageContent(formData.get("Body") as string),
-      MessageSid: unsafeExternalMessageId(formData.get("MessageSid") as string),
-    };
-
-    const program = pipe(
-      Effect.gen(function* () {
-        // Look up organization by store phone number using D1 service
-        yield* Effect.log("Looking up organization by store phone", {
-          storePhone: twilioData.To,
-          customerPhone: twilioData.From,
-        });
-
-        const orgD1Service = yield* OrgD1Service;
-
-        const organizationSlug = yield* Effect.gen(function* () {
-          try {
-            const orgSlug = yield* orgD1Service.lookupOrganizationByStorePhone(
-              twilioData.To
-            );
-            yield* Effect.log("Found organization for store phone", {
-              storePhone: twilioData.To,
-              organizationSlug: orgSlug,
-            });
-            return orgSlug;
-          } catch (error) {
-            yield* Effect.logWarning(
-              "No organization found for store phone, using default",
-              {
-                storePhone: twilioData.To,
-                error: error instanceof Error ? error.message : String(error),
-              }
-            );
-            // Fallback to default organization
-            return unsafeOrganizationSlug("nimblers-org");
-          }
-        });
-        // Get organization DO and create typed client
-        const organizationDONamespace = env.ORG_DO;
-        const orgDoId = organizationDONamespace.idFromName(organizationSlug);
-        const organizationDO = organizationDONamespace.get(orgDoId);
-
-        yield* Effect.log("Creating organization DO client", {
-          organizationSlug,
-          orgDoId: orgDoId.toString(),
-        });
-
-        // Create organization DO client
-        const orgClient = yield* createOrganizationDOClient(
-          organizationDO,
-          organizationSlug
-        );
-
-        let conversationId: string;
-        let shopifyStoreDomain: string | undefined;
-
-        // Try to find existing conversation using typed client
-        const lookupResult = yield* Effect.gen(function* () {
-          yield* Effect.log("Attempting conversation lookup", {
-            customerPhone: twilioData.From,
-            storePhone: twilioData.To,
-            organizationSlug,
-          });
-
-          return yield* orgClient.organizations.lookupConversation({
-            urlParams: {
-              customerPhone: twilioData.From,
-              storePhone: twilioData.To,
-            },
-          });
-        }).pipe(
-          Effect.tap((result) =>
-            Effect.log("Conversation lookup successful", result)
-          ),
-          Effect.catchAll((error) =>
-            Effect.gen(function* () {
-              yield* Effect.logError(
-                "Conversation lookup failed - will create new conversation",
-                {
-                  error: error,
-                  errorType: error?._tag,
-                  errorMessage:
-                    error instanceof Error ? error.message : String(error),
-                }
-              );
-              return yield* Effect.succeed(null);
-            })
-          )
-        );
-
-        if (lookupResult) {
-          conversationId = unsafeConversationId(lookupResult.conversationId);
-          shopifyStoreDomain = lookupResult.shopifyStoreDomain;
-        } else {
-          // First, get connected Shopify stores using typed client
-          const connectedStore = yield* Effect.gen(function* () {
-            yield* Effect.log("Fetching connected Shopify stores", {
-              organizationSlug,
-            });
-
-            const stores = yield* orgClient.organizations.getConnectedStores({
-              path: { organizationSlug },
-            });
-
-            const activeStore = stores.find(
-              (store) => store.status === "active"
-            );
-            yield* Effect.log("Found connected stores", {
-              totalStores: stores.length,
-              activeStore: activeStore?.shopDomain,
-            });
-
-            return activeStore?.shopDomain;
-          }).pipe(
-            Effect.catchAll((storeError) =>
-              Effect.gen(function* () {
-                yield* Effect.logWarning("Failed to fetch connected stores", {
-                  error: storeError,
-                  errorType: storeError?._tag,
-                  errorMessage:
-                    storeError instanceof Error
-                      ? storeError.message
-                      : String(storeError),
-                });
-                return yield* Effect.succeed(undefined);
-              })
-            )
-          );
-
-          // Create new conversation via conversation DO (not organization DO)
-          yield* Effect.log("Creating new conversation", {
-            customerPhone: twilioData.From,
-            storePhone: twilioData.To,
-            connectedStore,
-          });
-
-          const conversationDONamespace = env.CONVERSATION_DO;
-          const newConversationId = unsafeConversationId(crypto.randomUUID());
-          const conversationDoId =
-            conversationDONamespace.idFromName(newConversationId);
-          const conversationDO = conversationDONamespace.get(conversationDoId);
-          const conversationClient = yield* createConversationDOClient(
-            conversationDO,
-            newConversationId,
-            connectedStore // Pass Shopify store domain to client
-          );
-
-          const createResult =
-            yield* conversationClient.conversations.createConversation({
-              payload: {
-                organizationSlug,
-                campaignId: null,
-                customerPhone: twilioData.From,
-                storePhone: twilioData.To,
-                status: "active",
-                metadata: JSON.stringify({
-                  source: "incoming_sms",
-                  firstMessage: twilioData.Body,
-                  shopifyStoreDomain: connectedStore,
-                }),
-              },
-            });
-
-          conversationId = unsafeConversationId(createResult.id);
-          shopifyStoreDomain = connectedStore;
-        }
-
-        // Use conversation client to handle the incoming SMS
-        const conversationDONamespace = env.CONVERSATION_DO;
-
-        yield* Effect.log("=== CREATING CONVERSATION DO CLIENT ===", {
-          conversationId,
-          conversationIdType: typeof conversationId,
-          conversationIdLength: conversationId.length,
-        });
-
-        const doId = conversationDONamespace.idFromName(conversationId);
-
-        yield* Effect.log("=== CONVERSATION DO ID CREATED ===", {
-          doIdString: doId.toString(),
-        });
-
-        const conversationDO = conversationDONamespace.get(doId);
-
-        yield* Effect.log("=== CONVERSATION DO STUB OBTAINED ===");
-
-        const conversationClient = yield* createConversationDOClient(
-          conversationDO,
-          conversationId,
-          shopifyStoreDomain // Pass Shopify store domain to client
-        );
-
-        yield* Effect.log("=== CALLING HANDLE INCOMING SMS ===", {
-          payload: {
-            From: twilioData.From,
-            To: twilioData.To,
-            Body: twilioData.Body,
-            MessageSid: twilioData.MessageSid,
-            conversationId: conversationId,
-            organizationSlug,
-            shopifyStoreDomain,
-          },
-        });
-
-        // Use the handleIncomingSMS endpoint with type safety
-        const result =
-          yield* conversationClient.conversations.handleIncomingSMS({
-            payload: {
-              From: twilioData.From,
-              To: twilioData.To,
-              Body: twilioData.Body,
-              MessageSid: twilioData.MessageSid,
-              conversationId: unsafeConversationId(conversationId),
-              organizationSlug,
-              shopifyStoreDomain,
-            },
-          });
-
-        yield* Effect.log("=== HANDLE INCOMING SMS SUCCESSFUL ===", {
-          result,
-        });
-
-        return result;
-      }),
-      Effect.catchAll((error) =>
-        Effect.gen(function* () {
-          yield* Effect.logError(
-            "Effect pipeline failed in webhook processing",
-            {
-              error,
-              errorType: error?._tag,
-              errorMessage:
-                error instanceof Error ? error.message : String(error),
-            }
-          );
-          return yield* Effect.fail(new Error("Failed to process message"));
-        })
-      )
-    );
-
-    // Create the layer pipeline for D1 database access
-    const dbLayer = DatabaseLive({ DB: env.DB });
-    const orgServiceLayer = Layer.provide(OrgRepoD1LayerLive, dbLayer);
-
-    const result = await Effect.runPromise(
-      program.pipe(
-        Effect.provide(FetchHttpClient.layer),
-        Effect.provide(orgServiceLayer)
-      )
-    );
-
-    // Return empty TwiML response - no automatic replies
-    // The conversation DO will handle intelligent responses separately
-    const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-</Response>`;
-
-    return new Response(twimlResponse, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/xml",
-      },
-    });
-  } catch (error) {
-    console.error("Webhook error:", error);
+    console.error("ConversationDO webhook error:", error);
 
     // Return fallback TwiML response
     const errorResponse = `<?xml version="1.0" encoding="UTF-8"?>
@@ -734,10 +451,8 @@ export async function POST(request: Request) {
       return await handleStatusCallback(formData);
     }
 
-    console.log(
-      "💬 Processing incoming message webhook with ConversationAgent"
-    );
-    return await handleIncomingMessageWithAgent(formData);
+    console.log("💬 Processing incoming message webhook with ConversationDO");
+    return await handleIncomingMessageWithDO(formData);
   } catch (error) {
     console.error("💥 WEBHOOK ERROR:", error);
     return new Response("Internal Server Error", { status: 500 });
