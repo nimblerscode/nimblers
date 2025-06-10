@@ -87,6 +87,10 @@ import {
 import { ConversationAIServiceLive } from "@/application/tenant/conversations/ai-service";
 import { WorkersAI } from "@/domain/global/ai/service";
 
+import { AnthropicLayerLive } from "@/infrastructure/ai/anthropic/client";
+import { MCPClientLive } from "@/infrastructure/ai/anthropic/mcp-client";
+import { AnthropicConversationAIServiceLive } from "@/application/tenant/conversations/anthropic-ai-service";
+
 export function DatabaseLive(db: { DB: D1Database }) {
   const d1Layer = D1BindingLive(db);
   const drizzleLayer = Layer.provide(DrizzleD1ClientLive, d1Layer);
@@ -239,30 +243,35 @@ export function ConversationDOLive(doEnv: {
   return Layer.provide(ConversationDOAdapterLive, doNamespaceLayer);
 }
 
-export const ConversationLayerLive = (aiBinding: Ai) => {
+export const ConversationLayerLive = () => {
   const ConversationRepoLayer = Layer.provide(
     ConversationRepoLive,
     DrizzleDOClientLive
   );
-
-  // Import and provide MessageRepoLive
   const MessageRepoLayer = Layer.provide(MessageRepoLive, DrizzleDOClientLive);
 
-  // Provide AI binding
-  const AILayer = Layer.succeed(WorkersAI, aiBinding);
+  // Create Anthropic layer with environment variables
+  const anthropicLayer = AnthropicLayerLive({
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY!,
+    ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL,
+    ANTHROPIC_MAX_TOKENS: process.env.ANTHROPIC_MAX_TOKENS,
+    ANTHROPIC_TEMPERATURE: process.env.ANTHROPIC_TEMPERATURE,
+  });
 
-  // Add AI service layer
+  const mcpClientLayer = MCPClientLive;
+
   const ConversationAIServiceLayer = Layer.provide(
-    ConversationAIServiceLive,
-    Layer.mergeAll(ConversationRepoLayer, MessageRepoLayer, AILayer)
+    AnthropicConversationAIServiceLive,
+    Layer.merge(
+      ConversationRepoLayer,
+      Layer.merge(MessageRepoLayer, Layer.merge(anthropicLayer, mcpClientLayer))
+    )
   );
 
-  const ConversationUseCaseLayer = Layer.provide(
-    ConversationUseCaseLive(),
-    Layer.merge(ConversationRepoLayer, MessageRepoLayer)
+  return Layer.merge(
+    ConversationRepoLayer,
+    Layer.merge(MessageRepoLayer, ConversationAIServiceLayer)
   );
-
-  return Layer.merge(ConversationUseCaseLayer, ConversationAIServiceLayer);
 };
 
 export const CampaignLayerLive = (
@@ -397,12 +406,8 @@ export const ShopifyMCPLayer = (storeDomain: string) => {
 };
 
 // Enhanced conversation layer that includes MCP capabilities
-export const ConversationLayerWithMCP = (
-  doId: DurableObjectId,
-  aiBinding: Ai,
-  storeDomain?: string
-) => {
-  const baseConversationLayer = ConversationLayerLive(aiBinding);
+export const ConversationLayerWithMCP = (storeDomain?: string) => {
+  const baseConversationLayer = ConversationLayerLive();
 
   if (storeDomain) {
     const mcpLayer = ShopifyMCPLayer(storeDomain);

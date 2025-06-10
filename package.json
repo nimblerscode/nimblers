@@ -41,6 +41,7 @@
     "knip": "knip"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.53.0",
     "@effect/experimental": "^0.44.21",
     "@effect/opentelemetry": "^0.50.4",
     "@effect/platform": "^0.80.21",

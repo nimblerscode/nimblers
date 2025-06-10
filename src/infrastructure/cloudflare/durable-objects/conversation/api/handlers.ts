@@ -41,9 +41,10 @@ import { Effect, Layer, Schema } from "effect";
 import { ConversationApiSchemas } from "./schemas";
 // TEMPORARY: Disabled for debugging
 import { ConversationAIService } from "@/domain/tenant/conversations/ai-service";
-import { ConversationAIServiceLive } from "@/application/tenant/conversations/ai-service";
-import { ShopifyMCPLayer, ConversationLayerWithMCP } from "@/config/layers";
-import { WorkersAI } from "@/domain/global/ai/service";
+import { AnthropicConversationAIServiceLive } from "@/application/tenant/conversations/anthropic-ai-service";
+import { AnthropicLayerLive } from "@/infrastructure/ai/anthropic/client";
+import { MCPClientLive } from "@/infrastructure/ai/anthropic/mcp-client";
+// Removed unused imports - now using Anthropic instead of Workers AI
 
 class Unauthorized extends Schema.TaggedError<Unauthorized>()(
   "Unauthorized",
@@ -530,6 +531,10 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
           // Get conversation use case for sending response
           const conversationUseCase = yield* ConversationUseCase;
 
+          if (!shopifyStoreDomain) {
+            throw new Error("Shopify store domain is required");
+          }
+
           // Process message with AI
           console.log("🤖 Processing message with ConversationAI service");
           const aiResponse = yield* conversationAIService.processMessage({
@@ -539,7 +544,9 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
             shopifyStoreDomain,
           });
 
-          const responseMessage = String(aiResponse.responseMessage);
+          const responseMessage = String(
+            aiResponse.responseMessage || "No response generated"
+          );
           console.log(
             "🤖 AI response generated:",
             responseMessage.substring(0, 100) + "..."
@@ -577,14 +584,17 @@ const conversationsGroupLive = (conversationId: ConversationId) =>
           return {
             success: true,
             responseMessage: unsafeMessageContent(responseMessage),
-            sentMessageId: sentMessage.id,
           } as const;
         }).pipe(
           Effect.catchAll((error) => {
             return Effect.gen(function* () {
+              const errorType =
+                typeof error === "object" && error !== null && "_tag" in error
+                  ? (error as any)._tag
+                  : "unknown";
               yield* Effect.logError("=== HANDLE INCOMING SMS FAILED ===", {
                 error: String(error),
-                errorType: error?._tag,
+                errorType,
                 errorMessage:
                   error instanceof Error ? error.message : String(error),
                 customerPhone: payload.From,
@@ -677,14 +687,29 @@ export function getConversationHandler(
     AllRepoLayers
   );
 
-  // Create Workers AI layer
-  console.log("🔧 DEBUG: Creating WorkersAI layer", { hasAI: !!env.AI });
-  const WorkersAILayer = Layer.succeed(WorkersAI, env.AI);
+  // Create Anthropic AI layer
+  console.log("🔧 DEBUG: Creating Anthropic AI layer", {
+    hasAnthropicKey: !!env.ANTHROPIC_API_KEY,
+  });
+  const AnthropicLayer = AnthropicLayerLive({
+    ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY,
+    ANTHROPIC_MODEL: "claude-3-5-haiku-20241022",
+    ANTHROPIC_MAX_TOKENS: "5000",
+    ANTHROPIC_TEMPERATURE: "0.7",
+  });
 
-  // Create ConversationAI service layer properly
+  // Create MCP Client layer
+  const MCPLayer = MCPClientLive;
+
+  // Create ConversationAI service layer with Anthropic
   const ConversationAIServiceLayer = Layer.provide(
-    ConversationAIServiceLive,
-    Layer.mergeAll(ConversationRepoLayer, MessageRepoLayer, WorkersAILayer)
+    AnthropicConversationAIServiceLive,
+    Layer.mergeAll(
+      ConversationRepoLayer,
+      MessageRepoLayer,
+      AnthropicLayer,
+      MCPLayer
+    )
   );
 
   // Final layer with all required services

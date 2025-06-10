@@ -4,6 +4,16 @@ import {
 } from "@/domain/tenant/shared/branded-types";
 import { ConversationDurableObjectBase } from "../base/ConversationDurableObjectBase";
 import { getConversationHandler } from "./api/handlers";
+import { Effect, Layer, Schema } from "effect";
+import {
+  createMCPServerLayer,
+  MCPServerService,
+  type MCPServerConfig,
+  type ToolHandler,
+  type MCPRequest,
+  type MCPResponse,
+  MCPError,
+} from "./mcp-server";
 
 // Simple logging utility that can be easily replaced with a proper logger
 const logger = {
@@ -32,311 +42,253 @@ const logger = {
 };
 
 export class ConversationDurableObject extends ConversationDurableObjectBase {
+  private mcpServerLayer: Layer.Layer<MCPServerService, never> | null = null;
+
   constructor(ctx: DurableObjectState, env: Env) {
-    // IMMEDIATE LOGGING TO TRACK DO CREATION
-    console.log("=== CONVERSATION DO CONSTRUCTOR CALLED ===", {
+    super(ctx, env);
+
+    logger.info("ConversationDO initialized", {
+      doId: this.doId,
       timestamp: new Date().toISOString(),
-      doId: ctx.id.toString(),
     });
-
-    try {
-      super(ctx, env);
-      console.log("=== CONVERSATION DO CONSTRUCTOR COMPLETED ===", {
-        timestamp: new Date().toISOString(),
-        doId: this.doId,
-      });
-    } catch (error) {
-      console.error("=== CONVERSATION DO CONSTRUCTOR FAILED ===", {
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      });
-      throw error;
-    }
   }
 
-  async fetch(request: Request): Promise<Response> {
-    const startTime = Date.now();
-    const url = new URL(request.url);
-    const method = request.method;
+  /**
+   * Initialize MCP server layer with tools - called when MCP is needed
+   */
+  private initializeMCPServerLayer(tools: ToolHandler[]): void {
+    if (this.mcpServerLayer) return; // Already initialized
 
-    // IMMEDIATE HEALTH CHECK FOR BASIC DO CONNECTIVITY
-    if (url.pathname === "/health") {
-      return new Response(
-        JSON.stringify({
-          status: "healthy",
-          doId: this.doId,
-          timestamp: new Date().toISOString(),
-          method,
-          pathname: url.pathname,
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
+    const config: MCPServerConfig = {
+      serverInfo: {
+        name: "conversation-mcp-server",
+        version: "1.0.0",
+        description: "MCP server for conversation context",
+      },
+      protocolVersion: "2024-11-05",
+      capabilities: {
+        tools: {},
+      },
+    };
 
-    // IMMEDIATE DEBUG LOGGING TO TRACK FAILURE POINT
+    this.mcpServerLayer = createMCPServerLayer(config, tools);
+
+    logger.info("MCP server layer initialized", {
+      toolCount: tools.length,
+      doId: this.doId,
+    });
+  }
+
+  /**
+   * Handle MCP requests using Effect-TS
+   */
+  private async handleMCPRequest(request: Request): Promise<Response> {
     try {
-      logger.info("=== CONVERSATION DO FETCH START - IMMEDIATE ===", {
-        method,
-        pathname: url.pathname,
-        searchParams: Object.fromEntries(url.searchParams),
-        doId: this.doId,
-        timestamp: new Date().toISOString(),
-      });
+      const mcpRequest = (await request.json()) as MCPRequest;
 
-      logger.info("ConversationDO fetch started", {
-        method,
-        pathname: url.pathname,
-        searchParams: Object.fromEntries(url.searchParams),
+      logger.info("Processing MCP request", {
+        method: mcpRequest.method,
+        id: mcpRequest.id,
         doId: this.doId,
       });
 
-      try {
-        // Add request logging with conversation context
-        logger.info(`ConversationDO request: ${method} ${url.pathname}`, {
-          doId: this.doId,
-          method,
-          pathname: url.pathname,
-          searchParams: Object.fromEntries(url.searchParams),
-        });
-
-        // Debug: Log exact URL being received
-        logger.info("=== CONVERSATION DO URL DEBUG ===", {
-          fullUrl: request.url,
-          method,
-          pathname: url.pathname,
-          searchParams: Object.fromEntries(url.searchParams),
-          headers: Object.fromEntries(request.headers),
-        });
-
-        logger.info("Getting handler from getConversationHandler");
-
-        // Extract conversation ID from multiple sources (same pattern as OrganizationDO)
-        let conversationId: string | null = null;
-
-        logger.info("=== STARTING CONVERSATION ID RESOLUTION ===");
-
-        // Method 1: Try doState.id.name first
-        if (this.state.id.name) {
-          conversationId = this.state.id.name;
-          logger.info("Found conversation ID from doState.id.name", {
-            conversationId,
-          });
-        } else {
-          logger.info("doState.id.name is null/undefined");
-        }
-
-        // Method 2: Extract from request headers
-        if (!conversationId) {
-          conversationId = request.headers.get("X-Conversation-ID");
-          if (conversationId) {
-            logger.info("Found conversation ID from X-Conversation-ID header", {
-              conversationId,
-            });
-          } else {
-            logger.info("No X-Conversation-ID header found");
-          }
-        }
-
-        // Method 3: For API endpoints, skip URL path parsing (like OrganizationDO)
-        if (!conversationId) {
-          const pathSegments = url.pathname.split("/").filter(Boolean);
-          logger.info("Attempting URL path parsing", {
-            pathSegments,
-            pathname: url.pathname,
-          });
-
-          // For requests like /conversation, /messages, etc., don't extract from URL path
-          // These are internal API calls, not public conversation URLs
-          const apiEndpoints = ["conversation", "messages", "sms", "webhook"];
-          const isApiEndpoint =
-            pathSegments.length > 0 && apiEndpoints.includes(pathSegments[0]);
-
-          if (pathSegments.length > 0 && !isApiEndpoint) {
-            conversationId = pathSegments[0]; // First segment could be the conversation ID
-            logger.info("Found conversation ID from URL path", {
-              conversationId,
-            });
-          } else if (isApiEndpoint) {
-            logger.info("Skipping URL path parsing for API endpoint", {
-              firstSegment: pathSegments[0],
-              pathname: url.pathname,
-            });
-          }
-        }
-
-        logger.info("=== CONVERSATION ID RESOLUTION COMPLETE ===", {
-          conversationId,
-          found: !!conversationId,
-        });
-
-        if (!conversationId) {
-          logger.error("No conversation ID found in any source", {
-            doIdName: this.state.id.name,
-            headers: Object.fromEntries(request.headers),
-            pathname: url.pathname,
-          });
-          return new Response("Conversation ID not found", { status: 400 });
-        }
-
-        logger.info("Conversation ID resolved", { conversationId });
-
-        const finalConversationId: ConversationId =
-          unsafeConversationId(conversationId);
-
-        logger.info("=== CREATING CONVERSATION HANDLER ===");
-
-        // Get Twilio configuration from environment
-        const messagingConfig = {
-          twilioAccountSid: this.env.TWILIO_ACCOUNT_SID,
-          twilioAuthToken: this.env.TWILIO_AUTH_TOKEN,
-          twilioFromNumber: this.env.TWILIO_FROM_NUMBER,
-          twilioWebhookUrl: this.env.TWILIO_WEBHOOK_URL,
-        };
-
-        // Get Shopify store domain from request header (caller should provide this)
-        const shopifyStoreDomain =
-          request.headers.get("X-Shopify-Store-Domain") ||
-          "default-store.myshopify.com";
-        const shopifyConfig = { storeDomain: shopifyStoreDomain };
-
-        logger.info("Using Shopify store domain", {
-          storeDomain: shopifyStoreDomain,
-          source: request.headers.get("X-Shopify-Store-Domain")
-            ? "header"
-            : "default",
-        });
-
-        logger.info("=== CALLING getConversationHandler ===", {
-          conversationId: finalConversationId,
-          messagingConfig: {
-            twilioAccountSid: messagingConfig.twilioAccountSid
-              ? "present"
-              : "missing",
-            twilioAuthToken: messagingConfig.twilioAuthToken
-              ? "present"
-              : "missing",
-            twilioFromNumber: messagingConfig.twilioFromNumber,
-            twilioWebhookUrl: messagingConfig.twilioWebhookUrl,
-          },
-          shopifyConfig,
-        });
-
-        // Get handler with the resolved conversation ID, Twilio config, and Shopify config
-        const { handler } = getConversationHandler(
-          this.state,
-          finalConversationId,
-          messagingConfig,
-          shopifyConfig,
-          this.env
-        );
-
-        logger.info("=== HANDLER OBTAINED, CALLING WITH REQUEST ===");
-        const response = await handler(request);
-
-        const duration = Date.now() - startTime;
-        logger.info("ConversationDO fetch completed successfully", {
-          status: response.status,
-          duration: `${duration}ms`,
-        });
-
-        return response;
-      } catch (error) {
-        const duration = Date.now() - startTime;
-        logger.error("ConversationDO fetch failed", {
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          duration: `${duration}ms`,
-        });
-
-        logger.error("ConversationDO error handling request", {
-          doId: this.doId,
-          method,
-          pathname: url.pathname,
-          error: error instanceof Error ? error.message : String(error),
-        });
-
-        return new Response("Internal Server Error", { status: 500 });
+      // Initialize MCP server layer with context-aware tools if not already done
+      if (!this.mcpServerLayer) {
+        const tools = await this.createContextAwareTools();
+        this.initializeMCPServerLayer(tools);
       }
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      logger.error("ConversationDO fetch failed", {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        duration: `${duration}ms`,
+
+      // Use Effect-TS to handle the request
+      const program = Effect.gen(function* () {
+        const mcpService = yield* MCPServerService;
+        return yield* mcpService.handleRequest(mcpRequest);
       });
 
-      logger.error("ConversationDO error handling request", {
-        doId: this.doId,
-        method,
-        pathname: url.pathname,
-        error: error instanceof Error ? error.message : String(error),
-      });
-
-      return new Response("Internal Server Error", { status: 500 });
-    }
-  }
-
-  // Add health check endpoint
-  async healthCheck(): Promise<Response> {
-    try {
-      // Basic health check - could be expanded to check database connectivity
-      return new Response(
-        JSON.stringify({
-          status: "healthy",
-          doId: this.doId,
-          timestamp: new Date().toISOString(),
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }
+      const response: MCPResponse = await Effect.runPromise(
+        program.pipe(Effect.provide(this.mcpServerLayer!))
       );
-    } catch (error) {
-      return new Response(
-        JSON.stringify({
-          status: "unhealthy",
-          error: error instanceof Error ? error.message : String(error),
-          doId: this.doId,
-          timestamp: new Date().toISOString(),
-        }),
-        {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-  }
 
-  // Add method to get conversation metrics (for monitoring)
-  async getMetrics(): Promise<Response> {
-    try {
-      // This could be expanded to include actual metrics from the database
-      const metrics = {
-        doId: this.doId,
-        uptime: Date.now(), // Could track actual uptime
-        timestamp: new Date().toISOString(),
-        // Add more metrics as needed (message count, last activity, etc.)
-      };
-
-      return new Response(JSON.stringify(metrics), {
+      return new Response(JSON.stringify(response), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    } catch (_error) {
-      return new Response(
-        JSON.stringify({
-          error: "Failed to retrieve metrics",
-          doId: this.doId,
+    } catch (error) {
+      logger.error("MCP request failed", {
+        error: error instanceof Error ? error.message : String(error),
+        doId: this.doId,
+      });
+
+      const errorResponse: MCPResponse = {
+        jsonrpc: "2.0",
+        id: 0, // Default ID when we can't extract from request
+        error: {
+          code: -32603,
+          message: "Internal error processing MCP request",
+          data: error instanceof Error ? error.message : String(error),
+        },
+      };
+
+      return new Response(JSON.stringify(errorResponse), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  /**
+   * Create context-aware tools for this conversation
+   */
+  private async createContextAwareTools(): Promise<ToolHandler[]> {
+    const conversationId = this.getConversationIdFromContext();
+
+    // Create conversation-specific tools with simple schemas
+    const tools: ToolHandler[] = [
+      // Conversation history tool
+      {
+        name: "get_conversation_history",
+        description: "Get the conversation history for this conversation",
+        inputSchema: Schema.Struct({}),
+        execute: () => {
+          return Effect.succeed(
+            `Conversation history for ${conversationId}: [placeholder - integrate with your conversation storage]`
+          );
+        },
+      },
+
+      // Send message tool
+      {
+        name: "send_message",
+        description: "Send a message in this conversation",
+        inputSchema: Schema.Struct({
+          message: Schema.String,
+          type: Schema.Union(Schema.Literal("sms"), Schema.Literal("email")),
         }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        }
+        execute: (args: unknown) => {
+          const { message, type } = args as {
+            message: string;
+            type: "sms" | "email";
+          };
+          return Effect.succeed(
+            `Message sent via ${type}: "${message}" in conversation ${conversationId}`
+          );
+        },
+      },
+
+      // Customer info tool
+      {
+        name: "get_customer_info",
+        description: "Get customer information for this conversation",
+        inputSchema: Schema.Struct({}),
+        execute: () => {
+          return Effect.succeed(
+            `Customer info for conversation ${conversationId}: [placeholder - integrate with customer storage]`
+          );
+        },
+      },
+    ];
+
+    // Add Shopify tools if available (using environment check)
+    try {
+      if ((this.env as any).SHOPIFY_API_KEY) {
+        tools.push({
+          name: "get_order_info",
+          description: "Get Shopify order information",
+          inputSchema: Schema.Struct({
+            orderId: Schema.String,
+          }),
+          execute: (args: unknown) => {
+            const { orderId } = args as { orderId: string };
+            return Effect.succeed(
+              `Order info for ${orderId}: [placeholder - integrate with Shopify service]`
+            );
+          },
+        });
+      }
+    } catch {
+      // Ignore Shopify environment check errors
+    }
+
+    return tools;
+  }
+
+  /**
+   * Get conversation ID from various context sources
+   */
+  private getConversationIdFromContext(): string {
+    // Try to get conversation ID from DO state first
+    if (this.state.id.name) {
+      return this.state.id.name;
+    }
+
+    // Fallback to DO ID
+    return this.doId;
+  }
+
+  /**
+   * Minimal fetch method - delegates all non-MCP requests to handler
+   * Clean separation: DO only handles MCP, everything else goes to business logic
+   */
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const method = request.method;
+
+    // Only handle MCP requests directly in the DO
+    if (url.pathname === "/mcp" && method === "POST") {
+      return this.handleMCPRequest(request);
+    }
+
+    // For all other requests, delegate to the conversation handler
+    // This includes: /health, /conversation, /messages, /webhook, etc.
+    try {
+      logger.info("Delegating request to conversation handler", {
+        method,
+        pathname: url.pathname,
+        doId: this.doId,
+      });
+
+      // Extract conversation ID from DO context
+      const conversationId = this.getConversationIdFromContext();
+
+      if (!conversationId) {
+        logger.error("No conversation ID found", {
+          doIdName: this.state.id.name,
+          pathname: url.pathname,
+        });
+        return new Response("Conversation ID not found", { status: 400 });
+      }
+
+      // Get configuration from environment
+      const messagingConfig = {
+        twilioAccountSid: this.env.TWILIO_ACCOUNT_SID,
+        twilioAuthToken: this.env.TWILIO_AUTH_TOKEN,
+        twilioFromNumber: this.env.TWILIO_FROM_NUMBER,
+        twilioWebhookUrl: this.env.TWILIO_WEBHOOK_URL,
+      };
+
+      const shopifyStoreDomain =
+        request.headers.get("X-Shopify-Store-Domain") ||
+        "default-store.myshopify.com";
+      const shopifyConfig = { storeDomain: shopifyStoreDomain };
+
+      // Delegate to handler - this handles ALL business logic
+      const { handler } = getConversationHandler(
+        this.state,
+        unsafeConversationId(conversationId),
+        messagingConfig,
+        shopifyConfig,
+        this.env
       );
+
+      return await handler(request);
+    } catch (error) {
+      logger.error("Failed to delegate request to handler", {
+        error: error instanceof Error ? error.message : String(error),
+        doId: this.doId,
+        method,
+        pathname: url.pathname,
+      });
+
+      return new Response("Internal Server Error", { status: 500 });
     }
   }
 }

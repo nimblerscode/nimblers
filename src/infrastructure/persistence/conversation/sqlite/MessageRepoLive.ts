@@ -222,6 +222,46 @@ export const MessageRepoLive = Layer.effect(
               }),
           });
         }),
+
+      findByExternalId: (externalMessageId: string) =>
+        Effect.gen(function* () {
+          const result = yield* Effect.tryPromise({
+            try: async () => {
+              const results = await drizzleClient.db
+                .select()
+                .from(message)
+                .where(eq(message.externalMessageId, externalMessageId))
+                .limit(1);
+
+              return results.length > 0 ? results[0] : null;
+            },
+            catch: (error) =>
+              new MessageNotFoundError({
+                messageId: externalMessageId as MessageId,
+              }),
+          });
+
+          if (!result) {
+            return null;
+          }
+
+          // Transform database result to domain model
+          return {
+            id: result.id,
+            direction: result.direction as Message["direction"],
+            content: result.content,
+            status: result.status as Message["status"],
+            messageType: result.messageType,
+            externalMessageId: result.externalMessageId,
+            sentAt: result.sentAt,
+            deliveredAt: result.deliveredAt,
+            readAt: result.readAt,
+            failedAt: result.failedAt,
+            failureReason: result.failureReason,
+            createdAt: result.createdAt,
+            metadata: result.metadata,
+          } as Message;
+        }),
     };
   })
 );

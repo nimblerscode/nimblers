@@ -34,7 +34,7 @@ export const ProcessConversationMessageRequest = Schema.Struct({
   conversationId: ConversationId,
   messageContent: MessageContent,
   organizationSlug: OrganizationSlug,
-  shopifyStoreDomain: Schema.optional(Schema.String),
+  shopifyStoreDomain: Schema.String,
 });
 
 export type ProcessConversationMessageRequest = Schema.Schema.Type<

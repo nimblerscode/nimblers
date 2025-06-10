@@ -84,6 +84,9 @@ export abstract class MessageRepo extends Context.Tag(
       messageId: MessageId,
       externalMessageId: string
     ) => Effect.Effect<void, MessageUpdateError>;
+    readonly findByExternalId: (
+      externalMessageId: string
+    ) => Effect.Effect<Message | null, MessageNotFoundError>;
   }
 >() {}
 

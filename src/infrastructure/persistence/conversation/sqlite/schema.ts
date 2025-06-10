@@ -59,7 +59,7 @@ export const message = sqliteTable("message", {
 
   // Message metadata
   messageType: text("messageType"), // 'text', 'image', 'template', etc.
-  externalMessageId: text("externalMessageId"), // Twilio/provider message ID
+  externalMessageId: text("externalMessageId").unique(), // Twilio/provider message ID - unique to prevent duplicates
 
   // Delivery tracking
   sentAt: normalizeDate("sentAt"),

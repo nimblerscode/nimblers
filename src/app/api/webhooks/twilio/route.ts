@@ -70,6 +70,10 @@ async function handleStatusCallback(formData: FormData): Promise<Response> {
     });
   }
 
+  console.log(
+    `📊 Processing status callback: ${messageSid} -> ${messageStatus}`
+  );
+
   const program = pipe(
     Effect.gen(function* () {
       // Validate message ID
@@ -78,11 +82,12 @@ async function handleStatusCallback(formData: FormData): Promise<Response> {
       // Map status
       const mappedStatus = mapTwilioStatus(messageStatus);
 
-      // TODO: Update message status in database
-      // This would typically involve finding the message by external ID
-      // and updating its status in the conversation
-
-      // Log status update (replace with proper logging in production)
+      // Log status update for now - in the future we could update message status in the conversation DOs
+      yield* Effect.log("Status callback received", {
+        messageSid: validatedMessageId,
+        status: mappedStatus,
+        originalStatus: messageStatus,
+      });
 
       return {
         messageId: validatedMessageId,
@@ -391,14 +396,14 @@ async function handleIncomingMessageWithDO(
     }
 
     console.log(
-      `📤 Sending SMS response (${responseMessage.length} chars):`,
+      `📤 ConversationDO sent response (${responseMessage.length} chars):`,
       responseMessage.substring(0, 100) + "..."
     );
 
-    // Return TwiML response with the ConversationDO's message
+    // Return empty TwiML response since ConversationDO already sent the message via API
+    // This prevents duplicate messages (one from API, one from TwiML)
     const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Message>${responseMessage}</Message>
 </Response>`;
 
     return new Response(twimlResponse, {
@@ -447,11 +452,15 @@ export async function POST(request: Request) {
 
     // Determine webhook type and route accordingly
     if (isStatusCallback(formData)) {
-      console.log("📊 Processing status callback webhook");
+      console.log(
+        "📊 Processing status callback webhook - this updates message delivery status"
+      );
       return await handleStatusCallback(formData);
     }
 
-    console.log("💬 Processing incoming message webhook with ConversationDO");
+    console.log(
+      "💬 Processing incoming message webhook from customer - this will generate AI response"
+    );
     return await handleIncomingMessageWithDO(formData);
   } catch (error) {
     console.error("💥 WEBHOOK ERROR:", error);
