@@ -64,6 +64,7 @@ coverage
 *.temp
 
 .wrangler
+wrangler.jsonc
 
 ## Panda
 styled-system
